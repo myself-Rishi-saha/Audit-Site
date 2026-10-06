@@ -15,11 +15,6 @@
             "id": "fire-pump",
             "text": "FIRE PUMP WORKING STATUS?",
             "required": true
-          },
-          {
-            "id": "abc-1791300659447",
-            "text": "ABC",
-            "required": true
           }
         ]
       },
@@ -91,17 +86,6 @@
             "label": "Serial Number",
             "type": "text",
             "required": true
-          },
-          {
-            "label": "ABC",
-            "type": "multiple-choice",
-            "required": true,
-            "options": [
-              "ABC",
-              "EFG",
-              "HIJ"
-            ],
-            "id": "abc-1791298025210"
           }
         ]
       },
