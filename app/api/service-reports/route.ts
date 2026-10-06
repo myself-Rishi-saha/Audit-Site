@@ -1,0 +1,3 @@
+import {NextResponse} from 'next/server';import {readServiceReports,writeServiceReports,currentUser,nextReportId,ServiceReport} from '@/lib/service-report'
+export async function GET(){return NextResponse.json(await readServiceReports())}
+export async function POST(req:Request){const body=await req.json();const items=await readServiceReports();const user=await currentUser();const now=new Date().toISOString();const item:ServiceReport={...body,id:nextReportId(items),employeeId:user.id,employeeName:user.name,status:'DRAFT',evidence:body.evidence||[],actions:body.actions||[''],systems:body.systems||[],createdAt:now,updatedAt:now};items.push(item);await writeServiceReports(items);return NextResponse.json(item)}

@@ -1,0 +1,215 @@
+[
+  {
+    "date": "10/05/2026",
+    "time": "11:30 AM",
+    "serviceType": "PMW (Preventive Maintenance)",
+    "systems": [
+      "Fire Detection and Alarm System"
+    ],
+    "actions": [
+      "asd",
+      "adasd"
+    ],
+    "evidence": [
+      {
+        "reportId": "SRV-NEW",
+        "type": "equipment",
+        "url": "/uploads/SRV-NEW/1791191392360-capture.jpg",
+        "fileName": "1791191392360-capture.jpg",
+        "capturedAt": "2026-10-05T09:09:52.379Z"
+      },
+      {
+        "reportId": "SRV-NEW",
+        "type": "customer",
+        "url": "/uploads/SRV-NEW/1791191456981-capture.jpg",
+        "fileName": "1791191456981-capture.jpg",
+        "capturedAt": "2026-10-05T09:10:56.988Z"
+      }
+    ],
+    "customer": "fsd",
+    "address": "asd",
+    "engineer": "asdad",
+    "equipment": "ada",
+    "serial": "adsda",
+    "reportedFault": "adds",
+    "customerName": "asd",
+    "customerRemarks": "asdads",
+    "id": "SRV-001",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "status": "DRAFT",
+    "createdAt": "2026-10-05T09:11:02.892Z",
+    "updatedAt": "2026-10-05T09:11:06.507Z"
+  },
+  {
+    "date": "10/05/2026",
+    "time": "11:30 AM",
+    "serviceType": "s;;ss;;s",
+    "systems": [
+      "Fire Detection and Alarm Systemasas"
+    ],
+    "actions": [
+      "asd",
+      "adas"
+    ],
+    "evidence": [
+      {
+        "reportId": "SRV-NEW",
+        "type": "equipment",
+        "url": "/uploads/SRV-NEW/1791191392360-capture.jpg",
+        "fileName": "1791191392360-capture.jpg",
+        "capturedAt": "2026-10-05T09:09:52.379Z"
+      },
+      {
+        "reportId": "SRV-NEW",
+        "type": "customer",
+        "url": "/uploads/SRV-NEW/1791191456981-capture.jpg",
+        "fileName": "1791191456981-capture.jpg",
+        "capturedAt": "2026-10-05T09:10:56.988Z"
+      }
+    ],
+    "customer": "fsd",
+    "address": "asd",
+    "engineer": "asdad",
+    "equipment": "ada",
+    "serial": "adsda",
+    "reportedFault": "adds",
+    "customerName": "asd",
+    "customerRemarks": "asdad",
+    "id": "SRV-002",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-05T09:11:06.591Z",
+    "updatedAt": "2026-10-05T09:18:28.799Z",
+    "lastUpdatedBy": "ADMIN001",
+    "lastUpdatedAt": "2026-10-05T09:18:25.297Z"
+  },
+  {
+    "date": "2026-10-21",
+    "time": "15:56",
+    "serviceType": "PMW (Preventive Maintenance)",
+    "systems": [
+      "Fire Fighting System / Pump"
+    ],
+    "actions": [
+      "abc",
+      "xyz"
+    ],
+    "evidence": {
+      "customer-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791217302195-capture-1791217302149.jpg",
+          "fileName": "1791217302195-capture-1791217302149.jpg",
+          "capturedAt": "2026-10-05T16:21:42.199Z"
+        }
+      ],
+      "equipment-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791217309339-capture-1791217309309.jpg",
+          "fileName": "1791217309339-capture-1791217309309.jpg",
+          "capturedAt": "2026-10-05T16:21:49.342Z"
+        }
+      ],
+      "site-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791217315409-capture-1791217315381.jpg",
+          "fileName": "1791217315409-capture-1791217315381.jpg",
+          "capturedAt": "2026-10-05T16:21:55.412Z"
+        }
+      ],
+      "other-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791217319941-capture-1791217319909.jpg",
+          "fileName": "1791217319941-capture-1791217319909.jpg",
+          "capturedAt": "2026-10-05T16:21:59.943Z"
+        }
+      ],
+      "evidence-video": [
+        {
+          "reportId": "new",
+          "type": "video",
+          "url": "/uploads/new/1791217326954-capture-1791217326910.webm",
+          "fileName": "1791217326954-capture-1791217326910.webm",
+          "capturedAt": "2026-10-05T16:22:06.959Z"
+        }
+      ]
+    },
+    "customer": "AABC",
+    "address": "ABC",
+    "engineer": "abc",
+    "equipment": "abc",
+    "serial": "12345",
+    "reportedFault": "abc",
+    "customerName": "abc",
+    "customerRemarks": "abc",
+    "id": "SRV-003",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-05T16:25:20.653Z",
+    "updatedAt": "2026-10-05T16:25:28.223Z"
+  },
+  {
+    "date": "2026-10-07",
+    "time": "21:45",
+    "serviceType": "BDC (Breakdown Call)",
+    "systems": [
+      "Fire Detection and Alarm System"
+    ],
+    "actions": [
+      "ABC"
+    ],
+    "evidence": {
+      "customer-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791296050902-capture-1791296050878.jpg",
+          "fileName": "1791296050902-capture-1791296050878.jpg",
+          "capturedAt": "2026-10-06T14:14:10.904Z"
+        }
+      ],
+      "equipment-photo": [
+        {
+          "reportId": "new",
+          "type": "image",
+          "url": "/uploads/new/1791296057797-capture-1791296057774.jpg",
+          "fileName": "1791296057797-capture-1791296057774.jpg",
+          "capturedAt": "2026-10-06T14:14:17.799Z"
+        }
+      ],
+      "evidence-video": [
+        {
+          "reportId": "new",
+          "type": "video",
+          "url": "/uploads/new/1791296063744-capture-1791296063720.webm",
+          "fileName": "1791296063744-capture-1791296063720.webm",
+          "capturedAt": "2026-10-06T14:14:23.750Z"
+        }
+      ]
+    },
+    "customer": "ABC",
+    "address": "ABC",
+    "engineer": "ABC",
+    "equipment": "ABC",
+    "serial": "1234",
+    "reportedFault": "ABC",
+    "customerName": "ABC",
+    "customerRemarks": "ABC",
+    "id": "SRV-004",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-06T14:14:27.739Z",
+    "updatedAt": "2026-10-06T14:14:29.893Z"
+  }
+]

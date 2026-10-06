@@ -1,0 +1,1 @@
+@media print { header, nav, button { display:none !important } body { background:#fff !important } main { max-width:none !important; padding:0 !important } .print-hidden { display:none !important } }

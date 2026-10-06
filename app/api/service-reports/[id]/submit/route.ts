@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {readServiceReports,writeServiceReports} from '@/lib/service-report'
+export async function POST(_:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;const items=await readServiceReports();const i=items.findIndex(x=>x.id===id);if(i<0)return NextResponse.json({error:'Not found'},{status:404});items[i].status='COMPLETED';items[i].updatedAt=new Date().toISOString();await writeServiceReports(items);return NextResponse.json(items[i])}

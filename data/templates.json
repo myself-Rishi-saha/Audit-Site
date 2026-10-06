@@ -1,0 +1,217 @@
+[
+  {
+    "id": "multiplex-fire-safety",
+    "title": "MULTIPLEX FIRE SAFETY AND EVACUATION AUDIT",
+    "sections": [
+      {
+        "title": "CHECKLIST FINDINGS",
+        "questions": [
+          {
+            "id": "fda-panel",
+            "text": "FDA PANEL WORKING STATUS?",
+            "required": true
+          },
+          {
+            "id": "fire-pump",
+            "text": "FIRE PUMP WORKING STATUS?",
+            "required": true
+          },
+          {
+            "id": "abc-1791300659447",
+            "text": "ABC",
+            "required": true
+          }
+        ]
+      },
+      {
+        "title": "GENERAL",
+        "questions": [
+          {
+            "id": "extinguishers",
+            "text": "FIRE EXTINGUISHERS AVAILABLE?",
+            "required": true
+          },
+          {
+            "id": "exit-clear",
+            "text": "EMERGENCY EXIT CLEAR?",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "service-report",
+    "type": "SERVICE_REPORT",
+    "name": "Equipment Service & Maintenance Report",
+    "title": "Equipment Service & Maintenance Report",
+    "sections": [
+      {
+        "id": "job-information",
+        "name": "JOB INFORMATION",
+        "fields": [
+          {
+            "id": "customer-name",
+            "label": "Customer Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "customer-address",
+            "label": "Customer Address",
+            "type": "textarea",
+            "required": true
+          },
+          {
+            "id": "engineer-name",
+            "label": "Engineer's Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "service-call-date",
+            "label": "Service Call Date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "service-call-time",
+            "label": "Service Call Time",
+            "type": "time",
+            "required": true
+          },
+          {
+            "id": "equipment",
+            "label": "Equipment / System",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "serial-number",
+            "label": "Serial Number",
+            "type": "text",
+            "required": true
+          },
+          {
+            "label": "ABC",
+            "type": "multiple-choice",
+            "required": true,
+            "options": [
+              "ABC",
+              "EFG",
+              "HIJ"
+            ],
+            "id": "abc-1791298025210"
+          }
+        ]
+      },
+      {
+        "id": "service-type",
+        "name": "SERVICE TYPE",
+        "fields": [
+          {
+            "id": "service-type",
+            "label": "Service Type",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "BDC (Breakdown Call)",
+              "PMW (Preventive Maintenance)",
+              "Comprehensive AMC"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "installed-systems",
+        "name": "INSTALLED SYSTEM CHECKED",
+        "fields": [
+          {
+            "id": "installed-systems",
+            "label": "Installed Systems",
+            "type": "multiple-choice",
+            "required": false,
+            "options": [
+              "Fire Detection and Alarm System",
+              "Fire Fighting System / Pump",
+              "CCTV / PA System"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "fault-diagnosis",
+        "name": "FAULT DIAGNOSIS & ACTION LOG",
+        "fields": [
+          {
+            "id": "reported-fault",
+            "label": "Reported Fault",
+            "type": "textarea",
+            "required": false
+          },
+          {
+            "id": "actions",
+            "label": "Action Taken",
+            "type": "textarea",
+            "required": false,
+            "multiple": true
+          }
+        ]
+      },
+      {
+        "id": "customer-evidence",
+        "name": "CUSTOMER EVIDENCE",
+        "fields": [
+          {
+            "id": "customer-name-evidence",
+            "label": "Customer Name",
+            "type": "text",
+            "required": false
+          },
+          {
+            "id": "customer-photo",
+            "label": "Customer Photo",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "customer-remarks",
+            "label": "Customer Remarks",
+            "type": "textarea",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "evidence",
+        "name": "EVIDENCE",
+        "fields": [
+          {
+            "id": "equipment-photo",
+            "label": "Equipment Photo",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "site-photo",
+            "label": "Site Photo",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "other-photo",
+            "label": "Other Evidence Photo",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "evidence-video",
+            "label": "Evidence Video",
+            "type": "camera-video",
+            "required": false
+          }
+        ]
+      }
+    ]
+  }
+]

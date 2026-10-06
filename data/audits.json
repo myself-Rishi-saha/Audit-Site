@@ -1,0 +1,80 @@
+[
+  {
+    "id": "AUD-001",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "customer": "S. Samanta",
+    "location": "DHULAGORH WORKSHOP",
+    "date": "10/05/2026",
+    "status": "COMPLETED",
+    "score": 67,
+    "templateId": "multiplex-fire-safety",
+    "answers": {
+      "fda-panel": {
+        "status": "N/A",
+        "remarks": "Panel working normally."
+      },
+      "fire-pump": {
+        "status": "PASS",
+        "remarks": "Pump operational."
+      },
+      "extinguishers": {
+        "status": "PASS",
+        "remarks": "Available and tagged."
+      },
+      "exit-clear": {
+        "status": "FAIL",
+        "remarks": "Exit signage needs attention."
+      }
+    },
+    "lastUpdatedBy": "ADMIN001",
+    "lastUpdatedAt": "2026-10-05T13:34:08.603Z"
+  },
+  {
+    "customer": "ABC",
+    "location": "ABC",
+    "date": "10/05/2026",
+    "answers": {
+      "fda-panel": {
+        "status": "PASS",
+        "remarks": "ABC",
+        "evidence": [
+          {
+            "reportId": "new-audit",
+            "type": "image",
+            "url": "/uploads/new-audit/1791295974658-capture-1791295974541.jpg",
+            "fileName": "1791295974658-capture-1791295974541.jpg",
+            "capturedAt": "2026-10-06T14:12:54.662Z"
+          }
+        ]
+      },
+      "fire-pump": {
+        "status": "FAIL",
+        "remarks": "abc",
+        "evidence": [
+          {
+            "reportId": "new-audit",
+            "type": "video",
+            "url": "/uploads/new-audit/1791295985956-capture-1791295985930.webm",
+            "fileName": "1791295985956-capture-1791295985930.webm",
+            "capturedAt": "2026-10-06T14:13:05.960Z"
+          }
+        ]
+      },
+      "extinguishers": {
+        "status": "PASS",
+        "remarks": "abc"
+      },
+      "exit-clear": {
+        "status": "PASS",
+        "remarks": "abc"
+      }
+    },
+    "id": "AUD-002",
+    "employeeId": "EMP001",
+    "employeeName": "S. Roy",
+    "status": "COMPLETED",
+    "templateId": "multiplex-fire-safety",
+    "score": 75
+  }
+]

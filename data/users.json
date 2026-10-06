@@ -1,0 +1,14 @@
+[
+  {
+    "id": "EMP001",
+    "passwordHash": "123456",
+    "name": "S. Roy",
+    "role": "employee"
+  },
+  {
+    "id": "ADMIN001",
+    "passwordHash": "admin123",
+    "name": "A. Sen",
+    "role": "admin"
+  }
+]
