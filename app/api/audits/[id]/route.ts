@@ -1,37 +1,107 @@
 // import { NextResponse } from "next/server";
-// import { readAudits, writeAudits, scoreAudit } from "@/lib/audit";
+// import { readAudits, writeAudits } from "@/lib/audit";
+
 // export async function GET(
-//   _: Request,
+//   _request: Request,
 //   { params }: { params: Promise<{ id: string }> },
 // ) {
-//   const { id } = await params;
-//   const audit = (await readAudits()).find((a) => a.id === id);
-//   return audit
-//     ? NextResponse.json(audit)
-//     : NextResponse.json({ error: "Not found" }, { status: 404 });
+//   try {
+//     const { id } = await params;
+
+//     const audits = await readAudits();
+
+//     const audit = audits.find((item) => item.id === id);
+
+//     if (!audit) {
+//       return NextResponse.json(
+//         { error: "Audit not found" },
+//         { status: 404 },
+//       );
+//     }
+
+//     return NextResponse.json(audit);
+//   } catch (error) {
+//     console.error("Get audit error:", error);
+
+//     return NextResponse.json(
+//       { error: "Failed to get audit." },
+//       { status: 500 },
+//     );
+//   }
 // }
+
 // export async function PUT(
-//   req: Request,
+//   request: Request,
 //   { params }: { params: Promise<{ id: string }> },
 // ) {
-//   const { id } = await params;
-//   const body = await req.json();
-//   const audits = await readAudits();
-//   const i = audits.findIndex((a) => a.id === id);
-//   if (i < 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
-//   audits[i] = {
-//     ...audits[i],
-//     ...body,
-//     lastUpdatedAt: body.lastUpdatedAt || new Date().toISOString(),
-//   };
-//   audits[i].score = scoreAudit(audits[i]);
-//   await writeAudits(audits);
-//   return NextResponse.json(audits[i]);
+//   try {
+//     const { id } = await params;
+
+//     const body = await request.json();
+
+//     const audits = await readAudits();
+
+//     const index = audits.findIndex(
+//       (audit) => audit.id === id,
+//     );
+
+//     if (index === -1) {
+//       return NextResponse.json(
+//         { error: "Audit not found" },
+//         { status: 404 },
+//       );
+//     }
+
+//     const existingAudit = audits[index];
+
+//     const updatedAudit = {
+//       ...existingAudit,
+//       ...body,
+
+//       // Keep these fields unchanged
+//       id: existingAudit.id,
+//       employeeId: existingAudit.employeeId,
+//       employeeName: existingAudit.employeeName,
+//       templateId: existingAudit.templateId,
+
+//       answers: body.answers ?? existingAudit.answers,
+//     };
+
+//     audits[index] = updatedAudit;
+
+//     await writeAudits(audits);
+
+//     return NextResponse.json(updatedAudit);
+//   } catch (error) {
+//     console.error("Update audit error:", error);
+
+//     return NextResponse.json(
+//       { error: "Failed to update audit." },
+//       { status: 500 },
+//     );
+//   }
 // }
+
+
 
 
 import { NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
+
 import { readAudits, writeAudits } from "@/lib/audit";
+
+async function getTemplates() {
+  const filePath = path.join(
+    process.cwd(),
+    "data",
+    "templates.json",
+  );
+
+  const file = await readFile(filePath, "utf-8");
+
+  return JSON.parse(file);
+}
 
 export async function GET(
   _request: Request,
@@ -51,7 +121,46 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(audit);
+    console.log("AUDIT FOUND:", {
+      id: audit.id,
+      templateId: audit.templateId,
+    });
+
+    // Read templates.json
+    const templates = await getTemplates();
+
+    console.log(
+      "AVAILABLE TEMPLATES:",
+      templates.map((template: any) => template.id),
+    );
+
+    // Find the template used by this audit
+    const template = templates.find(
+      (item: any) =>
+        String(item.id).trim() ===
+        String(audit.templateId).trim(),
+    );
+
+    console.log("MATCHED TEMPLATE:", template?.id);
+
+    if (!template) {
+      return NextResponse.json(
+        {
+          error: "Audit template not found",
+          templateId: audit.templateId,
+          availableTemplates: templates.map(
+            (item: any) => item.id,
+          ),
+        },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      ...audit,
+      status: String(audit.status).toUpperCase(),
+      template,
+    });
   } catch (error) {
     console.error("Get audit error:", error);
 
@@ -86,6 +195,19 @@ export async function PUT(
 
     const existingAudit = audits[index];
 
+    // Completed audits cannot be edited
+    if (
+      String(existingAudit.status).toUpperCase() ===
+      "COMPLETED"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Completed audits cannot be edited.",
+        },
+        { status: 403 },
+      );
+    }
+
     const updatedAudit = {
       ...existingAudit,
       ...body,
@@ -95,6 +217,9 @@ export async function PUT(
       employeeId: existingAudit.employeeId,
       employeeName: existingAudit.employeeName,
       templateId: existingAudit.templateId,
+
+      // Draft updates always remain draft
+      status: "DRAFT",
 
       answers: body.answers ?? existingAudit.answers,
     };
@@ -113,7 +238,3 @@ export async function PUT(
     );
   }
 }
-
-
-
-
