@@ -6,6 +6,24 @@
     "title": "AUDIT FORM",
     "sections": [
       {
+        "id": "customer-evidence-1791441204491",
+        "name": "CUSTOMER EVIDENCE",
+        "fields": [
+          {
+            "id": "customer-photot-1791441229469",
+            "label": "CUSTOMER PHOTO",
+            "type": "camera-photo",
+            "required": true
+          },
+          {
+            "id": "customer-name-1791458853943",
+            "label": "CUSTOMER NAME",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      {
         "id": "checklist-findings",
         "name": "CHECKLIST FINDINGS",
         "fields": [
@@ -104,13 +122,19 @@
         ]
       },
       {
-        "id": "customer-evidence-1791441204491",
-        "name": "CUSTOMER EVIDENCE",
+        "id": "signature-completion",
+        "name": "SIGNATURE & COMPLETION",
         "fields": [
           {
-            "id": "customer-photot-1791441229469",
-            "label": "CUSTOMER PHOTOT",
-            "type": "camera-photo",
+            "id": "employee-signature",
+            "label": "EMPLOYEE SIGNATURE",
+            "type": "signature",
+            "required": true
+          },
+          {
+            "id": "customer-signature",
+            "label": "CUSTOMER SIGNATURE",
+            "type": "signature",
             "required": true
           }
         ]
@@ -185,6 +209,12 @@
               "PMW (Preventive Maintenance)",
               "Comprehensive AMC"
             ]
+          },
+          {
+            "id": "service-photo-1791453151273",
+            "label": "SERVICE PHOTO",
+            "type": "camera-photo",
+            "required": true
           }
         ]
       },
@@ -249,32 +279,20 @@
         ]
       },
       {
-        "id": "evidence",
-        "name": "EVIDENCE",
+        "id": "signature-completion",
+        "name": "SIGNATURE & COMPLETION",
         "fields": [
           {
-            "id": "equipment-photo",
-            "label": "Equipment Photo",
-            "type": "camera-photo",
-            "required": false
+            "id": "employee-signature",
+            "label": "EMPLOYEE SIGNATURE",
+            "type": "signature",
+            "required": true
           },
           {
-            "id": "site-photo",
-            "label": "Site Photo",
-            "type": "camera-photo",
-            "required": false
-          },
-          {
-            "id": "other-photo",
-            "label": "Other Evidence Photo",
-            "type": "camera-photo",
-            "required": false
-          },
-          {
-            "id": "evidence-video",
-            "label": "Evidence Video",
-            "type": "camera-video",
-            "required": false
+            "id": "customer-signature-1791452420105",
+            "label": "CUSTOMER SIGNATURE",
+            "type": "signature",
+            "required": true
           }
         ]
       }

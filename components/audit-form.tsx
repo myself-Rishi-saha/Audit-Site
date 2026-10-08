@@ -1,176 +1,1153 @@
 // "use client";
 
-// import { useEffect, useMemo, useState } from "react";
+// import { useEffect, useState } from "react";
 // import { useRouter } from "next/navigation";
-// import { ArrowLeft, Camera, Check, Save, Send, Video, X } from "lucide-react";
+// import {
+//   ArrowLeft,
+//   Camera,
+//   Check,
+//   Save,
+//   Send,
+//   Video,
+//   X,
+// } from "lucide-react";
 
 // import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
 // import { Textarea } from "@/components/ui/textarea";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import {
+//   Card,
+//   CardContent,
+// } from "@/components/ui/card";
 // import { Badge } from "@/components/ui/badge";
 // import { CameraCapture } from "@/components/camera-capture";
+
+// // --------------------------------------------------
+// // TYPES
+// // --------------------------------------------------
+
+// type FieldType =
+//   | "text"
+//   | "textarea"
+//   | "date"
+//   | "time"
+//   | "single-choice"
+//   | "multiple-choice"
+//   | "camera-photo"
+//   | "camera-video"
+//   | "number"
+//   | "signature";
+
+// type Field = {
+//   id: string;
+//   label: string;
+//   type: FieldType;
+//   required?: boolean;
+//   options?: string[];
+//   multiple?: boolean;
+// };
+
+// type Section = {
+//   id: string;
+//   name: string;
+//   title?: string;
+//   fields: Field[];
+// };
+
+// type Template = {
+//   id: string;
+//   type: string;
+//   name: string;
+//   title: string;
+//   sections: Section[];
+// };
+
+// type EvidenceItem = {
+//   reportId?: string;
+//   type: "image" | "video";
+//   url: string;
+//   fileName?: string;
+//   capturedAt?: string;
+// };
+
+// type SignatureData = {
+//   signature: string;
+//   signedAt: string;
+// };
+
+// type FieldValue = {
+//   value?: string | string[];
+//   evidence?: EvidenceItem[];
+//   signature?: SignatureData;
+// };
+
+// type FormData = Record<string, FieldValue>;
+
+// // --------------------------------------------------
+// // AUDIT FORM
+// // --------------------------------------------------
 
 // export default function AuditForm() {
 //   const router = useRouter();
 
-//   const [template, setTemplate] = useState<any>(null);
-//   const [customer, setCustomer] = useState("");
-//   const [location, setLocation] = useState("");
-//   const [answers, setAnswers] = useState<Record<string, any>>({});
+//   const [template, setTemplate] =
+//     useState<Template | null>(null);
+
 //   const [auditId, setAuditId] = useState("");
 
-//   // Camera state
-//   const [cameraMode, setCameraMode] = useState<"photo" | "video" | null>(null);
+//   const [data, setData] =
+//     useState<FormData>({});
 
-//   const [cameraQuestionId, setCameraQuestionId] = useState<string | null>(null);
+//   const [errors, setErrors] =
+//     useState<Record<string, boolean>>({});
+
+//   const [customer, setCustomer] =
+//     useState("");
+
+//   const [location, setLocation] =
+//     useState("");
+
+//   const [camera, setCamera] =
+//     useState<{
+//       mode: "photo" | "video";
+//       field: Field;
+//     } | null>(null);
+
+//   const [signatureField, setSignatureField] =
+//     useState<Field | null>(null);
 
 //   // --------------------------------------------------
-//   // Load template
+//   // LOAD LATEST TEMPLATE
 //   // --------------------------------------------------
 
 //   useEffect(() => {
-//     fetch("/api/templates")
-//       .then((r) => r.json())
-//       .then((d) => setTemplate(d[0]))
-//       .catch((err) => {
-//         console.error("Failed to load template:", err);
-//       });
+//     async function loadTemplate() {
+//       try {
+//         const response =
+//           await fetch("/api/templates");
+
+//         if (!response.ok) {
+//           throw new Error(
+//             "Failed to load audit template",
+//           );
+//         }
+
+//         const templates: Template[] =
+//           await response.json();
+
+//         const auditTemplate =
+//           templates.find(
+//             (item) =>
+//               item.type === "AUDIT",
+//           );
+
+//         if (!auditTemplate) {
+//           throw new Error(
+//             "Audit template not found",
+//           );
+//         }
+
+//         // This is the latest template
+//         // from template.json.
+//         setTemplate(auditTemplate);
+
+//         // Create initial values
+//         // from the latest template.
+//         const initialData: FormData = {};
+
+//         auditTemplate.sections.forEach(
+//           (section) => {
+//             section.fields.forEach(
+//               (field) => {
+//                 if (
+//                   field.type ===
+//                   "multiple-choice"
+//                 ) {
+//                   initialData[field.id] = {
+//                     value: [],
+//                   };
+//                 } else if (
+//                   field.multiple
+//                 ) {
+//                   initialData[field.id] = {
+//                     value: [""],
+//                   };
+//                 } else {
+//                   initialData[field.id] = {
+//                     value: "",
+//                   };
+//                 }
+//               },
+//             );
+//           },
+//         );
+
+//         setData(initialData);
+//       } catch (error) {
+//         console.error(
+//           "Failed to load audit template:",
+//           error,
+//         );
+//       }
+//     }
+
+//     loadTemplate();
 //   }, []);
 
 //   // --------------------------------------------------
-//   // Update answer
+//   // GET FIELD DATA
 //   // --------------------------------------------------
 
-//   function setAnswer(id: string, key: string, value: string) {
-//     setAnswers((current) => ({
-//       ...current,
-//       [id]: {
-//         ...current[id],
-//         [key]: value,
-//       },
-//     }));
+//   function getFieldData(
+//     field: Field,
+//   ): FieldValue {
+//     return data[field.id] || {};
+//   }
+
+//   function getValue(field: Field) {
+//     const fieldData =
+//       getFieldData(field);
+
+//     if (
+//       field.type ===
+//       "multiple-choice"
+//     ) {
+//       return Array.isArray(
+//         fieldData.value,
+//       )
+//         ? fieldData.value
+//         : [];
+//     }
+
+//     if (field.multiple) {
+//       return Array.isArray(
+//         fieldData.value,
+//       )
+//         ? fieldData.value
+//         : [""];
+//     }
+
+//     return typeof fieldData.value ===
+//       "string"
+//       ? fieldData.value
+//       : "";
 //   }
 
 //   // --------------------------------------------------
-//   // Save / Submit audit
+//   // UPDATE FIELD VALUE
 //   // --------------------------------------------------
 
-//   async function save(submit = false) {
-//     if (
-//       submit &&
-//       template?.sections
-//         .flatMap((s: any) => s.questions)
-//         .some((q: any) => !answers[q.id]?.status)
-//     ) {
-//       alert("Please select PASS, FAIL, or N/A for every question.");
-//       return;
+//   function setValue(
+//     field: Field,
+//     value: string | string[],
+//   ) {
+//     setData((current) => ({
+//       ...current,
+//       [field.id]: {
+//         ...current[field.id],
+//         value,
+//       },
+//     }));
+
+//     setErrors((current) => {
+//       if (!current[field.id]) {
+//         return current;
+//       }
+
+//       const updated = {
+//         ...current,
+//       };
+
+//       delete updated[field.id];
+
+//       return updated;
+//     });
+//   }
+
+//   // --------------------------------------------------
+//   // VALIDATE REQUIRED FIELDS
+//   // --------------------------------------------------
+
+//   function validateRequiredFields() {
+//     if (!template) {
+//       return false;
 //     }
 
+//     const newErrors: Record<
+//       string,
+//       boolean
+//     > = {};
+
+//     for (const section of template.sections) {
+//       for (const field of section.fields) {
+//         if (!field.required) {
+//           continue;
+//         }
+
+//         const fieldData =
+//           getFieldData(field);
+
+//         // --------------------------------------------
+//         // SIGNATURE
+//         // --------------------------------------------
+
+//         if (
+//           field.type ===
+//           "signature"
+//         ) {
+//           if (
+//             !fieldData.signature
+//               ?.signature
+//           ) {
+//             newErrors[field.id] =
+//               true;
+//           }
+
+//           continue;
+//         }
+
+//         // --------------------------------------------
+//         // CAMERA
+//         // --------------------------------------------
+
+//         if (
+//           field.type ===
+//             "camera-photo" ||
+//           field.type ===
+//             "camera-video"
+//         ) {
+//           if (
+//             !fieldData.evidence ||
+//             fieldData.evidence.length ===
+//               0
+//           ) {
+//             newErrors[field.id] =
+//               true;
+//           }
+
+//           continue;
+//         }
+
+//         // --------------------------------------------
+//         // NORMAL VALUE
+//         // --------------------------------------------
+
+//         const value =
+//           getValue(field);
+
+//         if (Array.isArray(value)) {
+//           const empty =
+//             value.length === 0 ||
+//             value.every(
+//               (item) =>
+//                 !String(
+//                   item ?? "",
+//                 ).trim(),
+//             );
+
+//           if (empty) {
+//             newErrors[field.id] =
+//               true;
+//           }
+//         } else if (
+//           !String(
+//             value ?? "",
+//           ).trim()
+//         ) {
+//           newErrors[field.id] =
+//             true;
+//         }
+//       }
+//     }
+
+//     setErrors(newErrors);
+
 //     if (
-//       submit &&
-//       !confirm(
-//         "Submit this audit? You will not be able to edit the completed report.",
-//       )
+//       Object.keys(newErrors)
+//         .length === 0
 //     ) {
-//       return;
+//       return true;
+//     }
+
+//     const firstMissingId =
+//       Object.keys(newErrors)[0];
+
+//     const firstField =
+//       document.querySelector(
+//         `[data-field-id="${firstMissingId}"]`,
+//       );
+
+//     firstField?.scrollIntoView({
+//       behavior: "smooth",
+//       block: "center",
+//     });
+
+//     return false;
+//   }
+
+//   // --------------------------------------------------
+//   // CAMERA FIELD
+//   // --------------------------------------------------
+
+//   function renderCameraField(
+//     field: Field,
+//   ) {
+//     const fieldData =
+//       getFieldData(field);
+
+//     const evidence =
+//       fieldData.evidence || [];
+
+//     const hasError =
+//       !!errors[field.id];
+
+//     return (
+//       <div
+//         className={
+//           hasError
+//             ? "space-y-3 rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+//             : "space-y-3"
+//         }
+//       >
+//         <Button
+//           type="button"
+//           variant="outline"
+//           onClick={() =>
+//             setCamera({
+//               mode:
+//                 field.type ===
+//                 "camera-video"
+//                   ? "video"
+//                   : "photo",
+//               field,
+//             })
+//           }
+//         >
+//           {field.type ===
+//           "camera-video" ? (
+//             <Video data-icon="inline-start" />
+//           ) : (
+//             <Camera data-icon="inline-start" />
+//           )}
+
+//           {field.type ===
+//           "camera-video"
+//             ? "Capture Video"
+//             : "Capture Photo"}
+//         </Button>
+
+//         {evidence.length > 0 && (
+//           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+//             {evidence.map(
+//               (
+//                 item,
+//                 index,
+//               ) => (
+//                 <div
+//                   key={`${item.url}-${index}`}
+//                   className="group relative overflow-hidden rounded-xl border bg-muted"
+//                 >
+//                   {item.type ===
+//                   "video" ? (
+//                     <video
+//                       src={item.url}
+//                       controls
+//                       playsInline
+//                       className="aspect-video w-full object-cover"
+//                     />
+//                   ) : (
+//                     <img
+//                       src={item.url}
+//                       alt={`Evidence ${
+//                         index + 1
+//                       }`}
+//                       className="aspect-video w-full object-cover"
+//                     />
+//                   )}
+
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setData(
+//                         (current) => ({
+//                           ...current,
+//                           [field.id]: {
+//                             ...current[
+//                               field.id
+//                             ],
+//                             evidence:
+//                               evidence.filter(
+//                                 (
+//                                   _,
+//                                   i,
+//                                 ) =>
+//                                   i !==
+//                                   index,
+//                               ),
+//                           },
+//                         }),
+//                       );
+//                     }}
+//                     className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
+//                     aria-label="Remove evidence"
+//                   >
+//                     <X className="size-4" />
+//                   </button>
+
+//                   <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
+//                     {item.type ===
+//                     "video"
+//                       ? "VIDEO"
+//                       : "PHOTO"}
+//                   </div>
+//                 </div>
+//               ),
+//             )}
+//           </div>
+//         )}
+
+//         <p className="text-xs text-muted-foreground">
+//           Add supporting photo or
+//           video evidence when
+//           available.
+//         </p>
+//       </div>
+//     );
+//   }
+
+//   // --------------------------------------------------
+//   // SIGNATURE FIELD
+//   // --------------------------------------------------
+
+//   function renderSignatureField(
+//     field: Field,
+//   ) {
+//     const fieldData =
+//       getFieldData(field);
+
+//     const signature =
+//       fieldData.signature;
+
+//     const hasError =
+//       !!errors[field.id];
+
+//     return (
+//       <div
+//         className={
+//           hasError
+//             ? "space-y-3 rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+//             : "space-y-3"
+//         }
+//       >
+//         {signature?.signature ? (
+//           <>
+//             <div className="overflow-hidden rounded-xl border bg-white">
+//               <img
+//                 src={
+//                   signature.signature
+//                 }
+//                 alt={field.label}
+//                 className="h-40 w-full object-contain"
+//               />
+//             </div>
+
+//             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+//               <p className="text-xs text-muted-foreground">
+//                 Signed on{" "}
+//                 {new Date(
+//                   signature.signedAt,
+//                 ).toLocaleString(
+//                   "en-IN",
+//                   {
+//                     timeZone:
+//                       "Asia/Kolkata",
+//                     dateStyle:
+//                       "medium",
+//                     timeStyle:
+//                       "short",
+//                   },
+//                 )}{" "}
+//                 IST
+//               </p>
+
+//               <Button
+//                 type="button"
+//                 variant="outline"
+//                 onClick={() =>
+//                   setSignatureField(
+//                     field,
+//                   )
+//                 }
+//               >
+//                 Re-sign
+//               </Button>
+//             </div>
+//           </>
+//         ) : (
+//           <Button
+//             type="button"
+//             variant="outline"
+//             className="h-24 w-full border-dashed"
+//             onClick={() =>
+//               setSignatureField(
+//                 field,
+//               )
+//             }
+//           >
+//             Sign on Touch Pad
+//           </Button>
+//         )}
+//       </div>
+//     );
+//   }
+
+//   // --------------------------------------------------
+//   // NORMAL FIELD CONTROL
+//   // --------------------------------------------------
+
+//   function fieldControl(
+//     field: Field,
+//   ) {
+//     const value =
+//       getValue(field);
+
+//     const hasError =
+//       !!errors[field.id];
+
+//     // --------------------------------------------
+//     // TEXTAREA
+//     // --------------------------------------------
+
+//     if (
+//       field.type ===
+//       "textarea"
+//     ) {
+//       return (
+//         <Textarea
+//           value={
+//             Array.isArray(value)
+//               ? value[0] || ""
+//               : value
+//           }
+//           onChange={(e) =>
+//             setValue(
+//               field,
+//               e.target.value,
+//             )
+//           }
+//           className={
+//             hasError
+//               ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
+//               : ""
+//           }
+//         />
+//       );
+//     }
+
+//     // --------------------------------------------
+//     // SINGLE CHOICE
+//     // --------------------------------------------
+
+//     if (
+//       field.type ===
+//       "single-choice"
+//     ) {
+//       return (
+//         <div
+//           className={
+//             hasError
+//               ? "rounded-lg border border-red-500 p-2 ring-1 ring-red-500"
+//               : ""
+//           }
+//         >
+//           <div className="flex flex-wrap gap-2">
+//             {(
+//               field.options || []
+//             ).map(
+//               (option) => (
+//                 <Button
+//                   key={option}
+//                   type="button"
+//                   variant={
+//                     value ===
+//                     option
+//                       ? "default"
+//                       : "outline"
+//                   }
+//                   onClick={() =>
+//                     setValue(
+//                       field,
+//                       option,
+//                     )
+//                   }
+//                 >
+//                   {option}
+//                 </Button>
+//               ),
+//             )}
+//           </div>
+//         </div>
+//       );
+//     }
+
+//     // --------------------------------------------
+//     // MULTIPLE CHOICE
+//     // --------------------------------------------
+
+//     if (
+//       field.type ===
+//       "multiple-choice"
+//     ) {
+//       const selected =
+//         Array.isArray(value)
+//           ? value
+//           : [];
+
+//       return (
+//         <div
+//           className={
+//             hasError
+//               ? "rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+//               : ""
+//           }
+//         >
+//           <div className="grid gap-2">
+//             {(
+//               field.options || []
+//             ).map(
+//               (option) => (
+//                 <label
+//                   key={option}
+//                   className="flex cursor-pointer items-center gap-2 text-sm"
+//                 >
+//                   <input
+//                     type="checkbox"
+//                     checked={selected.includes(
+//                       option,
+//                     )}
+//                     onChange={(
+//                       e,
+//                     ) => {
+//                       setValue(
+//                         field,
+//                         e.target.checked
+//                           ? [
+//                               ...selected,
+//                               option,
+//                             ]
+//                           : selected.filter(
+//                               (
+//                                 item,
+//                               ) =>
+//                                 item !==
+//                                 option,
+//                             ),
+//                       );
+//                     }}
+//                   />
+
+//                   {option}
+//                 </label>
+//               ),
+//             )}
+//           </div>
+//         </div>
+//       );
+//     }
+
+//     // --------------------------------------------
+//     // CAMERA
+//     // --------------------------------------------
+
+//     if (
+//       field.type ===
+//         "camera-photo" ||
+//       field.type ===
+//         "camera-video"
+//     ) {
+//       return renderCameraField(
+//         field,
+//       );
+//     }
+
+//     // --------------------------------------------
+//     // SIGNATURE
+//     // --------------------------------------------
+
+//     if (
+//       field.type ===
+//       "signature"
+//     ) {
+//       return renderSignatureField(
+//         field,
+//       );
+//     }
+
+//     // --------------------------------------------
+//     // NORMAL INPUT
+//     // --------------------------------------------
+
+//     return (
+//       <Input
+//         type={
+//           field.type ===
+//           "number"
+//             ? "number"
+//             : field.type
+//         }
+//         value={
+//           Array.isArray(value)
+//             ? value[0] || ""
+//             : value
+//         }
+//         onChange={(e) =>
+//           setValue(
+//             field,
+//             e.target.value,
+//           )
+//         }
+//         className={
+//           hasError
+//             ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
+//             : ""
+//         }
+//       />
+//     );
+//   }
+
+//   // --------------------------------------------------
+//   // MULTIPLE FIELD
+//   // --------------------------------------------------
+
+//   function renderMultipleField(
+//     field: Field,
+//   ) {
+//     const value =
+//       getValue(field);
+
+//     const values =
+//       Array.isArray(value)
+//         ? value
+//         : [""];
+
+//     return (
+//       <div
+//         className={
+//           errors[field.id]
+//             ? "rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+//             : "flex flex-col gap-2"
+//         }
+//       >
+//         {values.map(
+//           (
+//             item,
+//             index,
+//           ) => (
+//             <div
+//               key={index}
+//               className="flex gap-2"
+//             >
+//               <Textarea
+//                 value={item}
+//                 onChange={(e) => {
+//                   const updated = [
+//                     ...values,
+//                   ];
+
+//                   updated[index] =
+//                     e.target.value;
+
+//                   setValue(
+//                     field,
+//                     updated,
+//                   );
+//                 }}
+//               />
+
+//               {index > 0 && (
+//                 <Button
+//                   type="button"
+//                   variant="ghost"
+//                   onClick={() => {
+//                     setValue(
+//                       field,
+//                       values.filter(
+//                         (
+//                           _,
+//                           i,
+//                         ) =>
+//                           i !==
+//                           index,
+//                       ),
+//                     );
+//                   }}
+//                 >
+//                   <X />
+//                 </Button>
+//               )}
+//             </div>
+//           ),
+//         )}
+//       </div>
+//     );
+//   }
+
+//   // --------------------------------------------------
+//   // PREPARE DATA FOR DATABASE
+//   // --------------------------------------------------
+
+//   function buildAuditPayload() {
+//     if (!template) {
+//       throw new Error(
+//         "Audit template is not loaded.",
+//       );
+//     }
+
+//     const formData: Record<
+//       string,
+//       unknown
+//     > = {};
+
+//     const evidence: Record<
+//       string,
+//       EvidenceItem[]
+//     > = {};
+
+//     const signatures: Record<
+//       string,
+//       SignatureData
+//     > = {};
+
+//     Object.entries(data).forEach(
+//       ([fieldId, field]) => {
+//         // Normal field value
+//         if (
+//           field.value !==
+//           undefined
+//         ) {
+//           formData[fieldId] =
+//             field.value;
+//         }
+
+//         // Evidence
+//         if (
+//           field.evidence &&
+//           field.evidence.length >
+//             0
+//         ) {
+//           evidence[fieldId] =
+//             field.evidence;
+//         }
+
+//         // Signature
+//         if (
+//           field.signature
+//         ) {
+//           signatures[fieldId] =
+//             field.signature;
+//         }
+//       },
+//     );
+
+//     // These are currently outside
+//     // template.json, so preserve them
+//     // inside formData.
+//     formData.customer =
+//       customer;
+
+//     formData.location =
+//       location;
+
+//     formData.date =
+//       "10/05/2026";
+
+//     return {
+//       templateId: template.id,
+
+//       // IMPORTANT:
+//       // Save the exact latest template
+//       // that this employee used.
+//       templateSnapshot: template,
+
+//       formData,
+
+//       evidence,
+
+//       signatures,
+//     };
+//   }
+
+//   // --------------------------------------------------
+//   // SAVE / SUBMIT
+//   // --------------------------------------------------
+
+//   async function save(
+//     submit = false,
+//   ) {
+//     if (submit) {
+//       if (
+//         !validateRequiredFields()
+//       ) {
+//         return;
+//       }
+
+//       if (
+//         !confirm(
+//           "Submit this audit? You will not be able to edit the completed report.",
+//         )
+//       ) {
+//         return;
+//       }
 //     }
 
 //     let id = auditId;
 
-//     const audit = {
-//       customer,
-//       location,
-//       date: "10/05/2026",
-//       answers,
-//     };
-//     console.log("FINAL ANSWERS BEFORE SAVE:", JSON.stringify(answers, null, 2));
 //     try {
-//       // Create audit
+//       const audit =
+//         buildAuditPayload();
+
+//       console.log(
+//         "FINAL AUDIT DATA:",
+//         JSON.stringify(
+//           audit,
+//           null,
+//           2,
+//         ),
+//       );
+
+//       // --------------------------------------------
+//       // CREATE
+//       // --------------------------------------------
+
 //       if (!id) {
-//         const response = await fetch("/api/audits", {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//           },
-//           body: JSON.stringify(audit),
-//         });
+//         const response =
+//           await fetch(
+//             "/api/audits",
+//             {
+//               method: "POST",
+//               headers: {
+//                 "Content-Type":
+//                   "application/json",
+//               },
+//               body: JSON.stringify(
+//                 audit,
+//               ),
+//             },
+//           );
 
 //         if (!response.ok) {
-//           throw new Error("Failed to create audit");
+//           const error =
+//             await response.text();
+
+//           console.error(
+//             "Create audit failed:",
+//             error,
+//           );
+
+//           throw new Error(
+//             "Failed to create audit",
+//           );
 //         }
 
-//         const created = await response.json();
+//         const created =
+//           await response.json();
 
 //         id = created.id;
 
 //         setAuditId(id);
 //       }
 
-//       // Update existing audit
+//       // --------------------------------------------
+//       // UPDATE
+//       // --------------------------------------------
+
 //       else {
-//         const response = await fetch(`/api/audits/${id}`, {
-//           method: "PUT",
-//           headers: {
-//             "Content-Type": "application/json",
-//           },
-//           body: JSON.stringify(audit),
-//         });
+//         const response =
+//           await fetch(
+//             `/api/audits/${id}`,
+//             {
+//               method: "PUT",
+//               headers: {
+//                 "Content-Type":
+//                   "application/json",
+//               },
+//               body: JSON.stringify(
+//                 audit,
+//               ),
+//             },
+//           );
 
 //         if (!response.ok) {
-//           throw new Error("Failed to save audit");
+//           const error =
+//             await response.text();
+
+//           console.error(
+//             "Update audit failed:",
+//             error,
+//           );
+
+//           throw new Error(
+//             "Failed to save audit",
+//           );
 //         }
 //       }
 
-//       // Submit
+//       // --------------------------------------------
+//       // SUBMIT
+//       // --------------------------------------------
+
 //       if (submit) {
-//         const response = await fetch(`/api/audits/${id}/submit`, {
-//           method: "POST",
-//         });
+//         const response =
+//           await fetch(
+//             `/api/audits/${id}/submit`,
+//             {
+//               method: "POST",
+//             },
+//           );
 
 //         if (!response.ok) {
-//           throw new Error("Failed to submit audit");
+//           const error =
+//             await response.text();
+
+//           console.error(
+//             "Submit audit failed:",
+//             error,
+//           );
+
+//           throw new Error(
+//             "Failed to submit audit",
+//           );
 //         }
 
-//         router.push(`/employee/audits/${id}`);
+//         router.push(
+//           `/employee/audits/${id}`,
+//         );
 //       } else {
 //         alert("Draft saved.");
 //       }
 //     } catch (error) {
-//       console.error("SAVE AUDIT ERROR:", error);
+//       console.error(
+//         "SAVE AUDIT ERROR:",
+//         error,
+//       );
 
-//       alert(error instanceof Error ? error.message : "Failed to save audit.");
+//       alert(
+//         error instanceof Error
+//           ? error.message
+//           : "Failed to save audit.",
+//       );
 //     }
 //   }
 
 //   // --------------------------------------------------
-//   // Flatten questions for progress
-//   // --------------------------------------------------
-
-//   const questions = useMemo(
-//     () =>
-//       template?.sections.flatMap((section: any) =>
-//         section.questions.map((question: any) => ({
-//           ...question,
-//           section: section.title,
-//         })),
-//       ) || [],
-//     [template],
-//   );
-
-//   const answered = questions.filter((q: any) => answers[q.id]?.status).length;
-
-//   const progress = questions.length
-//     ? Math.round((answered / questions.length) * 100)
-//     : 0;
-
-//   // --------------------------------------------------
-//   // Loading
+//   // LOADING
 //   // --------------------------------------------------
 
 //   if (!template) {
 //     return (
-//       <main className="p-8 text-muted-foreground">Loading audit template…</main>
+//       <main className="p-8 text-muted-foreground">
+//         Loading audit template…
+//       </main>
 //     );
 //   }
 
@@ -181,408 +1158,342 @@
 //   return (
 //     <main className="mobile-safe-bottom mx-auto max-w-6xl px-5 py-8 sm:px-8">
 //       {/* BACK */}
-//       <Button variant="ghost" onClick={() => router.push("/employee")}>
+
+//       <Button
+//         variant="ghost"
+//         onClick={() =>
+//           router.push("/employee")
+//         }
+//       >
 //         <ArrowLeft data-icon="inline-start" />
 //         Back to Audits
 //       </Button>
 
-//       {/* ==================================================
-//           HEADER
-//       ================================================== */}
+//       {/* HEADER */}
 
 //       <Card className="teal-wash mt-5 overflow-hidden shadow-sm">
 //         <CardContent className="p-6 sm:p-8">
 //           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
 //             <div>
 //               <p className="text-sm font-semibold text-primary">
-//                 New Audit · 10/05/2026
+//                 New Audit
 //               </p>
 
 //               <h1 className="mt-2 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-//                 {template.title}
+//                 {template.title ||
+//                   template.name}
 //               </h1>
 
 //               <p className="mt-2 text-sm text-muted-foreground">
-//                 Safety inspection checklist
+//                 Complete the audit
+//                 checklist and attach
+//                 supporting evidence.
 //               </p>
 //             </div>
 
-//             <Badge variant="secondary" className="w-fit">
-//               Draft · 10 May 2026
+//             <Badge variant="secondary">
+//               Draft
 //             </Badge>
 //           </div>
 //         </CardContent>
 //       </Card>
 
-//       {/* ==================================================
-//           MAIN CONTENT
-//       ================================================== */}
+//       {/* AUDIT INFORMATION
 
-//       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
-//         <div className="flex flex-col gap-6">
-//           {/* ==================================================
-//               AUDIT INFORMATION
-//           ================================================== */}
+//       <Card className="mt-6 shadow-sm">
+//         <CardContent className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+//           <div>
+//             <label className="text-sm font-medium">
+//               Customer Name
+//             </label>
 
-//           <Card className="shadow-sm">
-//             <CardHeader>
-//               <CardTitle className="text-sm uppercase tracking-[0.18em] text-primary">
-//                 Audit Information
-//               </CardTitle>
-//             </CardHeader>
+//             <Input
+//               className="mt-2"
+//               placeholder="Enter customer name"
+//               value={customer}
+//               onChange={(e) => {
+//                 setCustomer(
+//                   e.target.value,
+//                 );
+//               }}
+//             />
+//           </div>
 
-//             <CardContent className="grid gap-4 sm:grid-cols-2">
-//               {/* CUSTOMER */}
-//               <label className="text-sm font-medium">
-//                 Customer Name
-//                 <Input
-//                   className="mt-2"
-//                   placeholder="Enter customer name"
-//                   value={customer}
-//                   onChange={(e) => setCustomer(e.target.value)}
-//                 />
-//               </label>
+//           <div>
+//             <label className="text-sm font-medium">
+//               Location
+//             </label>
 
-//               {/* LOCATION */}
-//               <label className="text-sm font-medium">
-//                 Location
-//                 <Input
-//                   className="mt-2"
-//                   placeholder="Enter location"
-//                   value={location}
-//                   onChange={(e) => setLocation(e.target.value)}
-//                 />
-//               </label>
+//             <Input
+//               className="mt-2"
+//               placeholder="Enter location"
+//               value={location}
+//               onChange={(e) => {
+//                 setLocation(
+//                   e.target.value,
+//                 );
+//               }}
+//             />
+//           </div>
 
-//               {/* DATE */}
-//               <label className="text-sm font-medium">
-//                 Audit Date
-//                 <Input className="mt-2" value="10/05/2026" readOnly />
-//               </label>
+//           <div>
+//             <label className="text-sm font-medium">
+//               Audit Date
+//             </label>
 
-//               {/* AUDITOR */}
-//               <label className="text-sm font-medium">
-//                 Auditor
-//                 <Input className="mt-2" value="S. Roy" readOnly />
-//               </label>
-//             </CardContent>
-//           </Card>
+//             <Input
+//               className="mt-2"
+//               value="10/05/2026"
+//               readOnly
+//             />
+//           </div>
 
-//           {/* ==================================================
-//               SECTIONS
-//           ================================================== */}
+//           <div>
+//             <label className="text-sm font-medium">
+//               Auditor
+//             </label>
 
-//           {template.sections.map((section: any) => (
-//             <section key={section.title}>
+//             <Input
+//               className="mt-2"
+//               value="S. Roy"
+//               readOnly
+//             />
+//           </div>
+//         </CardContent>
+//       </Card> */}
+
+//       {/* SECTIONS */}
+
+//       <div className="mt-6 flex flex-col gap-6">
+//         {template.sections.map(
+//           (section) => (
+//             <section
+//               key={section.id}
+//             >
 //               {/* SECTION HEADER */}
+
 //               <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-//                 <div className="flex items-center gap-3">
-//                   <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-//                     <Check className="size-5" />
-//                   </span>
+//                 <div>
+//                   <h2 className="font-semibold">
+//                     {section.name ||
+//                       section.title}
+//                   </h2>
 
-//                   <div>
-//                     <h2 className="font-semibold">{section.title}</h2>
-
-//                     <p className="text-xs text-muted-foreground">
-//                       Verify the condition of installed systems
-//                     </p>
-//                   </div>
+//                   <p className="text-xs text-muted-foreground">
+//                     Complete the
+//                     information below.
+//                   </p>
 //                 </div>
 
 //                 <Badge variant="secondary">
-//                   {section.questions.length} questions
+//                   {
+//                     section.fields
+//                       .length
+//                   }{" "}
+//                   fields
 //                 </Badge>
 //               </div>
 
-//               {/* QUESTIONS */}
-//               <div className="flex flex-col gap-4">
-//                 {section.questions.map((question: any, index: number) => {
-//                   const answer = answers[question.id] || {};
+//               {/* SECTION CONTENT */}
 
-//                   return (
-//                     <Card key={question.id} className="shadow-sm">
-//                       <CardContent className="p-5 sm:p-6">
-//                         <div className="flex gap-4">
-//                           {/* QUESTION NUMBER */}
-//                           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">
-//                             {String(index + 1).padStart(2, "0")}
-//                           </span>
+//               <Card className="shadow-sm">
+//                 <CardContent className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+//                   {section.fields.map(
+//                     (field) => {
+//                       const fullWidth =
+//                         field.type ===
+//                           "textarea" ||
+//                         field.type ===
+//                           "multiple-choice" ||
+//                         field.type ===
+//                           "single-choice" ||
+//                         field.type ===
+//                           "camera-photo" ||
+//                         field.type ===
+//                           "camera-video" ||
+//                         field.type ===
+//                           "signature" ||
+//                         field.multiple;
 
-//                           <div className="min-w-0 flex-1">
-//                             {/* QUESTION */}
-//                             <h3 className="font-bold tracking-tight">
-//                               {question.label}
-//                             </h3>
+//                       return (
+//                         <div
+//                           key={field.id}
+//                           data-field-id={
+//                             field.id
+//                           }
+//                           className={
+//                             fullWidth
+//                               ? "sm:col-span-2"
+//                               : ""
+//                           }
+//                         >
+//                           <label className="flex flex-col gap-2 text-sm font-medium">
+//                             <span>
+//                               {
+//                                 field.label
+//                               }
 
-//                             <h3 className="font-bold tracking-tight">
-//                               {question.text}
-//                             </h3>
-//                             <p className="mt-1 text-sm text-muted-foreground">
-//                               Select inspection status
-//                             </p>
-
-//                             {/* ==================================================
-//                                   STATUS
-//                               ================================================== */}
-
-//                             <div className="mt-4 grid grid-cols-3 gap-2">
-//                               {["PASS", "FAIL", "N/A"].map((status) => (
-//                                 <button
-//                                   key={status}
-//                                   type="button"
-//                                   onClick={() =>
-//                                     setAnswer(question.id, "status", status)
-//                                   }
-//                                   className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition ${
-//                                     answer.status === status
-//                                       ? status === "PASS"
-//                                         ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-//                                         : status === "FAIL"
-//                                           ? "border-red-300 bg-red-50 text-red-700"
-//                                           : "border-slate-300 bg-slate-100 text-slate-700"
-//                                       : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
-//                                   }`}
-//                                 >
-//                                   {answer.status === status && (
-//                                     <Check className="mr-1 inline size-4" />
-//                                   )}
-
-//                                   {status}
-//                                 </button>
-//                               ))}
-//                             </div>
-
-//                             {/* ==================================================
-//                                   REMARKS
-//                               ================================================== */}
-
-//                             <label className="mt-5 block text-sm font-medium">
-//                               Remarks
-//                               <Textarea
-//                                 className="mt-2 min-h-24 resize-y"
-//                                 placeholder="Add your observation or remarks..."
-//                                 value={answer.remarks || ""}
-//                                 onChange={(e) =>
-//                                   setAnswer(
-//                                     question.id,
-//                                     "remarks",
-//                                     e.target.value,
-//                                   )
-//                                 }
-//                               />
-//                             </label>
-
-//                             {/* ==================================================
-//                                   EVIDENCE
-//                               ================================================== */}
-
-//                             <div className="mt-5">
-//                               <p className="text-sm font-medium">Evidence</p>
-
-//                               {/* CAMERA BUTTONS */}
-//                               <div className="mt-2 flex flex-wrap gap-2">
-//                                 <Button
-//                                   type="button"
-//                                   variant="outline"
-//                                   size="sm"
-//                                   onClick={() => {
-//                                     setCameraQuestionId(question.id);
-//                                     setCameraMode("photo");
-//                                   }}
-//                                 >
-//                                   <Camera data-icon="inline-start" />
-//                                   Capture Photo
-//                                 </Button>
-
-//                                 <Button
-//                                   type="button"
-//                                   variant="outline"
-//                                   size="sm"
-//                                   onClick={() => {
-//                                     setCameraQuestionId(question.id);
-//                                     setCameraMode("video");
-//                                   }}
-//                                 >
-//                                   <Video data-icon="inline-start" />
-//                                   Record Video
-//                                 </Button>
-//                               </div>
-
-//                               {/* ==================================================
-//                                     EVIDENCE PREVIEWS
-//                                 ================================================== */}
-
-//                               {answer.evidence?.length > 0 && (
-//                                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-//                                   {answer.evidence.map(
-//                                     (item: any, evidenceIndex: number) => (
-//                                       <div
-//                                         key={`${item.url}-${evidenceIndex}`}
-//                                         className="group relative overflow-hidden rounded-xl border bg-muted"
-//                                       >
-//                                         {/* VIDEO */}
-//                                         {item.type === "video" ? (
-//                                           <video
-//                                             src={item.url}
-//                                             controls
-//                                             playsInline
-//                                             className="aspect-video w-full object-cover"
-//                                           />
-//                                         ) : (
-//                                           /* IMAGE */
-//                                           <img
-//                                             src={item.url}
-//                                             alt="Audit evidence"
-//                                             className="aspect-video w-full object-cover"
-//                                           />
-//                                         )}
-
-//                                         {/* DELETE BUTTON */}
-//                                         <button
-//                                           type="button"
-//                                           onClick={() => {
-//                                             setAnswers((current) => ({
-//                                               ...current,
-//                                               [question.id]: {
-//                                                 ...current[question.id],
-//                                                 evidence: (
-//                                                   current[question.id]
-//                                                     ?.evidence || []
-//                                                 ).filter(
-//                                                   (_: any, i: number) =>
-//                                                     i !== evidenceIndex,
-//                                                 ),
-//                                               },
-//                                             }));
-//                                           }}
-//                                           className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
-//                                           aria-label="Remove evidence"
-//                                         >
-//                                           <X className="size-4" />
-//                                         </button>
-
-//                                         {/* TYPE LABEL */}
-//                                         <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
-//                                           {item.type === "video"
-//                                             ? "VIDEO"
-//                                             : "PHOTO"}
-//                                         </div>
-//                                       </div>
-//                                     ),
-//                                   )}
-//                                 </div>
+//                               {field.required && (
+//                                 <span className="ml-1 text-red-500">
+//                                   *
+//                                 </span>
 //                               )}
+//                             </span>
 
-//                               <p className="mt-2 text-xs text-muted-foreground">
-//                                 Add supporting evidence when available.
-//                               </p>
-//                             </div>
-//                           </div>
+//                             {field.multiple ? (
+//                               renderMultipleField(
+//                                 field,
+//                               )
+//                             ) : (
+//                               fieldControl(
+//                                 field,
+//                               )
+//                             )}
+//                           </label>
+
+//                           {errors[
+//                             field.id
+//                           ] && (
+//                             <p className="mt-1 text-xs font-medium text-red-500">
+//                               This field
+//                               is
+//                               required.
+//                             </p>
+//                           )}
 //                         </div>
-//                       </CardContent>
-//                     </Card>
-//                   );
-//                 })}
-//               </div>
+//                       );
+//                     },
+//                   )}
+//                 </CardContent>
+//               </Card>
 //             </section>
-//           ))}
-//         </div>
-
-//         {/* ==================================================
-//             PROGRESS SIDEBAR
-//         ================================================== */}
-
-//         <aside className="lg:sticky lg:top-24 lg:self-start">
-//           <Card className="shadow-sm">
-//             <CardHeader>
-//               <CardTitle className="text-base">Audit progress</CardTitle>
-
-//               <p className="text-sm text-muted-foreground">
-//                 {answered} of {questions.length} questions answered
-//               </p>
-//             </CardHeader>
-
-//             <CardContent>
-//               <div className="h-2 overflow-hidden rounded-full bg-muted">
-//                 <div
-//                   className="h-full rounded-full bg-primary transition-all"
-//                   style={{
-//                     width: `${progress}%`,
-//                   }}
-//                 />
-//               </div>
-
-//               <p className="mt-3 text-2xl font-bold text-primary">
-//                 {progress}%
-//               </p>
-
-//               <div className="mt-5 flex flex-col gap-2 border-t pt-4">
-//                 <Button variant="outline" onClick={() => save(false)}>
-//                   <Save data-icon="inline-start" />
-//                   Save Draft
-//                 </Button>
-
-//                 <Button onClick={() => save(true)}>
-//                   <Send data-icon="inline-start" />
-//                   Submit Audit
-//                 </Button>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         </aside>
+//           ),
+//         )}
 //       </div>
 
-//       {/* ==================================================
-//           MOBILE ACTION BAR
-//       ================================================== */}
+//       {/* ACTIONS */}
 
-//       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur lg:hidden">
-//         <div className="mx-auto flex max-w-6xl gap-2">
-//           <Button
-//             variant="outline"
-//             className="flex-1"
-//             onClick={() => save(false)}
-//           >
-//             Save Draft
-//           </Button>
+//       <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+//         <Button
+//           variant="outline"
+//           onClick={() =>
+//             save(false)
+//           }
+//         >
+//           <Save data-icon="inline-start" />
+//           Save Draft
+//         </Button>
 
-//           <Button className="flex-1" onClick={() => save(true)}>
-//             Submit Audit
-//           </Button>
-//         </div>
+//         <Button
+//           onClick={() =>
+//             save(true)
+//           }
+//         >
+//           <Send data-icon="inline-start" />
+//           Submit Audit
+//         </Button>
 //       </div>
 
-//       {/* ==================================================
-//           CAMERA MODAL
-//       ================================================== */}
+//       {/* CAMERA */}
 
-//       {cameraMode && cameraQuestionId && (
+//       {camera && (
 //         <CameraCapture
-//           mode={cameraMode}
-//           reportId={auditId || "new-audit"}
-//           onUse={(item) => {
-//             console.log("Uploaded evidence:", item);
+//           mode={camera.mode}
+//           reportId={
+//             auditId ||
+//             "new-audit"
+//           }
+//           onCancel={() =>
+//             setCamera(null)
+//           }
+//           onUse={(
+//             item: EvidenceItem,
+//           ) => {
+//             const fieldId =
+//               camera.field.id;
 
-//             setAnswers((current) => ({
-//               ...current,
-//               [cameraQuestionId]: {
-//                 ...current[cameraQuestionId],
+//             setData(
+//               (current) => ({
+//                 ...current,
+//                 [fieldId]: {
+//                   ...current[fieldId],
+//                   evidence: [
+//                     ...(current[
+//                       fieldId
+//                     ]?.evidence ||
+//                       []),
+//                     item,
+//                   ],
+//                 },
+//               }),
+//             );
 
-//                 evidence: [
-//                   ...(current[cameraQuestionId]?.evidence || []),
-//                   item,
-//                 ],
+//             setErrors(
+//               (current) => {
+//                 const updated = {
+//                   ...current,
+//                 };
+
+//                 delete updated[
+//                   fieldId
+//                 ];
+
+//                 return updated;
 //               },
-//             }));
+//             );
 
-//             // Close camera
-//             setCameraMode(null);
-//             setCameraQuestionId(null);
+//             setCamera(null);
 //           }}
-//           onCancel={() => {
-//             setCameraMode(null);
-//             setCameraQuestionId(null);
+//         />
+//       )}
+
+//       {/* SIGNATURE */}
+
+//       {signatureField && (
+//         <SignaturePad
+//           field={signatureField}
+//           onCancel={() =>
+//             setSignatureField(
+//               null,
+//             )
+//           }
+//           onSave={(
+//             signature,
+//           ) => {
+//             setData(
+//               (current) => ({
+//                 ...current,
+//                 [signatureField.id]:
+//                   {
+//                     ...current[
+//                       signatureField.id
+//                     ],
+//                     signature: {
+//                       signature,
+//                       signedAt:
+//                         new Date().toISOString(),
+//                     },
+//                   },
+//               }),
+//             );
+
+//             setErrors(
+//               (current) => {
+//                 const updated = {
+//                   ...current,
+//                 };
+
+//                 delete updated[
+//                   signatureField.id
+//                 ];
+
+//                 return updated;
+//               },
+//             );
+
+//             setSignatureField(
+//               null,
+//             );
 //           }}
 //         />
 //       )}
@@ -590,14 +1501,326 @@
 //   );
 // }
 
+// // ==================================================
+// // SIGNATURE PAD
+// // ==================================================
+
+// function SignaturePad({
+//   field,
+//   onCancel,
+//   onSave,
+// }: {
+//   field: Field;
+//   onCancel: () => void;
+//   onSave: (
+//     signature: string,
+//   ) => void;
+// }) {
+//   const [canvas, setCanvas] =
+//     useState<HTMLCanvasElement | null>(
+//       null,
+//     );
+
+//   const [drawing, setDrawing] =
+//     useState(false);
+
+//   useEffect(() => {
+//     if (!canvas) {
+//       return;
+//     }
+
+//     const context =
+//       canvas.getContext("2d");
+
+//     if (!context) {
+//       return;
+//     }
+
+//     context.fillStyle =
+//       "#ffffff";
+
+//     context.fillRect(
+//       0,
+//       0,
+//       canvas.width,
+//       canvas.height,
+//     );
+
+//     context.lineWidth = 2;
+//     context.lineCap = "round";
+//     context.lineJoin = "round";
+//     context.strokeStyle =
+//       "#000000";
+//   }, [canvas]);
+
+//   function getPosition(
+//     event:
+//       | React.MouseEvent<HTMLCanvasElement>
+//       | React.TouchEvent<HTMLCanvasElement>,
+//   ) {
+//     if (!canvas) {
+//       return {
+//         x: 0,
+//         y: 0,
+//       };
+//     }
+
+//     const rect =
+//       canvas.getBoundingClientRect();
+
+//     if ("touches" in event) {
+//       const touch =
+//         event.touches[0];
+
+//       if (!touch) {
+//         return {
+//           x: 0,
+//           y: 0,
+//         };
+//       }
+
+//       return {
+//         x:
+//           ((touch.clientX -
+//             rect.left) /
+//             rect.width) *
+//           canvas.width,
+
+//         y:
+//           ((touch.clientY -
+//             rect.top) /
+//             rect.height) *
+//           canvas.height,
+//       };
+//     }
+
+//     return {
+//       x:
+//         ((event.clientX -
+//           rect.left) /
+//           rect.width) *
+//         canvas.width,
+
+//       y:
+//         ((event.clientY -
+//           rect.top) /
+//           rect.height) *
+//         canvas.height,
+//     };
+//   }
+
+//   function startDrawing(
+//     event:
+//       | React.MouseEvent<HTMLCanvasElement>
+//       | React.TouchEvent<HTMLCanvasElement>,
+//   ) {
+//     event.preventDefault();
+
+//     if (!canvas) {
+//       return;
+//     }
+
+//     const context =
+//       canvas.getContext("2d");
+
+//     if (!context) {
+//       return;
+//     }
+
+//     const position =
+//       getPosition(event);
+
+//     context.beginPath();
+
+//     context.moveTo(
+//       position.x,
+//       position.y,
+//     );
+
+//     setDrawing(true);
+//   }
+
+//   function draw(
+//     event:
+//       | React.MouseEvent<HTMLCanvasElement>
+//       | React.TouchEvent<HTMLCanvasElement>,
+//   ) {
+//     event.preventDefault();
+
+//     if (
+//       !drawing ||
+//       !canvas
+//     ) {
+//       return;
+//     }
+
+//     const context =
+//       canvas.getContext("2d");
+
+//     if (!context) {
+//       return;
+//     }
+
+//     const position =
+//       getPosition(event);
+
+//     context.lineTo(
+//       position.x,
+//       position.y,
+//     );
+
+//     context.stroke();
+//   }
+
+//   function stopDrawing() {
+//     setDrawing(false);
+//   }
+
+//   function clearSignature() {
+//     if (!canvas) {
+//       return;
+//     }
+
+//     const context =
+//       canvas.getContext("2d");
+
+//     if (!context) {
+//       return;
+//     }
+
+//     context.fillStyle =
+//       "#ffffff";
+
+//     context.fillRect(
+//       0,
+//       0,
+//       canvas.width,
+//       canvas.height,
+//     );
+
+//     context.strokeStyle =
+//       "#000000";
+//   }
+
+//   function saveSignature() {
+//     if (!canvas) {
+//       return;
+//     }
+
+//     const signature =
+//       canvas.toDataURL(
+//         "image/png",
+//       );
+
+//     onSave(signature);
+//   }
+
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+//       <div className="w-full max-w-2xl rounded-2xl bg-background p-5 shadow-2xl">
+//         {/* HEADER */}
+
+//         <div className="mb-4 flex items-center justify-between">
+//           <div>
+//             <h2 className="text-lg font-semibold">
+//               {field.label}
+//             </h2>
+
+//             <p className="text-sm text-muted-foreground">
+//               Sign using touch,
+//               mouse, or trackpad.
+//             </p>
+//           </div>
+
+//           <Button
+//             type="button"
+//             variant="ghost"
+//             size="icon"
+//             onClick={
+//               onCancel
+//             }
+//           >
+//             <X />
+//           </Button>
+//         </div>
+
+//         {/* CANVAS */}
+
+//         <div className="overflow-hidden rounded-xl border bg-white">
+//           <canvas
+//             ref={setCanvas}
+//             width={1000}
+//             height={400}
+//             className="h-64 w-full touch-none cursor-crosshair"
+//             onMouseDown={
+//               startDrawing
+//             }
+//             onMouseMove={draw}
+//             onMouseUp={
+//               stopDrawing
+//             }
+//             onMouseLeave={
+//               stopDrawing
+//             }
+//             onTouchStart={
+//               startDrawing
+//             }
+//             onTouchMove={draw}
+//             onTouchEnd={
+//               stopDrawing
+//             }
+//           />
+//         </div>
+
+//         {/* ACTIONS */}
+
+//         <div className="mt-4 flex justify-between gap-3">
+//           <Button
+//             type="button"
+//             variant="outline"
+//             onClick={
+//               clearSignature
+//             }
+//           >
+//             Clear
+//           </Button>
+
+//           <div className="flex gap-2">
+//             <Button
+//               type="button"
+//               variant="ghost"
+//               onClick={
+//                 onCancel
+//               }
+//             >
+//               Cancel
+//             </Button>
+
+//             <Button
+//               type="button"
+//               onClick={
+//                 saveSignature
+//               }
+//             >
+//               <Check data-icon="inline-start" />
+//               Save Signature
+//             </Button>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Building2,
   Camera,
   Check,
+  ChevronDown,
   Save,
   Send,
   Video,
@@ -607,14 +1830,49 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CameraCapture } from "@/components/camera-capture";
+
+// --------------------------------------------------
+// TYPES
+// --------------------------------------------------
+
+type FieldType =
+  | "text"
+  | "textarea"
+  | "date"
+  | "time"
+  | "single-choice"
+  | "multiple-choice"
+  | "camera-photo"
+  | "camera-video"
+  | "number"
+  | "signature";
+
+type Field = {
+  id: string;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  options?: string[];
+  multiple?: boolean;
+};
+
+type Section = {
+  id: string;
+  name: string;
+  title?: string;
+  fields: Field[];
+};
+
+type Template = {
+  id: string;
+  type: string;
+  name: string;
+  title: string;
+  sections: Section[];
+};
 
 type EvidenceItem = {
   reportId?: string;
@@ -624,142 +1882,820 @@ type EvidenceItem = {
   capturedAt?: string;
 };
 
-type Answer = {
+type SignatureData = {
+  signature: string;
+  signedAt: string;
+};
+
+type FieldValue = {
   value?: string | string[];
-  remarks?: string;
   evidence?: EvidenceItem[];
+  signature?: SignatureData;
 };
 
-type Field = {
+type FormData = Record<string, FieldValue>;
+
+// --------------------------------------------------
+// CUSTOMER TYPE
+// --------------------------------------------------
+
+type Customer = {
   id: string;
-  label: string;
-  type:
-    | "text"
-    | "textarea"
-    | "date"
-    | "time"
-    | "single-choice"
-    | "multiple-choice"
-    | "camera-photo"
-    | "camera-video"
-    | "number";
-  required?: boolean;
-  options?: string[];
-  multiple?: boolean;
-};
-
-type Section = {
-  id?: string;
   name: string;
-  title?: string;
-  fields: Field[];
+  address: string;
+  gstNo: string | null;
+  contactNumber: string;
 };
 
-type AuditTemplate = {
-  id: string;
-  type?: string;
-  name?: string;
-  title: string;
-  sections: Section[];
-};
+// --------------------------------------------------
+// AUDIT FORM
+// --------------------------------------------------
 
 export default function AuditForm() {
   const router = useRouter();
 
-  const [template, setTemplate] = useState<AuditTemplate | null>(null);
-  const [customer, setCustomer] = useState("");
-  const [location, setLocation] = useState("");
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [template, setTemplate] = useState<Template | null>(null);
+
   const [auditId, setAuditId] = useState("");
 
-  const [cameraMode, setCameraMode] = useState<
-    "photo" | "video" | null
-  >(null);
+  const [data, setData] = useState<FormData>({});
 
-  const [cameraFieldId, setCameraFieldId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
+  const [customer, setCustomer] = useState("");
+
+  const [location, setLocation] = useState("");
 
   // --------------------------------------------------
-  // Load template
+  // CUSTOMER STATE
+  // --------------------------------------------------
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
+
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
+
+  const [customersLoading, setCustomersLoading] = useState(true);
+
+  const [customerLoadError, setCustomerLoadError] = useState(false);
+
+  // --------------------------------------------------
+
+  const [camera, setCamera] = useState<{
+    mode: "photo" | "video";
+    field: Field;
+  } | null>(null);
+
+  const [signatureField, setSignatureField] = useState<Field | null>(null);
+
+  // --------------------------------------------------
+  // LOAD LATEST TEMPLATE
   // --------------------------------------------------
 
   useEffect(() => {
-    fetch("/api/templates")
-      .then((r) => r.json())
-      .then((d) => setTemplate(d[0]))
-      .catch((err) => {
-        console.error("Failed to load template:", err);
-      });
+    async function loadTemplate() {
+      try {
+        const response = await fetch("/api/templates");
+
+        if (!response.ok) {
+          throw new Error("Failed to load audit template");
+        }
+
+        const templates: Template[] = await response.json();
+
+        const auditTemplate = templates.find((item) => item.type === "AUDIT");
+
+        if (!auditTemplate) {
+          throw new Error("Audit template not found");
+        }
+
+        // This is the latest template
+        // from template.json.
+        setTemplate(auditTemplate);
+
+        // Create initial values
+        // from the latest template.
+        const initialData: FormData = {};
+
+        auditTemplate.sections.forEach((section) => {
+          section.fields.forEach((field) => {
+            if (field.type === "multiple-choice") {
+              initialData[field.id] = {
+                value: [],
+              };
+            } else if (field.multiple) {
+              initialData[field.id] = {
+                value: [""],
+              };
+            } else {
+              initialData[field.id] = {
+                value: "",
+              };
+            }
+          });
+        });
+
+        setData(initialData);
+      } catch (error) {
+        console.error("Failed to load audit template:", error);
+      }
+    }
+
+    loadTemplate();
   }, []);
 
   // --------------------------------------------------
-  // Update answer
+  // LOAD CUSTOMERS
   // --------------------------------------------------
 
-  function setAnswer(
-    id: string,
-    key: keyof Answer,
-    value: string | string[],
-  ) {
-    setAnswers((current) => ({
-      ...current,
-      [id]: {
-        ...current[id],
-        [key]: value,
-      },
-    }));
+  useEffect(() => {
+    async function loadCustomers() {
+      try {
+        setCustomersLoading(true);
+        setCustomerLoadError(false);
+
+        const response = await fetch("/employee/customers", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const text = await response.text();
+
+        let result: Customer[] = [];
+
+        try {
+          result = text ? JSON.parse(text) : [];
+        } catch {
+          throw new Error("Invalid customer response");
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            result instanceof Array
+              ? "Failed to load customers"
+              : "Failed to load customers",
+          );
+        }
+
+        setCustomers(result);
+      } catch (error) {
+        console.error("Load customers error:", error);
+
+        setCustomerLoadError(true);
+      } finally {
+        setCustomersLoading(false);
+      }
+    }
+
+    loadCustomers();
+  }, []);
+
+  // --------------------------------------------------
+  // CUSTOMER SELECTION
+  // --------------------------------------------------
+
+  function handleCustomerChange(customerId: string) {
+    setSelectedCustomerId(customerId);
+
+    const selected = customers.find((item) => item.id === customerId) || null;
+
+    setSelectedCustomer(selected);
+
+    // Preserve existing customer variable
+    // functionality.
+    setCustomer(selected?.name || "");
+
+    // Preserve existing location variable
+    // functionality.
+    setLocation(selected?.address || "");
+
+    setErrors((current) => {
+      if (!current.customer) {
+        return current;
+      }
+
+      const updated = {
+        ...current,
+      };
+
+      delete updated.customer;
+
+      return updated;
+    });
   }
 
   // --------------------------------------------------
-  // Save / Submit audit
+  // GET FIELD DATA
+  // --------------------------------------------------
+
+  function getFieldData(field: Field): FieldValue {
+    return data[field.id] || {};
+  }
+
+  function getValue(field: Field) {
+    const fieldData = getFieldData(field);
+
+    if (field.type === "multiple-choice") {
+      return Array.isArray(fieldData.value) ? fieldData.value : [];
+    }
+
+    if (field.multiple) {
+      return Array.isArray(fieldData.value) ? fieldData.value : [""];
+    }
+
+    return typeof fieldData.value === "string" ? fieldData.value : "";
+  }
+
+  // --------------------------------------------------
+  // UPDATE FIELD VALUE
+  // --------------------------------------------------
+
+  function setValue(field: Field, value: string | string[]) {
+    setData((current) => ({
+      ...current,
+      [field.id]: {
+        ...current[field.id],
+        value,
+      },
+    }));
+
+    setErrors((current) => {
+      if (!current[field.id]) {
+        return current;
+      }
+
+      const updated = {
+        ...current,
+      };
+
+      delete updated[field.id];
+
+      return updated;
+    });
+  }
+
+  // --------------------------------------------------
+  // VALIDATE REQUIRED FIELDS
+  // --------------------------------------------------
+
+  function validateRequiredFields() {
+    if (!template) {
+      return false;
+    }
+
+    const newErrors: Record<string, boolean> = {};
+
+    // CUSTOMER IS REQUIRED
+    if (!selectedCustomerId) {
+      newErrors.customer = true;
+    }
+
+    for (const section of template.sections) {
+      for (const field of section.fields) {
+        if (!field.required) {
+          continue;
+        }
+
+        const fieldData = getFieldData(field);
+
+        // --------------------------------------------
+        // SIGNATURE
+        // --------------------------------------------
+
+        if (field.type === "signature") {
+          if (!fieldData.signature?.signature) {
+            newErrors[field.id] = true;
+          }
+
+          continue;
+        }
+
+        // --------------------------------------------
+        // CAMERA
+        // --------------------------------------------
+
+        if (field.type === "camera-photo" || field.type === "camera-video") {
+          if (!fieldData.evidence || fieldData.evidence.length === 0) {
+            newErrors[field.id] = true;
+          }
+
+          continue;
+        }
+
+        // --------------------------------------------
+        // NORMAL VALUE
+        // --------------------------------------------
+
+        const value = getValue(field);
+
+        if (Array.isArray(value)) {
+          const empty =
+            value.length === 0 ||
+            value.every((item) => !String(item ?? "").trim());
+
+          if (empty) {
+            newErrors[field.id] = true;
+          }
+        } else if (!String(value ?? "").trim()) {
+          newErrors[field.id] = true;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      return true;
+    }
+
+    // CUSTOMER ERROR FIRST
+    if (newErrors.customer) {
+      const customerElement = document.getElementById("customer-selector");
+
+      customerElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      return false;
+    }
+
+    const firstMissingId = Object.keys(newErrors)[0];
+
+    const firstField = document.querySelector(
+      `[data-field-id="${firstMissingId}"]`,
+    );
+
+    firstField?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    return false;
+  }
+
+  // --------------------------------------------------
+  // CAMERA FIELD
+  // --------------------------------------------------
+
+  function renderCameraField(field: Field) {
+    const fieldData = getFieldData(field);
+
+    const evidence = fieldData.evidence || [];
+
+    const hasError = !!errors[field.id];
+
+    return (
+      <div
+        className={
+          hasError
+            ? "space-y-3 rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+            : "space-y-3"
+        }
+      >
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            setCamera({
+              mode: field.type === "camera-video" ? "video" : "photo",
+              field,
+            })
+          }
+        >
+          {field.type === "camera-video" ? (
+            <Video data-icon="inline-start" />
+          ) : (
+            <Camera data-icon="inline-start" />
+          )}
+
+          {field.type === "camera-video" ? "Capture Video" : "Capture Photo"}
+        </Button>
+
+        {evidence.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {evidence.map((item, index) => (
+              <div
+                key={`${item.url}-${index}`}
+                className="group relative overflow-hidden rounded-xl border bg-muted"
+              >
+                {item.type === "video" ? (
+                  <video
+                    src={item.url}
+                    controls
+                    playsInline
+                    className="aspect-video w-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={item.url}
+                    alt={`Evidence ${index + 1}`}
+                    className="aspect-video w-full object-cover"
+                  />
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setData((current) => ({
+                      ...current,
+                      [field.id]: {
+                        ...current[field.id],
+                        evidence: evidence.filter((_, i) => i !== index),
+                      },
+                    }));
+                  }}
+                  className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
+                  aria-label="Remove evidence"
+                >
+                  <X className="size-4" />
+                </button>
+
+                <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
+                  {item.type === "video" ? "VIDEO" : "PHOTO"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Add supporting photo or video evidence when available.
+        </p>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // SIGNATURE FIELD
+  // --------------------------------------------------
+
+  function renderSignatureField(field: Field) {
+    const fieldData = getFieldData(field);
+
+    const signature = fieldData.signature;
+
+    const hasError = !!errors[field.id];
+
+    return (
+      <div
+        className={
+          hasError
+            ? "space-y-3 rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+            : "space-y-3"
+        }
+      >
+        {signature?.signature ? (
+          <>
+            <div className="overflow-hidden rounded-xl border bg-white">
+              <img
+                src={signature.signature}
+                alt={field.label}
+                className="h-40 w-full object-contain"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Signed on{" "}
+                {new Date(signature.signedAt).toLocaleString("en-IN", {
+                  timeZone: "Asia/Kolkata",
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}{" "}
+                IST
+              </p>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSignatureField(field)}
+              >
+                Re-sign
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-24 w-full border-dashed"
+            onClick={() => setSignatureField(field)}
+          >
+            Sign on Touch Pad
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // NORMAL FIELD CONTROL
+  // --------------------------------------------------
+
+  function fieldControl(field: Field) {
+    const value = getValue(field);
+
+    const hasError = !!errors[field.id];
+
+    // --------------------------------------------
+    // TEXTAREA
+    // --------------------------------------------
+
+    if (field.type === "textarea") {
+      return (
+        <Textarea
+          value={Array.isArray(value) ? value[0] || "" : value}
+          onChange={(e) => setValue(field, e.target.value)}
+          className={
+            hasError
+              ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
+              : ""
+          }
+        />
+      );
+    }
+
+    // --------------------------------------------
+    // SINGLE CHOICE
+    // --------------------------------------------
+
+    if (field.type === "single-choice") {
+      return (
+        <div
+          className={
+            hasError
+              ? "rounded-lg border border-red-500 p-2 ring-1 ring-red-500"
+              : ""
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            {(field.options || []).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                variant={value === option ? "default" : "outline"}
+                onClick={() => setValue(field, option)}
+              >
+                {option}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --------------------------------------------
+    // MULTIPLE CHOICE
+    // --------------------------------------------
+
+    if (field.type === "multiple-choice") {
+      const selected = Array.isArray(value) ? value : [];
+
+      return (
+        <div
+          className={
+            hasError
+              ? "rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+              : ""
+          }
+        >
+          <div className="grid gap-2">
+            {(field.options || []).map((option) => (
+              <label
+                key={option}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option)}
+                  onChange={(e) => {
+                    setValue(
+                      field,
+                      e.target.checked
+                        ? [...selected, option]
+                        : selected.filter((item) => item !== option),
+                    );
+                  }}
+                />
+
+                {option}
+              </label>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --------------------------------------------
+    // CAMERA
+    // --------------------------------------------
+
+    if (field.type === "camera-photo" || field.type === "camera-video") {
+      return renderCameraField(field);
+    }
+
+    // --------------------------------------------
+    // SIGNATURE
+    // --------------------------------------------
+
+    if (field.type === "signature") {
+      return renderSignatureField(field);
+    }
+
+    // --------------------------------------------
+    // NORMAL INPUT
+    // --------------------------------------------
+
+    return (
+      <Input
+        type={field.type === "number" ? "number" : field.type}
+        value={Array.isArray(value) ? value[0] || "" : value}
+        onChange={(e) => setValue(field, e.target.value)}
+        className={
+          hasError
+            ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
+            : ""
+        }
+      />
+    );
+  }
+
+  // --------------------------------------------------
+  // MULTIPLE FIELD
+  // --------------------------------------------------
+
+  function renderMultipleField(field: Field) {
+    const value = getValue(field);
+
+    const values = Array.isArray(value) ? value : [""];
+
+    return (
+      <div
+        className={
+          errors[field.id]
+            ? "rounded-lg border border-red-500 p-3 ring-1 ring-red-500"
+            : "flex flex-col gap-2"
+        }
+      >
+        {values.map((item, index) => (
+          <div key={index} className="flex gap-2">
+            <Textarea
+              value={item}
+              onChange={(e) => {
+                const updated = [...values];
+
+                updated[index] = e.target.value;
+
+                setValue(field, updated);
+              }}
+            />
+
+            {index > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setValue(
+                    field,
+                    values.filter((_, i) => i !== index),
+                  );
+                }}
+              >
+                <X />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // PREPARE DATA FOR DATABASE
+  // --------------------------------------------------
+
+  function buildAuditPayload() {
+    if (!template) {
+      throw new Error("Audit template is not loaded.");
+    }
+
+    // CUSTOMER MUST BE SELECTED
+    if (!selectedCustomer) {
+      throw new Error("Please select a customer before saving the audit.");
+    }
+
+    const formData: Record<string, unknown> = {};
+
+    const evidence: Record<string, EvidenceItem[]> = {};
+
+    const signatures: Record<string, SignatureData> = {};
+
+    Object.entries(data).forEach(([fieldId, field]) => {
+      // Normal field value
+      if (field.value !== undefined) {
+        formData[fieldId] = field.value;
+      }
+
+      // Evidence
+      if (field.evidence && field.evidence.length > 0) {
+        evidence[fieldId] = field.evidence;
+      }
+
+      // Signature
+      if (field.signature) {
+        signatures[fieldId] = field.signature;
+      }
+    });
+
+    // --------------------------------------------------
+    // CUSTOMER INFORMATION
+    // --------------------------------------------------
+
+    // formData.customerId = selectedCustomer.id;
+
+    // formData.customer = selectedCustomer.name;
+
+    // formData.customerAddress = selectedCustomer.address;
+
+    // formData.customerGstNo = selectedCustomer.gstNo;
+
+    formData.customerContactNumber = selectedCustomer.contactNumber;
+
+    // Preserve existing location
+    formData.location = selectedCustomer.address;
+
+    // Preserve existing date
+    formData.date = "10/05/2026";
+
+    return {
+      templateId: template.id,
+
+      // IMPORTANT:
+      // Save the exact latest template
+      // that this employee used.
+      customerId: selectedCustomer.id,
+      customerName: selectedCustomer.name,
+      customerAddress: selectedCustomer.address,
+      templateSnapshot: template,
+
+      formData,
+
+      evidence,
+
+      signatures,
+    };
+  }
+
+  // --------------------------------------------------
+  // SAVE / SUBMIT
   // --------------------------------------------------
 
   async function save(submit = false) {
-    const fields =
-      template?.sections.flatMap((section) => section.fields) || [];
+    // CUSTOMER REQUIRED BEFORE ANY SAVE
+    if (!selectedCustomerId) {
+      setErrors((current) => ({
+        ...current,
+        customer: true,
+      }));
 
-    const answerFields = fields.filter(
-      (field) =>
-        field.type !== "camera-photo" &&
-        field.type !== "camera-video",
-    );
+      document.getElementById("customer-selector")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
 
-    if (
-      submit &&
-      answerFields.some(
-        (field) =>
-          field.required &&
-          !answers[field.id]?.value,
-      )
-    ) {
-      alert("Please complete all required fields.");
       return;
     }
 
-    if (
-      submit &&
-      !confirm(
-        "Submit this audit? You will not be able to edit the completed report.",
-      )
-    ) {
-      return;
+    if (submit) {
+      if (!validateRequiredFields()) {
+        return;
+      }
+
+      if (
+        !confirm(
+          "Submit this audit? You will not be able to edit the completed report.",
+        )
+      ) {
+        return;
+      }
     }
 
     let id = auditId;
 
-    const audit = {
-      customer,
-      location,
-      date: "10/05/2026",
-      answers,
-    };
-
-    console.log(
-      "FINAL ANSWERS BEFORE SAVE:",
-      JSON.stringify(answers, null, 2),
-    );
-
     try {
-      // Create audit
+      const audit = buildAuditPayload();
+
+      // console.log("FINAL AUDIT DATA:", JSON.stringify(audit, null, 2));
+
+      // --------------------------------------------
+      // CREATE
+      // --------------------------------------------
+
       if (!id) {
         const response = await fetch("/api/audits", {
           method: "POST",
@@ -770,6 +2706,10 @@ export default function AuditForm() {
         });
 
         if (!response.ok) {
+          const error = await response.text();
+
+          console.error("Create audit failed:", error);
+
           throw new Error("Failed to create audit");
         }
 
@@ -780,7 +2720,9 @@ export default function AuditForm() {
         setAuditId(id);
       }
 
-      // Update existing audit
+      // --------------------------------------------
+      // UPDATE
+      // --------------------------------------------
       else {
         const response = await fetch(`/api/audits/${id}`, {
           method: "PUT",
@@ -791,17 +2733,28 @@ export default function AuditForm() {
         });
 
         if (!response.ok) {
+          const error = await response.text();
+
+          console.error("Update audit failed:", error);
+
           throw new Error("Failed to save audit");
         }
       }
 
-      // Submit
+      // --------------------------------------------
+      // SUBMIT
+      // --------------------------------------------
+
       if (submit) {
         const response = await fetch(`/api/audits/${id}/submit`, {
           method: "POST",
         });
 
         if (!response.ok) {
+          const error = await response.text();
+
+          console.error("Submit audit failed:", error);
+
           throw new Error("Failed to submit audit");
         }
 
@@ -812,511 +2765,17 @@ export default function AuditForm() {
     } catch (error) {
       console.error("SAVE AUDIT ERROR:", error);
 
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to save audit.",
-      );
+      alert(error instanceof Error ? error.message : "Failed to save audit.");
     }
   }
 
   // --------------------------------------------------
-  // Flatten fields for progress
-  // --------------------------------------------------
-
-  const fields = useMemo(
-    () =>
-      template?.sections.flatMap((section) =>
-        section.fields.map((field) => ({
-          ...field,
-          section: section.name,
-        })),
-      ) || [],
-    [template],
-  );
-
-  // Camera fields are not counted as questions
-  const answerFields = fields.filter(
-    (field) =>
-      field.type !== "camera-photo" &&
-      field.type !== "camera-video",
-  );
-
-  const answered = answerFields.filter((field) => {
-    const value = answers[field.id]?.value;
-
-    if (Array.isArray(value)) {
-      return value.length > 0;
-    }
-
-    return Boolean(value);
-  }).length;
-
-  const progress = answerFields.length
-    ? Math.round((answered / answerFields.length) * 100)
-    : 0;
-
-  // --------------------------------------------------
-  // Loading
+  // LOADING
   // --------------------------------------------------
 
   if (!template) {
     return (
-      <main className="p-8 text-muted-foreground">
-        Loading audit template…
-      </main>
-    );
-  }
-
-  // --------------------------------------------------
-  // Render field
-  // --------------------------------------------------
-
-  function renderField(field: Field, index: number) {
-    const answer = answers[field.id] || {};
-    const value = answer.value;
-
-    // ------------------------------------------------
-    // CAMERA PHOTO
-    // ------------------------------------------------
-
-    if (field.type === "camera-photo") {
-      return (
-        <Card key={field.id} className="shadow-sm">
-          <CardContent className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold tracking-tight">
-                  {field.label}
-                </h3>
-
-                {field.required && (
-                  <span className="ml-1 text-red-500">*</span>
-                )}
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Capture supporting photo evidence.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setCameraFieldId(field.id);
-                  setCameraMode("photo");
-                }}
-              >
-                <Camera data-icon="inline-start" />
-                Capture Photo
-              </Button>
-            </div>
-
-            {answer.evidence?.length ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {answer.evidence.map(
-                  (item, evidenceIndex) => (
-                    <div
-                      key={`${item.url}-${evidenceIndex}`}
-                      className="group relative overflow-hidden rounded-xl border bg-muted"
-                    >
-                      <img
-                        src={item.url}
-                        alt="Audit evidence"
-                        className="aspect-video w-full object-cover"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAnswers((current) => ({
-                            ...current,
-                            [field.id]: {
-                              ...current[field.id],
-                              evidence: (
-                                current[field.id]?.evidence || []
-                              ).filter(
-                                (_, i) =>
-                                  i !== evidenceIndex,
-                              ),
-                            },
-                          }));
-                        }}
-                        className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
-                        aria-label="Remove evidence"
-                      >
-                        <X className="size-4" />
-                      </button>
-
-                      <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
-                        PHOTO
-                      </div>
-                    </div>
-                  ),
-                )}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // ------------------------------------------------
-    // CAMERA VIDEO
-    // ------------------------------------------------
-
-    if (field.type === "camera-video") {
-      return (
-        <Card key={field.id} className="shadow-sm">
-          <CardContent className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold tracking-tight">
-                  {field.label}
-                </h3>
-
-                {field.required && (
-                  <span className="ml-1 text-red-500">*</span>
-                )}
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Record supporting video evidence.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setCameraFieldId(field.id);
-                  setCameraMode("video");
-                }}
-              >
-                <Video data-icon="inline-start" />
-                Record Video
-              </Button>
-            </div>
-
-            {answer.evidence?.length ? (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {answer.evidence.map(
-                  (item, evidenceIndex) => (
-                    <div
-                      key={`${item.url}-${evidenceIndex}`}
-                      className="group relative overflow-hidden rounded-xl border bg-muted"
-                    >
-                      <video
-                        src={item.url}
-                        controls
-                        playsInline
-                        className="aspect-video w-full object-cover"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAnswers((current) => ({
-                            ...current,
-                            [field.id]: {
-                              ...current[field.id],
-                              evidence: (
-                                current[field.id]?.evidence || []
-                              ).filter(
-                                (_, i) =>
-                                  i !== evidenceIndex,
-                              ),
-                            },
-                          }));
-                        }}
-                        className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
-                        aria-label="Remove evidence"
-                      >
-                        <X className="size-4" />
-                      </button>
-
-                      <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
-                        VIDEO
-                      </div>
-                    </div>
-                  ),
-                )}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // ------------------------------------------------
-    // NORMAL FIELD
-    // ------------------------------------------------
-
-    return (
-      <Card key={field.id} className="shadow-sm">
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex gap-4">
-            {/* FIELD NUMBER */}
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-
-            <div className="min-w-0 flex-1">
-              {/* LABEL */}
-              <h3 className="font-bold tracking-tight">
-                {field.label}
-
-                {field.required && (
-                  <span className="ml-1 text-red-500">*</span>
-                )}
-              </h3>
-
-              {/* =========================================
-                  SINGLE CHOICE
-              ========================================= */}
-
-              {field.type === "single-choice" && (
-                <>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Select an option
-                  </p>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(field.options || []).map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() =>
-                          setAnswer(
-                            field.id,
-                            "value",
-                            option,
-                          )
-                        }
-                        className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition ${
-                          value === option
-                            ? option === "PASS"
-                              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                              : option === "FAIL"
-                                ? "border-red-300 bg-red-50 text-red-700"
-                                : option === "N/A"
-                                  ? "border-slate-300 bg-slate-100 text-slate-700"
-                                  : "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
-                        }`}
-                      >
-                        {value === option && (
-                          <Check className="mr-1 inline size-4" />
-                        )}
-
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* =========================================
-                  MULTIPLE CHOICE
-              ========================================= */}
-
-              {field.type === "multiple-choice" && (
-                <>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Select one or more options
-                  </p>
-
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                    {(field.options || []).map((option) => {
-                      const selected = Array.isArray(value)
-                        ? value.includes(option)
-                        : false;
-
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => {
-                            const currentValues =
-                              Array.isArray(value)
-                                ? value
-                                : [];
-
-                            const nextValues = selected
-                              ? currentValues.filter(
-                                  (item) =>
-                                    item !== option,
-                                )
-                              : [
-                                  ...currentValues,
-                                  option,
-                                ];
-
-                            setAnswer(
-                              field.id,
-                              "value",
-                              nextValues,
-                            );
-                          }}
-                          className={`rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition ${
-                            selected
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
-                          }`}
-                        >
-                          {selected && (
-                            <Check className="mr-1 inline size-4" />
-                          )}
-
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* =========================================
-                  TEXT
-              ========================================= */}
-
-              {field.type === "text" && (
-                <Input
-                  className="mt-4"
-                  placeholder={`Enter ${field.label.toLowerCase()}`}
-                  value={
-                    typeof value === "string"
-                      ? value
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "value",
-                      e.target.value,
-                    )
-                  }
-                />
-              )}
-
-              {/* =========================================
-                  TEXTAREA
-              ========================================= */}
-
-              {field.type === "textarea" && (
-                <Textarea
-                  className="mt-4 min-h-24 resize-y"
-                  placeholder={`Enter ${field.label.toLowerCase()}`}
-                  value={
-                    typeof value === "string"
-                      ? value
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "value",
-                      e.target.value,
-                    )
-                  }
-                />
-              )}
-
-              {/* =========================================
-                  DATE
-              ========================================= */}
-
-              {field.type === "date" && (
-                <Input
-                  type="date"
-                  className="mt-4"
-                  value={
-                    typeof value === "string"
-                      ? value
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "value",
-                      e.target.value,
-                    )
-                  }
-                />
-              )}
-
-              {/* =========================================
-                  TIME
-              ========================================= */}
-
-              {field.type === "time" && (
-                <Input
-                  type="time"
-                  className="mt-4"
-                  value={
-                    typeof value === "string"
-                      ? value
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "value",
-                      e.target.value,
-                    )
-                  }
-                />
-              )}
-
-              {/* =========================================
-                  NUMBER
-              ========================================= */}
-
-              {field.type === "number" && (
-                <Input
-                  type="number"
-                  className="mt-4"
-                  placeholder={`Enter ${field.label.toLowerCase()}`}
-                  value={
-                    typeof value === "string"
-                      ? value
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "value",
-                      e.target.value,
-                    )
-                  }
-                />
-              )}
-
-              {/* =========================================
-                  REMARKS
-              ========================================= */}
-
-              <label className="mt-5 block text-sm font-medium">
-                Remarks
-
-                <Textarea
-                  className="mt-2 min-h-24 resize-y"
-                  placeholder="Add your observation or remarks..."
-                  value={answer.remarks || ""}
-                  onChange={(e) =>
-                    setAnswer(
-                      field.id,
-                      "remarks",
-                      e.target.value,
-                    )
-                  }
-                />
-              </label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <main className="p-8 text-muted-foreground">Loading audit template…</main>
     );
   }
 
@@ -1328,10 +2787,7 @@ export default function AuditForm() {
     <main className="mobile-safe-bottom mx-auto max-w-6xl px-5 py-8 sm:px-8">
       {/* BACK */}
 
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/employee")}
-      >
+      <Button variant="ghost" onClick={() => router.push("/employee")}>
         <ArrowLeft data-icon="inline-start" />
         Back to Audits
       </Button>
@@ -1342,224 +2798,282 @@ export default function AuditForm() {
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold text-primary">
-                New Audit · 10/05/2026
-              </p>
+              <p className="text-sm font-semibold text-primary">New Audit</p>
 
               <h1 className="mt-2 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-                {template.title}
+                {template.title || template.name}
               </h1>
 
               <p className="mt-2 text-sm text-muted-foreground">
-                Safety inspection checklist
+                Complete the audit checklist and attach supporting evidence.
               </p>
             </div>
 
-            <Badge variant="secondary" className="w-fit">
-              Draft · 10 May 2026
-            </Badge>
+            <Badge variant="secondary">Draft</Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* MAIN CONTENT */}
+      {/* CUSTOMER INFORMATION */}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
-        <div className="flex flex-col gap-6">
-          {/* AUDIT INFORMATION */}
+      <Card
+        id="customer-selector"
+        className={`mt-6 shadow-sm ${
+          errors.customer ? "border-red-500 ring-1 ring-red-500" : ""
+        }`}
+      >
+        <CardContent className="p-5 sm:p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Building2 className="size-5" />
+            </div>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-sm uppercase tracking-[0.18em] text-primary">
-                Audit Information
-              </CardTitle>
-            </CardHeader>
+            <div>
+              <h2 className="font-semibold">Customer Information</h2>
 
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium">
-                Customer Name
+              <p className="text-xs text-muted-foreground">
+                Select the customer before filling the audit form.
+              </p>
+            </div>
+          </div>
 
-                <Input
-                  className="mt-2"
-                  placeholder="Enter customer name"
-                  value={customer}
-                  onChange={(e) =>
-                    setCustomer(e.target.value)
-                  }
-                />
-              </label>
+          {customersLoading ? (
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+              Loading customers...
+            </div>
+          ) : customerLoadError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+              Failed to load customers. Please refresh the page.
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              No customers are available. Please contact the administrator.
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => handleCustomerChange(e.target.value)}
+                  className={`h-11 w-full appearance-none rounded-lg border bg-background px-3 pr-10 text-sm outline-none transition focus:ring-2 focus:ring-primary/20 ${
+                    errors.customer ? "border-red-500" : "border-input"
+                  }`}
+                >
+                  <option value="">Select Customer *</option>
 
-              <label className="text-sm font-medium">
-                Location
+                  {customers.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
 
-                <Input
-                  className="mt-2"
-                  placeholder="Enter location"
-                  value={location}
-                  onChange={(e) =>
-                    setLocation(e.target.value)
-                  }
-                />
-              </label>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
 
-              <label className="text-sm font-medium">
-                Audit Date
+              {errors.customer && (
+                <p className="mt-2 text-xs font-medium text-red-500">
+                  Please select a customer.
+                </p>
+              )}
 
-                <Input
-                  className="mt-2"
-                  value="10/05/2026"
-                  readOnly
-                />
-              </label>
+              {/* SELECTED CUSTOMER DETAILS */}
 
-              <label className="text-sm font-medium">
-                Auditor
+              {selectedCustomer && (
+                <div className="mt-4 rounded-xl border bg-muted/30 p-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Customer Name
+                      </p>
 
-                <Input
-                  className="mt-2"
-                  value="S. Roy"
-                  readOnly
-                />
-              </label>
-            </CardContent>
-          </Card>
+                      <p className="mt-1 text-sm font-semibold">
+                        {selectedCustomer.name}
+                      </p>
+                    </div>
 
-          {/* SECTIONS */}
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Contact Number
+                      </p>
 
-          {template.sections.map((section) => (
-            <section
-              key={section.id || section.name}
-            >
-              {/* SECTION HEADER */}
+                      <p className="mt-1 text-sm font-semibold">
+                        {selectedCustomer.contactNumber}
+                      </p>
+                    </div>
 
-              <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <Check className="size-5" />
-                  </span>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-muted-foreground">Address</p>
 
-                  <div>
-                    <h2 className="font-semibold">
-                      {section.name}
-                    </h2>
+                      <p className="mt-1 text-sm font-semibold">
+                        {selectedCustomer.address}
+                      </p>
+                    </div>
 
-                    <p className="text-xs text-muted-foreground">
-                      Complete the fields in this section
-                    </p>
+                    {selectedCustomer.gstNo && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          GST Number
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold">
+                          {selectedCustomer.gstNo}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-                <Badge variant="secondary">
-                  {section.fields.length} fields
-                </Badge>
+      {/* SECTIONS */}
+
+      <div className="mt-6 flex flex-col gap-6">
+        {template.sections.map((section) => (
+          <section key={section.id}>
+            {/* SECTION HEADER */}
+
+            <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+              <div>
+                <h2 className="font-semibold">
+                  {section.name || section.title}
+                </h2>
+
+                <p className="text-xs text-muted-foreground">
+                  Complete the information below.
+                </p>
               </div>
 
-              {/* FIELDS */}
+              <Badge variant="secondary">{section.fields.length} fields</Badge>
+            </div>
 
-              <div className="flex flex-col gap-4">
-                {section.fields.map((field, index) =>
-                  renderField(field, index),
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
+            {/* SECTION CONTENT */}
 
-        {/* PROGRESS SIDEBAR */}
+            <Card className="shadow-sm">
+              <CardContent className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                {section.fields.map((field) => {
+                  const fullWidth =
+                    field.type === "textarea" ||
+                    field.type === "multiple-choice" ||
+                    field.type === "single-choice" ||
+                    field.type === "camera-photo" ||
+                    field.type === "camera-video" ||
+                    field.type === "signature" ||
+                    field.multiple;
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">
-                Audit progress
-              </CardTitle>
+                  return (
+                    <div
+                      key={field.id}
+                      data-field-id={field.id}
+                      className={fullWidth ? "sm:col-span-2" : ""}
+                    >
+                      <label className="flex flex-col gap-2 text-sm font-medium">
+                        <span>
+                          {field.label}
 
-              <p className="text-sm text-muted-foreground">
-                {answered} of {answerFields.length} fields
-                completed
-              </p>
-            </CardHeader>
+                          {field.required && (
+                            <span className="ml-1 text-red-500">*</span>
+                          )}
+                        </span>
 
-            <CardContent>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{
-                    width: `${progress}%`,
-                  }}
-                />
-              </div>
+                        {field.multiple
+                          ? renderMultipleField(field)
+                          : fieldControl(field)}
+                      </label>
 
-              <p className="mt-3 text-2xl font-bold text-primary">
-                {progress}%
-              </p>
-
-              <div className="mt-5 flex flex-col gap-2 border-t pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => save(false)}
-                >
-                  <Save data-icon="inline-start" />
-                  Save Draft
-                </Button>
-
-                <Button onClick={() => save(true)}>
-                  <Send data-icon="inline-start" />
-                  Submit Audit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
+                      {errors[field.id] && (
+                        <p className="mt-1 text-xs font-medium text-red-500">
+                          This field is required.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </section>
+        ))}
       </div>
 
-      {/* MOBILE ACTION BAR */}
+      {/* ACTIONS */}
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-6xl gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => save(false)}
-          >
-            Save Draft
-          </Button>
+      <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+        <Button variant="outline" onClick={() => save(false)}>
+          <Save data-icon="inline-start" />
+          Save Draft
+        </Button>
 
-          <Button
-            className="flex-1"
-            onClick={() => save(true)}
-          >
-            Submit Audit
-          </Button>
-        </div>
+        <Button onClick={() => save(true)}>
+          <Send data-icon="inline-start" />
+          Submit Audit
+        </Button>
       </div>
 
-      {/* CAMERA MODAL */}
+      {/* CAMERA */}
 
-      {cameraMode && cameraFieldId && (
+      {camera && (
         <CameraCapture
-          mode={cameraMode}
+          mode={camera.mode}
           reportId={auditId || "new-audit"}
-          onUse={(item) => {
-            console.log("Uploaded evidence:", item);
+          onCancel={() => setCamera(null)}
+          onUse={(item: EvidenceItem) => {
+            const fieldId = camera.field.id;
 
-            setAnswers((current) => ({
+            setData((current) => ({
               ...current,
-              [cameraFieldId]: {
-                ...current[cameraFieldId],
-                evidence: [
-                  ...(current[cameraFieldId]?.evidence || []),
-                  item,
-                ],
+              [fieldId]: {
+                ...current[fieldId],
+                evidence: [...(current[fieldId]?.evidence || []), item],
               },
             }));
 
-            setCameraMode(null);
-            setCameraFieldId(null);
+            setErrors((current) => {
+              const updated = {
+                ...current,
+              };
+
+              delete updated[fieldId];
+
+              return updated;
+            });
+
+            setCamera(null);
           }}
-          onCancel={() => {
-            setCameraMode(null);
-            setCameraFieldId(null);
+        />
+      )}
+
+      {/* SIGNATURE */}
+
+      {signatureField && (
+        <SignaturePad
+          field={signatureField}
+          onCancel={() => setSignatureField(null)}
+          onSave={(signature) => {
+            setData((current) => ({
+              ...current,
+              [signatureField.id]: {
+                ...current[signatureField.id],
+                signature: {
+                  signature,
+                  signedAt: new Date().toISOString(),
+                },
+              },
+            }));
+
+            setErrors((current) => {
+              const updated = {
+                ...current,
+              };
+
+              delete updated[signatureField.id];
+
+              return updated;
+            });
+
+            setSignatureField(null);
           }}
         />
       )}
@@ -1567,3 +3081,220 @@ export default function AuditForm() {
   );
 }
 
+// ==================================================
+// SIGNATURE PAD
+// ==================================================
+
+function SignaturePad({
+  field,
+  onCancel,
+  onSave,
+}: {
+  field: Field;
+  onCancel: () => void;
+  onSave: (signature: string) => void;
+}) {
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+
+  const [drawing, setDrawing] = useState(false);
+
+  useEffect(() => {
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.fillStyle = "#ffffff";
+
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.lineWidth = 2;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = "#000000";
+  }, [canvas]);
+
+  function getPosition(
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) {
+    if (!canvas) {
+      return {
+        x: 0,
+        y: 0,
+      };
+    }
+
+    const rect = canvas.getBoundingClientRect();
+
+    if ("touches" in event) {
+      const touch = event.touches[0];
+
+      if (!touch) {
+        return {
+          x: 0,
+          y: 0,
+        };
+      }
+
+      return {
+        x: ((touch.clientX - rect.left) / rect.width) * canvas.width,
+
+        y: ((touch.clientY - rect.top) / rect.height) * canvas.height,
+      };
+    }
+
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  }
+
+  function startDrawing(
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) {
+    event.preventDefault();
+
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    const position = getPosition(event);
+
+    context.beginPath();
+
+    context.moveTo(position.x, position.y);
+
+    setDrawing(true);
+  }
+
+  function draw(
+    event:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) {
+    event.preventDefault();
+
+    if (!drawing || !canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    const position = getPosition(event);
+
+    context.lineTo(position.x, position.y);
+
+    context.stroke();
+  }
+
+  function stopDrawing() {
+    setDrawing(false);
+  }
+
+  function clearSignature() {
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.fillStyle = "#ffffff";
+
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.strokeStyle = "#000000";
+  }
+
+  function saveSignature() {
+    if (!canvas) {
+      return;
+    }
+
+    const signature = canvas.toDataURL("image/png");
+
+    onSave(signature);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-background p-5 shadow-2xl">
+        {/* HEADER */}
+
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">{field.label}</h2>
+
+            <p className="text-sm text-muted-foreground">
+              Sign using touch, mouse, or trackpad.
+            </p>
+          </div>
+
+          <Button type="button" variant="ghost" size="icon" onClick={onCancel}>
+            <X />
+          </Button>
+        </div>
+
+        {/* CANVAS */}
+
+        <div className="overflow-hidden rounded-xl border bg-white">
+          <canvas
+            ref={setCanvas}
+            width={1000}
+            height={400}
+            className="h-64 w-full touch-none cursor-crosshair"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+          />
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="mt-4 flex justify-between gap-3">
+          <Button type="button" variant="outline" onClick={clearSignature}>
+            Clear
+          </Button>
+
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+
+            <Button type="button" onClick={saveSignature}>
+              <Check data-icon="inline-start" />
+              Save Signature
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

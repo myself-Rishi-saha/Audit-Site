@@ -1,13 +1,14 @@
+
+
 // import { NextResponse } from "next/server";
 // import { readAudits, writeAudits } from "@/lib/audit";
 
-// export async function PUT(
+// export async function POST(
 //   request: Request,
 //   { params }: { params: Promise<{ id: string }> },
 // ) {
 //   try {
 //     const { id } = await params;
-//     const body = await request.json();
 
 //     const audits = await readAudits();
 
@@ -24,15 +25,8 @@
 
 //     const updatedAudit = {
 //       ...existingAudit,
-//       ...body,
-
-//       // These should not be changed by the edit form
-//       id: existingAudit.id,
-//       employeeId: existingAudit.employeeId,
-//       employeeName: existingAudit.employeeName,
-//       templateId: existingAudit.templateId,
-
-//       answers: body.answers || existingAudit.answers,
+//       status: "COMPLETED",
+//       submittedAt: new Date().toISOString(),
 //     };
 
 //     audits[index] = updatedAudit;
@@ -41,17 +35,20 @@
 
 //     return NextResponse.json(updatedAudit);
 //   } catch (error) {
-//     console.error("Update audit error:", error);
+//     console.error("Submit audit error:", error);
 
 //     return NextResponse.json(
-//       { error: "Failed to update audit." },
+//       { error: "Failed to submit audit." },
 //       { status: 500 },
 //     );
 //   }
 // }
 
 import { NextResponse } from "next/server";
-import { readAudits, writeAudits } from "@/lib/audit";
+import {
+  readAudits,
+  writeAudits,
+} from "@/lib/audit";
 
 export async function POST(
   request: Request,
@@ -62,7 +59,9 @@ export async function POST(
 
     const audits = await readAudits();
 
-    const index = audits.findIndex((audit) => audit.id === id);
+    const index = audits.findIndex(
+      (audit) => audit.id === id,
+    );
 
     if (index === -1) {
       return NextResponse.json(
@@ -71,24 +70,36 @@ export async function POST(
       );
     }
 
-    const existingAudit = audits[index];
+    const existingAudit =
+      audits[index];
 
     const updatedAudit = {
       ...existingAudit,
-      status: "COMPLETED",
-      submittedAt: new Date().toISOString(),
+
+      status: "COMPLETED" as const,
+
+      updatedAt:
+        new Date().toISOString(),
     };
 
     audits[index] = updatedAudit;
 
     await writeAudits(audits);
 
-    return NextResponse.json(updatedAudit);
+    return NextResponse.json(
+      updatedAudit,
+    );
   } catch (error) {
-    console.error("Submit audit error:", error);
+    console.error(
+      "Submit audit error:",
+      error,
+    );
 
     return NextResponse.json(
-      { error: "Failed to submit audit." },
+      {
+        error:
+          "Failed to submit audit.",
+      },
       { status: 500 },
     );
   }

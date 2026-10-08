@@ -1764,6 +1764,16 @@ import { Badge } from "@/components/ui/badge";
 
 
 
+// type FieldType =
+//   | "text"
+//   | "textarea"
+//   | "date"
+//   | "time"
+//   | "single-choice"
+//   | "multiple-choice"
+//   | "camera-photo"
+//   | "camera-video"
+//   | "number";
 type FieldType =
   | "text"
   | "textarea"
@@ -1773,7 +1783,8 @@ type FieldType =
   | "multiple-choice"
   | "camera-photo"
   | "camera-video"
-  | "number";
+  | "number"
+  | "signature";
 
 type Field = {
   id: string;
@@ -1815,6 +1826,7 @@ const FIELD_TYPES: {
   { value: "multiple-choice", label: "Multiple Choice" },
   { value: "camera-photo", label: "Camera Photo" },
   { value: "camera-video", label: "Camera Video" },
+  { value: "signature", label: "Signature" },
 ];
 
 function createFieldId(label: string) {

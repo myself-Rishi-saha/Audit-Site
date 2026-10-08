@@ -15,17 +15,29 @@ export default function Login() {
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
   const router = useRouter();
   async function submit(e: FormEvent) {
     e.preventDefault();
+
     const r = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, password }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
     });
+
     const d = await r.json();
-    if (!r.ok) return setError(d.error);
-    router.push(d.user.role === "admin" ? "/admin" : "/employee");
+
+    if (!r.ok) {
+      return setError(d.error);
+    }
+
+    router.push("/employee");
   }
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
@@ -45,9 +57,9 @@ export default function Login() {
               Employee ID
               <Input
                 className="mt-2"
-                placeholder="EMP001"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
                 required
               />
             </label>

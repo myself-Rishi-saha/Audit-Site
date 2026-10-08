@@ -1,6 +1,11 @@
-// import { Check, CircleX, Minus, ShieldCheck } from "lucide-react";
+// import { ShieldCheck } from "lucide-react";
 // import { Badge } from "@/components/ui/badge";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import {
+//   Card,
+//   CardContent,
+//   CardHeader,
+//   CardTitle,
+// } from "@/components/ui/card";
 
 // export function AuditReport({
 //   audit,
@@ -9,215 +14,551 @@
 //   audit: any;
 //   admin?: boolean;
 // }) {
-//   const answers = Object.entries(audit.answers || {}) as [string, any][];
-//   const pass = answers.filter(([, answer]) => answer.status === "PASS").length;
-//   const fail = answers.filter(([, answer]) => answer.status === "FAIL").length;
-//   const na = answers.filter(([, answer]) => answer.status === "N/A").length;
+//   const template = audit.template;
+
+//   const sections = template?.sections || [];
+
+//   const fields = sections.flatMap(
+//     (section: any) => section.fields || [],
+//   );
+
+//   /*
+//    * Fields that actually contain answers.
+//    * Evidence and signatures are displayed separately.
+//    */
+//   const answerFields = fields.filter(
+//     (field: any) =>
+//       field.type !== "camera-photo" &&
+//       field.type !== "camera-video" &&
+//       field.type !== "signature",
+//   );
+
+//   /*
+//    * Dynamically calculate how many times each option
+//    * has been selected.
+//    *
+//    * Example:
+//    * PASS -> 5
+//    * FAIL -> 2
+//    * N/A  -> 1
+//    *
+//    * If another template has:
+//    * YES -> 4
+//    * NO -> 3
+//    *
+//    * it automatically becomes:
+//    * YES -> 4
+//    * NO -> 3
+//    */
+//   const optionCounts: Record<string, number> = {};
+
+//   answerFields.forEach((field: any) => {
+//     const value = audit.answers?.[field.id]?.value;
+
+//     if (field.type !== "single-choice") {
+//       return;
+//     }
+
+//     if (!value || typeof value !== "string") {
+//       return;
+//     }
+
+//     optionCounts[value] = (optionCounts[value] || 0) + 1;
+//   });
+
+//   /*
+//    * Get all unique options from the template.
+//    *
+//    * This means the report does not need to know
+//    * anything about PASS / FAIL / N/A.
+//    */
+//   const allOptions = Array.from(
+//     new Set(
+//       answerFields
+//         .filter((field: any) => field.type === "single-choice")
+//         .flatMap((field: any) => field.options || []),
+//     ),
+//   );
+
+//   /*
+//    * Only show options that are actually used in the answers.
+//    */
+//   const selectedOptions = allOptions.filter(
+//     (option: string) => optionCounts[option] !== undefined,
+//   );
+
 //   return (
 //     <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+//       {/* Header */}
 //       <div className="teal-wash rounded-xl border border-primary/15 p-6 sm:p-8">
 //         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
 //           <div>
 //             <p className="text-sm font-semibold text-primary">
 //               {admin ? "Admin review" : "Audit report"}
 //             </p>
+
 //             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-//               FIRE SAFETY AUDIT REPORT
+//               {template?.title || "AUDIT REPORT"}
 //             </h1>
+
 //             <p className="mt-2 font-mono text-sm text-muted-foreground">
 //               {audit.id}
 //             </p>
 //           </div>
+
 //           <Badge
-//             variant={audit.status === "COMPLETED" ? "default" : "secondary"}
+//             variant={
+//               audit.status === "COMPLETED"
+//                 ? "default"
+//                 : "secondary"
+//             }
 //           >
 //             {audit.status}
 //           </Badge>
 //         </div>
 //       </div>
-//       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-//         <Metric icon={ShieldCheck} label="Questions" value={answers.length} />
+
+//       {/* Dynamic Metrics */}
+//       <div
+//         className={`mt-6 grid gap-4 ${
+//           selectedOptions.length > 0
+//             ? `grid-cols-2 lg:grid-cols-${Math.min(
+//                 selectedOptions.length + 1,
+//                 5,
+//               )}`
+//             : "grid-cols-2 lg:grid-cols-3"
+//         }`}
+//       >
 //         <Metric
-//           icon={Check}
-//           label="Pass"
-//           value={pass}
-//           tone="text-emerald-600"
+//           icon={ShieldCheck}
+//           label="Fields"
+//           value={answerFields.length}
 //         />
-//         <Metric icon={CircleX} label="Fail" value={fail} tone="text-red-600" />
+
+//         {selectedOptions.map((option: string) => (
+//           <Metric
+//             key={option}
+//             icon={ShieldCheck}
+//             label={option}
+//             value={optionCounts[option]}
+//           />
+//         ))}
+
 //         <Metric
 //           icon={ShieldCheck}
 //           label="Score"
-//           value={audit.score != null ? `${audit.score}%` : "—"}
+//           value={
+//             audit.score != null
+//               ? `${audit.score}%`
+//               : "—"
+//           }
 //           tone="text-primary"
 //         />
 //       </div>
-//       <Card className="mt-6 shadow-sm">
+
+//       {/* Inspection Details */}
+//       {/* <Card className="mt-6 shadow-sm">
 //         <CardHeader>
 //           <CardTitle>Inspection details</CardTitle>
 //         </CardHeader>
+
 //         <CardContent className="grid gap-5 sm:grid-cols-4">
 //           <Info label="Customer" value={audit.customer} />
 //           <Info label="Location" value={audit.location} />
 //           <Info label="Auditor" value={audit.employeeName} />
 //           <Info label="Date" value={audit.date} />
 //         </CardContent>
-//       </Card>
+//       </Card> */}
+
+//       {/* Sections */}
 //       <div className="mt-8 flex flex-col gap-8">
-//         {["CHECKLIST FINDINGS", "GENERAL"].map((section, sectionIndex) => {
-//           const sectionAnswers = answers.slice(
-//             sectionIndex === 0 ? 0 : 2,
-//             sectionIndex === 0 ? 2 : 4,
-//           );
-//           return (
-//             <section key={section}>
-//               <div className="mb-3 flex items-center justify-between">
-//                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-primary">
-//                   {section}
-//                 </h2>
-//                 <span className="text-sm text-muted-foreground">
-//                   {sectionAnswers.length} questions
-//                 </span>
-//               </div>
-//               <div className="flex flex-col gap-3">
-//                 {sectionAnswers.map(([id, answer], index) => (
-//                   <Card
-//                     key={id}
-//                     className={`shadow-sm ${answer.status === "FAIL" ? "border-l-4 border-l-red-400" : answer.status === "PASS" ? "border-l-4 border-l-emerald-400" : "border-l-4 border-l-slate-300"}`}
-//                   >
-//                     <CardContent className="p-5">
-//                       <div className="flex items-start gap-4">
-//                         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold">
-//                           {String(index + 1).padStart(2, "0")}
-//                         </span>
-//                         <div className="min-w-0 flex-1">
-//                           <div className="flex flex-wrap items-center justify-between gap-2">
-//                             <h3 className="font-bold">{label(id)}</h3>
-//                             <Status status={answer.status} />
-//                           </div>
-//                           {/* {answer.remarks && (
-//                             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-//                               {answer.remarks}
-//                             </p>
-//                           )}
-//                           <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-//                             Evidence
-//                           </p>
-//                           <p className="mt-1 text-sm text-muted-foreground">
-//                             No evidence attached
-//                           </p> */}
-//                           {answer.remarks && (
-//                             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-//                               {answer.remarks}
-//                             </p>
-//                           )}
+//         {sections.map(
+//           (section: any, sectionIndex: number) => {
+//             const sectionFields = section.fields || [];
 
-//                           <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-//                             Evidence
-//                           </p>
+//             return (
+//               <section
+//                 key={
+//                   section.id ||
+//                   `${section.name}-${sectionIndex}`
+//                 }
+//               >
+//                 {/* Section Header */}
+//                 <div className="mb-3 flex items-center justify-between">
+//                   <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-primary">
+//                     {section.name || section.title}
+//                   </h2>
 
-//                           {answer.evidence?.length > 0 ? (
-//                             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-//                               {answer.evidence.map(
-//                                 (item: any, evidenceIndex: number) => {
-//                                   const url = item.url;
+//                   <span className="text-sm text-muted-foreground">
+//                     {sectionFields.length}{" "}
+//                     {sectionFields.length === 1
+//                       ? "field"
+//                       : "fields"}
+//                   </span>
+//                 </div>
 
-//                                   if (!url) return null;
+//                 <div className="flex flex-col gap-3">
+//                   {sectionFields.map(
+//                     (field: any, fieldIndex: number) => {
+//                       const answer =
+//                         audit.answers?.[field.id] || {};
 
-//                                   if (item.type === "video") {
-//                                     return (
-//                                       <div
-//                                         key={evidenceIndex}
-//                                         className="overflow-hidden rounded-lg border bg-muted"
-//                                       >
-//                                         <video
-//                                           src={url}
-//                                           controls
-//                                           className="h-40 w-full object-cover"
+//                       const value = answer.value;
+
+//                       /*
+//                        * CAMERA PHOTO / VIDEO
+//                        */
+//                       if (
+//                         field.type === "camera-photo" ||
+//                         field.type === "camera-video"
+//                       ) {
+//                         return (
+//                           <Card
+//                             key={field.id}
+//                             className="shadow-sm"
+//                           >
+//                             <CardContent className="p-5">
+//                               <div className="flex items-start gap-4">
+//                                 <FieldNumber
+//                                   number={fieldIndex + 1}
+//                                 />
+
+//                                 <div className="min-w-0 flex-1">
+//                                   <h3 className="font-bold">
+//                                     {field.label}
+//                                   </h3>
+
+//                                   <Evidence
+//                                     evidence={
+//                                       answer.evidence
+//                                     }
+//                                   />
+//                                 </div>
+//                               </div>
+//                             </CardContent>
+//                           </Card>
+//                         );
+//                       }
+
+//                       /*
+//                        * SIGNATURE
+//                        */
+//                       if (field.type === "signature") {
+//                         const signature =
+//                           typeof answer.signature ===
+//                           "object"
+//                             ? answer.signature
+//                             : undefined;
+
+//                         return (
+//                           <Card
+//                             key={field.id}
+//                             className="shadow-sm"
+//                           >
+//                             <CardContent className="p-5">
+//                               <div className="flex items-start gap-4">
+//                                 <FieldNumber
+//                                   number={fieldIndex + 1}
+//                                 />
+
+//                                 <div className="min-w-0 flex-1">
+//                                   <h3 className="font-bold">
+//                                     {field.label}
+
+//                                     {field.required && (
+//                                       <span className="ml-1 text-red-500">
+//                                         *
+//                                       </span>
+//                                     )}
+//                                   </h3>
+
+//                                   {signature?.signature ? (
+//                                     <>
+//                                       <div className="mt-4 inline-block rounded-lg border bg-white p-3">
+//                                         <img
+//                                           src={
+//                                             signature.signature
+//                                           }
+//                                           alt={field.label}
+//                                           className="max-h-40 w-auto"
 //                                         />
 //                                       </div>
-//                                     );
-//                                   }
 
-//                                   return (
-//                                     <a
-//                                       key={evidenceIndex}
-//                                       href={url}
-//                                       target="_blank"
-//                                       rel="noopener noreferrer"
-//                                       className="block overflow-hidden rounded-lg border bg-muted"
-//                                     >
-//                                       <img
-//                                         src={url}
-//                                         alt={`Evidence ${evidenceIndex + 1}`}
-//                                         className="h-40 w-full object-cover transition-transform hover:scale-105"
-//                                       />
-//                                     </a>
-//                                   );
-//                                 },
-//                               )}
+//                                       {signature.signedAt && (
+//                                         <p className="mt-2 text-xs text-muted-foreground">
+//                                           Signed:{" "}
+//                                           {new Date(
+//                                             signature.signedAt,
+//                                           ).toLocaleString(
+//                                             "en-IN",
+//                                             {
+//                                               timeZone:
+//                                                 "Asia/Kolkata",
+//                                               dateStyle:
+//                                                 "medium",
+//                                               timeStyle:
+//                                                 "short",
+//                                             },
+//                                           )}
+//                                         </p>
+//                                       )}
+//                                     </>
+//                                   ) : (
+//                                     <p className="mt-3 text-sm text-muted-foreground">
+//                                       No signature provided
+//                                     </p>
+//                                   )}
+//                                 </div>
+//                               </div>
+//                             </CardContent>
+//                           </Card>
+//                         );
+//                       }
+
+//                       /*
+//                        * NORMAL FIELD
+//                        */
+//                       return (
+//                         <Card
+//                           key={field.id}
+//                           className="shadow-sm"
+//                         >
+//                           <CardContent className="p-5">
+//                             <div className="flex items-start gap-4">
+//                               <FieldNumber
+//                                 number={fieldIndex + 1}
+//                               />
+
+//                               <div className="min-w-0 flex-1">
+//                                 <div className="flex flex-wrap items-center justify-between gap-2">
+//                                   <h3 className="font-bold">
+//                                     {field.label}
+
+//                                     {field.required && (
+//                                       <span className="ml-1 text-red-500">
+//                                         *
+//                                       </span>
+//                                     )}
+//                                   </h3>
+//                                 </div>
+
+//                                 {/* Dynamic single-choice options */}
+//                                 {field.type ===
+//                                   "single-choice" &&
+//                                   Array.isArray(
+//                                     field.options,
+//                                   ) && (
+//                                     <div className="mt-3 flex flex-wrap gap-2">
+//                                       {field.options.map(
+//                                         (
+//                                           option: string,
+//                                         ) => {
+//                                           const selected =
+//                                             value ===
+//                                             option;
+
+//                                           return (
+//                                             <Badge
+//                                               key={
+//                                                 option
+//                                               }
+//                                               variant={
+//                                                 selected
+//                                                   ? "default"
+//                                                   : "secondary"
+//                                               }
+//                                               className={
+//                                                 selected
+//                                                   ? ""
+//                                                   : "opacity-50"
+//                                               }
+//                                             >
+//                                               {option}
+//                                             </Badge>
+//                                           );
+//                                         },
+//                                       )}
+//                                     </div>
+//                                   )}
+
+//                                 {/* String value */}
+//                                 {value &&
+//                                   typeof value ===
+//                                     "string" &&
+//                                   field.type !==
+//                                     "single-choice" && (
+//                                     <p className="mt-3 text-sm font-medium">
+//                                       {value}
+//                                     </p>
+//                                   )}
+
+//                                 {/* Multiple choice */}
+//                                 {Array.isArray(value) &&
+//                                   value.length > 0 && (
+//                                     <div className="mt-3 flex flex-wrap gap-2">
+//                                       {value.map(
+//                                         (
+//                                           item: string,
+//                                         ) => (
+//                                           <Badge
+//                                             key={item}
+//                                             variant="secondary"
+//                                           >
+//                                             {item}
+//                                           </Badge>
+//                                         ),
+//                                       )}
+//                                     </div>
+//                                   )}
+
+//                                 {/* Remarks */}
+//                                 {answer.remarks && (
+//                                   <div className="mt-4">
+//                                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+//                                       Remarks
+//                                     </p>
+
+//                                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
+//                                       {answer.remarks}
+//                                     </p>
+//                                   </div>
+//                                 )}
+
+//                                 {/* Evidence */}
+//                                 <Evidence
+//                                   evidence={
+//                                     answer.evidence
+//                                   }
+//                                 />
+//                               </div>
 //                             </div>
-//                           ) : (
-//                             <p className="mt-1 text-sm text-muted-foreground">
-//                               No evidence attached
-//                             </p>
-//                           )}
-//                         </div>
-//                       </div>
-//                     </CardContent>
-//                   </Card>
-//                 ))}
-//               </div>
-//             </section>
-//           );
-//         })}
+//                           </CardContent>
+//                         </Card>
+//                       );
+//                     },
+//                   )}
+//                 </div>
+//               </section>
+//             );
+//           },
+//         )}
 //       </div>
 //     </main>
 //   );
 // }
-// function label(id: string) {
+
+// /* ---------------------------------- */
+// /* Field Number                       */
+// /* ---------------------------------- */
+
+// function FieldNumber({
+//   number,
+// }: {
+//   number: number;
+// }) {
 //   return (
-//     (
-//       {
-//         "fda-panel": "FDA PANEL WORKING STATUS?",
-//         "fire-pump": "FIRE PUMP WORKING STATUS?",
-//         extinguishers: "FIRE EXTINGUISHERS AVAILABLE?",
-//         "exit-clear": "EMERGENCY EXIT CLEAR?",
-//       } as any
-//     )[id] || id
+//     <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold">
+//       {String(number).padStart(2, "0")}
+//     </span>
 //   );
 // }
-// function Status({ status }: { status: string }) {
+
+// /* ---------------------------------- */
+// /* Evidence                           */
+// /* ---------------------------------- */
+
+// function Evidence({
+//   evidence,
+// }: {
+//   evidence?: any[];
+// }) {
 //   return (
-//     <Badge
-//       variant={
-//         status === "FAIL"
-//           ? "destructive"
-//           : status === "PASS"
-//             ? "default"
-//             : "secondary"
-//       }
-//     >
-//       {status === "PASS" ? (
-//         <Check data-icon="inline-start" />
-//       ) : status === "FAIL" ? (
-//         <CircleX data-icon="inline-start" />
+//     <div className="mt-4">
+//       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+//         Evidence
+//       </p>
+
+//       {evidence?.length > 0 ? (
+//         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+//           {evidence.map(
+//             (item: any, evidenceIndex: number) => {
+//               const url = item.url;
+
+//               if (!url) return null;
+
+//               if (item.type === "video") {
+//                 return (
+//                   <div
+//                     key={`${url}-${evidenceIndex}`}
+//                     className="overflow-hidden rounded-lg border bg-muted"
+//                   >
+//                     <video
+//                       src={url}
+//                       controls
+//                       playsInline
+//                       className="h-40 w-full object-cover"
+//                     />
+//                   </div>
+//                 );
+//               }
+
+//               return (
+//                 <a
+//                   key={`${url}-${evidenceIndex}`}
+//                   href={url}
+//                   target="_blank"
+//                   rel="noopener noreferrer"
+//                   className="block overflow-hidden rounded-lg border bg-muted"
+//                 >
+//                   <img
+//                     src={url}
+//                     alt={`Evidence ${
+//                       evidenceIndex + 1
+//                     }`}
+//                     className="h-40 w-full object-cover transition-transform hover:scale-105"
+//                   />
+//                 </a>
+//               );
+//             },
+//           )}
+//         </div>
 //       ) : (
-//         <Minus data-icon="inline-start" />
+//         <p className="mt-1 text-sm text-muted-foreground">
+//           No evidence attached
+//         </p>
 //       )}
-//       {status}
-//     </Badge>
+//     </div>
 //   );
 // }
-// function Info({ label, value }: { label: string; value: any }) {
+
+// /* ---------------------------------- */
+// /* Info                               */
+// /* ---------------------------------- */
+
+// function Info({
+//   label,
+//   value,
+// }: {
+//   label: string;
+//   value: any;
+// }) {
 //   return (
 //     <div>
 //       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 //         {label}
 //       </p>
-//       <p className="mt-1 font-semibold">{value || "—"}</p>
+
+//       <p className="mt-1 font-semibold">
+//         {value || "—"}
+//       </p>
 //     </div>
 //   );
 // }
+
+// /* ---------------------------------- */
+// /* Metric                             */
+// /* ---------------------------------- */
+
 // function Metric({
 //   icon: Icon,
 //   label,
@@ -233,23 +574,22 @@
 //     <Card className="shadow-sm">
 //       <CardContent className="p-5">
 //         <Icon className={`mb-3 ${tone}`} />
+
 //         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 //           {label}
 //         </p>
-//         <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
+
+//         <p className={`mt-1 text-2xl font-bold ${tone}`}>
+//           {value}
+//         </p>
 //       </CardContent>
 //     </Card>
 //   );
 // }
 
-import { Check, CircleX, Minus, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function AuditReport({
   audit,
@@ -258,50 +598,101 @@ export function AuditReport({
   audit: any;
   admin?: boolean;
 }) {
-  const template = audit.template;
-
   /*
-   * New structure:
-   *
-   * template.sections[].fields[]
-   *
-   * answers:
-   * {
-   *   "field-id": {
-   *      value: "PASS",
-   *      remarks: "...",
-   *      evidence: [...]
-   *   }
-   * }
+   * Existing audits should use the saved template snapshot.
    */
+  const template = audit.templateSnapshot || audit.template || null;
 
-  const fields =
-    template?.sections?.flatMap((section: any) => section.fields || []) || [];
+  const sections = template?.sections || [];
+
+  const fields = sections.flatMap((section: any) => section.fields || []);
+  // console.log("audit", audit);
 
   /*
-   * Camera fields are evidence fields, so they should not
-   * be counted as inspection questions.
+   * Fields that actually contain normal answers.
+   *
+   * Evidence and signatures are stored separately:
+   *
+   * audit.formData
+   * audit.evidence
+   * audit.signatures
    */
   const answerFields = fields.filter(
     (field: any) =>
-      field.type !== "camera-photo" && field.type !== "camera-video",
+      field.type !== "camera-photo" &&
+      field.type !== "camera-video" &&
+      field.type !== "signature",
   );
 
-  const pass = answerFields.filter(
-    (field: any) => audit.answers?.[field.id]?.value === "PASS",
-  ).length;
+  /*
+   * Count selected options dynamically.
+   *
+   * Example:
+   *
+   * PASS -> 5
+   * FAIL -> 2
+   * N/A  -> 1
+   *
+   * It does not assume that the options are
+   * PASS / FAIL / N/A.
+   */
+  const optionCounts: Record<string, number> = {};
 
-  const fail = answerFields.filter(
-    (field: any) => audit.answers?.[field.id]?.value === "FAIL",
-  ).length;
+  answerFields.forEach((field: any) => {
+    if (field.type !== "single-choice") {
+      return;
+    }
 
-  const na = answerFields.filter(
-    (field: any) => audit.answers?.[field.id]?.value === "N/A",
-  ).length;
+    const value = audit.formData?.[field.id];
+
+    if (!value || typeof value !== "string") {
+      return;
+    }
+
+    optionCounts[value] = (optionCounts[value] || 0) + 1;
+  });
+
+  /*
+   * Get all unique options from
+   * the saved template.
+   */
+  const allOptions = Array.from(
+    new Set(
+      answerFields
+        .filter((field: any) => field.type === "single-choice")
+        .flatMap((field: any) =>
+          Array.isArray(field.options) ? field.options : [],
+        ),
+    ),
+  );
+
+  /*
+   * Only display options that were
+   * actually selected.
+   */
+  const selectedOptions = allOptions.filter(
+    (option: string) => optionCounts[option] !== undefined,
+  );
+
+  /*
+   * Use static Tailwind classes instead
+   * of dynamically generated classes.
+   */
+  const metricGridClass =
+    selectedOptions.length === 0
+      ? "grid-cols-2 lg:grid-cols-3"
+      : selectedOptions.length === 1
+        ? "grid-cols-2 lg:grid-cols-3"
+        : selectedOptions.length === 2
+          ? "grid-cols-2 lg:grid-cols-4"
+          : selectedOptions.length === 3
+            ? "grid-cols-2 lg:grid-cols-5"
+            : "grid-cols-2 lg:grid-cols-5";
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
       {/* Header */}
+
       <div className="teal-wash rounded-xl border border-primary/15 p-6 sm:p-8">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
@@ -310,7 +701,7 @@ export function AuditReport({
             </p>
 
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-              {template?.title || "AUDIT REPORT"}
+              {template?.title || template?.name || "AUDIT REPORT"}
             </h1>
 
             <p className="mt-2 font-mono text-sm text-muted-foreground">
@@ -320,35 +711,29 @@ export function AuditReport({
 
           <Badge
             variant={
-              audit.status === "COMPLETED" ? "default" : "secondary"
+              String(audit.status).toUpperCase() === "COMPLETED"
+                ? "default"
+                : "secondary"
             }
           >
-            {audit.status}
+            {String(audit.status || "DRAFT").toUpperCase()}
           </Badge>
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Metric
-          icon={ShieldCheck}
-          label="Fields"
-          value={answerFields.length}
-        />
+      {/* Dynamic Metrics */}
 
-        <Metric
-          icon={Check}
-          label="Pass"
-          value={pass}
-          tone="text-emerald-600"
-        />
+      <div className={`mt-6 grid gap-4 ${metricGridClass}`}>
+        <Metric icon={ShieldCheck} label="Fields" value={answerFields.length} />
 
-        <Metric
-          icon={CircleX}
-          label="Fail"
-          value={fail}
-          tone="text-red-600"
-        />
+        {selectedOptions.map((option: string) => (
+          <Metric
+            key={option}
+            icon={ShieldCheck}
+            label={option}
+            value={optionCounts[option]}
+          />
+        ))}
 
         <Metric
           icon={ShieldCheck}
@@ -357,31 +742,34 @@ export function AuditReport({
           tone="text-primary"
         />
       </div>
-
-      {/* Audit information */}
+      {/* Inspection Details */}
       <Card className="mt-6 shadow-sm">
         <CardHeader>
           <CardTitle>Inspection details</CardTitle>
         </CardHeader>
 
         <CardContent className="grid gap-5 sm:grid-cols-4">
-          <Info label="Customer" value={audit.customer} />
-          <Info label="Location" value={audit.location} />
+          <Info label="Customer" value={audit.customerName} />
+          <Info label="Location" value={audit.customerAddress} />
           <Info label="Auditor" value={audit.employeeName} />
-          <Info label="Date" value={audit.date} />
+          <Info label="Date" value={audit.updatedAt} />
         </CardContent>
       </Card>
 
-      {/* Dynamic sections */}
+      {/* Sections */}
+
       <div className="mt-8 flex flex-col gap-8">
-        {template?.sections?.map((section: any, sectionIndex: number) => {
+        {sections.map((section: any, sectionIndex: number) => {
           const sectionFields = section.fields || [];
 
           return (
             <section
-              key={section.id || `${section.name}-${sectionIndex}`}
+              key={
+                section.id || `${section.name || section.title}-${sectionIndex}`
+              }
             >
-              {/* Section heading */}
+              {/* Section Header */}
+
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-primary">
                   {section.name || section.title}
@@ -394,134 +782,191 @@ export function AuditReport({
               </div>
 
               <div className="flex flex-col gap-3">
-                {sectionFields.map(
-                  (field: any, fieldIndex: number) => {
-                    const answer = audit.answers?.[field.id] || {};
-                    const value = answer.value;
+                {sectionFields.map((field: any, fieldIndex: number) => {
+                  /*
+                   * Current audit schema:
+                   *
+                   * Normal values:
+                   * audit.formData[field.id]
+                   *
+                   * Evidence:
+                   * audit.evidence[field.id]
+                   *
+                   * Signatures:
+                   * audit.signatures[field.id]
+                   */
 
-                    /*
-                     * Camera-only fields are displayed as evidence
-                     * fields and do not get PASS/FAIL status.
-                     */
-                    if (
-                      field.type === "camera-photo" ||
-                      field.type === "camera-video"
-                    ) {
-                      return (
-                        <Card
-                          key={field.id}
-                          className="shadow-sm"
-                        >
-                          <CardContent className="p-5">
-                            <div className="flex items-start gap-4">
-                              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold">
-                                {String(fieldIndex + 1).padStart(2, "0")}
-                              </span>
+                  const value = audit.formData?.[field.id];
 
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-bold">
-                                  {field.label}
-                                </h3>
+                  /*
+                   * CAMERA PHOTO / VIDEO
+                   */
 
-                                <Evidence
-                                  evidence={answer.evidence}
-                                />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-
+                  if (
+                    field.type === "camera-photo" ||
+                    field.type === "camera-video"
+                  ) {
                     return (
-                      <Card
-                        key={field.id}
-                        className={`shadow-sm ${
-                          value === "FAIL"
-                            ? "border-l-4 border-l-red-400"
-                            : value === "PASS"
-                              ? "border-l-4 border-l-emerald-400"
-                              : value === "N/A"
-                                ? "border-l-4 border-l-slate-300"
-                                : ""
-                        }`}
-                      >
+                      <Card key={field.id} className="shadow-sm">
                         <CardContent className="p-5">
                           <div className="flex items-start gap-4">
-                            {/* Field number */}
-                            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold">
-                              {String(fieldIndex + 1).padStart(2, "0")}
-                            </span>
+                            <FieldNumber number={fieldIndex + 1} />
 
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h3 className="font-bold">
-                                  {field.label}
+                              <h3 className="font-bold">
+                                {field.label}
 
-                                  {field.required && (
-                                    <span className="ml-1 text-red-500">
-                                      *
-                                    </span>
-                                  )}
-                                </h3>
-
-                                {/* Status only for fields with a value */}
-                                {value &&
-                                  typeof value === "string" && (
-                                    <Status status={value} />
-                                  )}
-                              </div>
-
-                              {/* Non-choice value */}
-                              {value &&
-                                typeof value === "string" &&
-                                value !== "PASS" &&
-                                value !== "FAIL" &&
-                                value !== "N/A" && (
-                                  <p className="mt-3 text-sm font-medium">
-                                    {value}
-                                  </p>
+                                {field.required && (
+                                  <span className="ml-1 text-red-500">*</span>
                                 )}
+                              </h3>
 
-                              {/* Multiple choice */}
-                              {Array.isArray(value) &&
-                                value.length > 0 && (
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    {value.map((item: string) => (
-                                      <Badge
-                                        key={item}
-                                        variant="secondary"
-                                      >
-                                        {item}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-
-                              {/* Remarks */}
-                              {answer.remarks && (
-                                <div className="mt-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Remarks
-                                  </p>
-
-                                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                    {answer.remarks}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Evidence */}
-                              <Evidence
-                                evidence={answer.evidence}
-                              />
+                              <Evidence evidence={audit.evidence?.[field.id]} />
                             </div>
                           </div>
                         </CardContent>
                       </Card>
                     );
-                  },
-                )}
+                  }
+
+                  /*
+                   * SIGNATURE
+                   */
+
+                  if (field.type === "signature") {
+                    const signature = audit.signatures?.[field.id];
+
+                    return (
+                      <Card key={field.id} className="shadow-sm">
+                        <CardContent className="p-5">
+                          <div className="flex items-start gap-4">
+                            <FieldNumber number={fieldIndex + 1} />
+
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold">
+                                {field.label}
+
+                                {field.required && (
+                                  <span className="ml-1 text-red-500">*</span>
+                                )}
+                              </h3>
+
+                              {signature?.signature ? (
+                                <>
+                                  <div className="mt-4 inline-block rounded-lg border bg-white p-3">
+                                    <img
+                                      src={signature.signature}
+                                      alt={field.label}
+                                      className="max-h-40 w-auto"
+                                    />
+                                  </div>
+
+                                  {signature.signedAt && (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                      Signed:{" "}
+                                      {new Date(
+                                        signature.signedAt,
+                                      ).toLocaleString("en-IN", {
+                                        timeZone: "Asia/Kolkata",
+                                        dateStyle: "medium",
+                                        timeStyle: "short",
+                                      })}{" "}
+                                      IST
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="mt-3 text-sm text-muted-foreground">
+                                  No signature provided
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  /*
+                   * NORMAL FIELD
+                   */
+
+                  return (
+                    <Card key={field.id} className="shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <FieldNumber number={fieldIndex + 1} />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h3 className="font-bold">
+                                {field.label}
+
+                                {field.required && (
+                                  <span className="ml-1 text-red-500">*</span>
+                                )}
+                              </h3>
+                            </div>
+
+                            {/* Single Choice */}
+
+                            {field.type === "single-choice" &&
+                              Array.isArray(field.options) && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {field.options.map((option: string) => {
+                                    const selected = value === option;
+
+                                    return (
+                                      <Badge
+                                        key={option}
+                                        variant={
+                                          selected ? "default" : "secondary"
+                                        }
+                                        className={selected ? "" : "opacity-50"}
+                                      >
+                                        {option}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                            {/* String Value */}
+
+                            {value &&
+                              typeof value === "string" &&
+                              field.type !== "single-choice" && (
+                                <p className="mt-3 whitespace-pre-wrap text-sm font-medium">
+                                  {value}
+                                </p>
+                              )}
+
+                            {/* Multiple Choice */}
+
+                            {Array.isArray(value) && value.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {value.map(
+                                  (item: string, itemIndex: number) => (
+                                    <Badge
+                                      key={`${item}-${itemIndex}`}
+                                      variant="secondary"
+                                    >
+                                      {item}
+                                    </Badge>
+                                  ),
+                                )}
+                              </div>
+                            )}
+
+                            {/* Evidence */}
+
+                            <Evidence evidence={audit.evidence?.[field.id]} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </section>
           );
@@ -531,27 +976,37 @@ export function AuditReport({
   );
 }
 
-/* -------------------------------------------------------
- * Evidence
- * ----------------------------------------------------- */
+/* ---------------------------------- */
+/* Field Number                       */
+/* ---------------------------------- */
 
-function Evidence({
-  evidence,
-}: {
-  evidence?: any[];
-}) {
+function FieldNumber({ number }: { number: number }) {
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold">
+      {String(number).padStart(2, "0")}
+    </span>
+  );
+}
+
+/* ---------------------------------- */
+/* Evidence                           */
+/* ---------------------------------- */
+
+function Evidence({ evidence }: { evidence?: any[] }) {
   return (
     <div className="mt-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Evidence
       </p>
 
-      {evidence?.length > 0 ? (
+      {evidence && evidence.length > 0 ? (
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {evidence.map((item: any, evidenceIndex: number) => {
-            const url = item.url;
+            const url = item?.url;
 
-            if (!url) return null;
+            if (!url) {
+              return null;
+            }
 
             if (item.type === "video") {
               return (
@@ -595,65 +1050,25 @@ function Evidence({
   );
 }
 
-/* -------------------------------------------------------
- * Status
- * ----------------------------------------------------- */
+/* ---------------------------------- */
+/* Info                               */
+/* ---------------------------------- */
 
-function Status({ status }: { status: string }) {
-  if (!["PASS", "FAIL", "N/A"].includes(status)) {
-    return null;
-  }
-
-  return (
-    <Badge
-      variant={
-        status === "FAIL"
-          ? "destructive"
-          : status === "PASS"
-            ? "default"
-            : "secondary"
-      }
-    >
-      {status === "PASS" ? (
-        <Check data-icon="inline-start" />
-      ) : status === "FAIL" ? (
-        <CircleX data-icon="inline-start" />
-      ) : (
-        <Minus data-icon="inline-start" />
-      )}
-
-      {status}
-    </Badge>
-  );
-}
-
-/* -------------------------------------------------------
- * Info
- * ----------------------------------------------------- */
-
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: any;
-}) {
+function Info({ label, value }: { label: string; value: any }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
 
-      <p className="mt-1 font-semibold">
-        {value || "—"}
-      </p>
+      <p className="mt-1 font-semibold">{value || "—"}</p>
     </div>
   );
 }
 
-/* -------------------------------------------------------
- * Metric
- * ----------------------------------------------------- */
+/* ---------------------------------- */
+/* Metric                             */
+/* ---------------------------------- */
 
 function Metric({
   icon: Icon,
@@ -675,11 +1090,8 @@ function Metric({
           {label}
         </p>
 
-        <p className={`mt-1 text-2xl font-bold ${tone}`}>
-          {value}
-        </p>
+        <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
       </CardContent>
     </Card>
   );
 }
-

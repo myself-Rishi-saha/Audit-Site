@@ -6,27 +6,54 @@ export async function GET(
 ) {
   const { id } = await params;
   const item = (await readServiceReports()).find((x) => x.id === id);
+  console.log("GET SERVICE REPORT ITEM:", item);
   return item
     ? NextResponse.json(item)
     : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
+// export async function PUT(
+//   req: Request,
+//   { params }: { params: Promise<{ id: string }> },
+// ) {
+//   const { id } = await params;
+//   const items = await readServiceReports();
+//   const i = items.findIndex((x) => x.id === id);
+//   if (i < 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+//   items[i] = {
+//     ...items[i],
+//     ...(await req.json()),
+//     updatedAt: new Date().toISOString(),
+//   };
+//   await writeServiceReports(items);
+//   return NextResponse.json(items[i]);
+// }
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const body = await req.json();
+
+  console.log("PUT SERVICE REPORT BODY:", body);
+  console.log("SIGNATURES:", body.signatures);
+
   const items = await readServiceReports();
   const i = items.findIndex((x) => x.id === id);
-  if (i < 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (i < 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   items[i] = {
     ...items[i],
-    ...(await req.json()),
+    ...body,
     updatedAt: new Date().toISOString(),
   };
+
   await writeServiceReports(items);
+
   return NextResponse.json(items[i]);
 }
-
 export async function DELETE(
   _: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -38,10 +65,7 @@ export async function DELETE(
   const index = items.findIndex((x) => x.id === id);
 
   if (index < 0) {
-    return NextResponse.json(
-      { error: "Not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   items.splice(index, 1);
