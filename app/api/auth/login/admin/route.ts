@@ -11,9 +11,7 @@ if (!secret) {
 }
 //console.log("Admin credentials:", { adminUsername, adminPasswordHash });
 if (!adminUsername || !adminPasswordHash) {
-  throw new Error(
-    "ADMIN_USERNAME or ADMIN_PASSWORD_HASH is not configured",
-  );
+  throw new Error("ADMIN_USERNAME or ADMIN_PASSWORD_HASH is not configured");
 }
 
 const secretKey = new TextEncoder().encode(secret);
@@ -35,11 +33,19 @@ export async function POST(req: Request) {
         { status: 401 },
       );
     }
-
-    const passwordValid = await bcrypt.compare(
-      password,
-      adminPasswordHash,
+    console.log("ADMIN_USERNAME exists:", !!process.env.ADMIN_USERNAME);
+    console.log(
+      "ADMIN_PASSWORD_HASH exists:",
+      !!process.env.ADMIN_PASSWORD_HASH,
     );
+    console.log(
+      "ADMIN_PASSWORD_HASH length:",
+      process.env.ADMIN_PASSWORD_HASH?.length,
+    );
+    console.log("AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
+
+    const passwordValid = await bcrypt.compare(password, adminPasswordHash);
+    // console.log("Admin password valid:", adminPasswordHash, passwordValid);
 
     if (!passwordValid) {
       return NextResponse.json(
