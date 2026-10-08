@@ -1,6 +1,54 @@
-// import fs from "node:fs/promises";
-// import path from "node:path";
-// export type Answer = { status?: "PASS" | "FAIL" | "N/A"; remarks?: string };
+// // import fs from "node:fs/promises";
+// // import path from "node:path";
+// // export type Answer = { status?: "PASS" | "FAIL" | "N/A"; remarks?: string };
+// // export type Audit = {
+// //   id: string;
+// //   employeeId: string;
+// //   employeeName: string;
+// //   customer: string;
+// //   location: string;
+// //   date: string;
+// //   status: string;
+// //   score?: number;
+// //   templateId: string;
+// //   answers: Record<string, Answer>;
+// // };
+// // const file = path.join(process.cwd(), "data/audits.json");
+// // export async function readAudits(): Promise<Audit[]> {
+// //   return JSON.parse(await fs.readFile(file, "utf8"));
+// // }
+// // export async function writeAudits(audits: Audit[]) {
+// //   await fs.writeFile(file, JSON.stringify(audits, null, 2));
+// // }
+// // export function scoreAudit(audit: Audit) {
+// //   const values = Object.values(audit.answers)
+// //     .map((a) => a.status)
+// //     .filter(Boolean);
+// //   const eligible = values.filter((v) => v !== "N/A");
+// //   return eligible.length
+// //     ? Math.round(
+// //         (values.filter((v) => v === "PASS").length / eligible.length) * 100,
+// //       )
+// //     : 0;
+// // }
+// // export async function getSession() {
+// //   return null;
+// // }
+
+// import { neon } from "@neondatabase/serverless";
+
+// export type Answer = {
+//   status?: "PASS" | "FAIL" | "N/A";
+//   remarks?: string;
+//   evidence?: Array<{
+//     reportId: string;
+//     type: string;
+//     url: string;
+//     fileName: string;
+//     capturedAt: string;
+//   }>;
+// };
+
 // export type Audit = {
 //   id: string;
 //   employeeId: string;
@@ -13,42 +61,122 @@
 //   templateId: string;
 //   answers: Record<string, Answer>;
 // };
-// const file = path.join(process.cwd(), "data/audits.json");
+
+// function getDatabase() {
+//   const url = process.env.DATABASE_URL;
+
+//   if (!url) {
+//     throw new Error("DATABASE_URL is not configured");
+//   }
+
+//   return neon(url);
+// }
+
 // export async function readAudits(): Promise<Audit[]> {
-//   return JSON.parse(await fs.readFile(file, "utf8"));
+//   const sql = getDatabase();
+
+//   const rows = await sql`
+//     SELECT
+//       id,
+//       employee_id,
+//       employee_name,
+//       customer,
+//       location,
+//       date,
+//       status,
+//       score,
+//       template_id,
+//       answers
+//     FROM audits
+//     ORDER BY created_at DESC
+//   `;
+
+//   return rows.map((row: any) => ({
+//     id: row.id,
+//     employeeId: row.employee_id,
+//     employeeName: row.employee_name,
+//     customer: row.customer,
+//     location: row.location,
+//     date: row.date,
+//     status: row.status,
+//     score: row.score ?? undefined,
+//     templateId: row.template_id,
+//     answers: row.answers || {},
+//   }));
 // }
+
 // export async function writeAudits(audits: Audit[]) {
-//   await fs.writeFile(file, JSON.stringify(audits, null, 2));
+//   const sql = getDatabase();
+
+//   // This keeps your existing API structure working:
+//   // writeAudits([...audits]) replaces the stored list.
+//   //
+//   // For the current demo, we synchronize the database
+//   // with the supplied audit array.
+
+//   await sql`DELETE FROM audits`;
+
+//   for (const audit of audits) {
+//     await sql`
+//       INSERT INTO audits (
+//         id,
+//         employee_id,
+//         employee_name,
+//         customer,
+//         location,
+//         date,
+//         status,
+//         score,
+//         template_id,
+//         answers
+//       )
+//       VALUES (
+//         ${audit.id},
+//         ${audit.employeeId},
+//         ${audit.employeeName},
+//         ${audit.customer},
+//         ${audit.location},
+//         ${audit.date},
+//         ${audit.status},
+//         ${audit.score ?? null},
+//         ${audit.templateId},
+//         ${JSON.stringify(audit.answers)}::jsonb
+//       )
+//     `;
+//   }
 // }
+
 // export function scoreAudit(audit: Audit) {
 //   const values = Object.values(audit.answers)
 //     .map((a) => a.status)
 //     .filter(Boolean);
+
 //   const eligible = values.filter((v) => v !== "N/A");
+
 //   return eligible.length
 //     ? Math.round(
 //         (values.filter((v) => v === "PASS").length / eligible.length) * 100,
 //       )
 //     : 0;
 // }
+
 // export async function getSession() {
 //   return null;
 // }
 
 import { neon } from "@neondatabase/serverless";
-
-export type Answer = {
-  status?: "PASS" | "FAIL" | "N/A";
-  remarks?: string;
-  evidence?: Array<{
-    reportId: string;
-    type: string;
-    url: string;
-    fileName: string;
-    capturedAt: string;
-  }>;
+export type EvidenceItem = {
+  reportId?: string;
+  type: "image" | "video";
+  url: string;
+  fileName?: string;
+  capturedAt?: string;
 };
-
+export type Answer = {
+  value?: string | string[];
+  remarks?: string;
+  evidence?: EvidenceItem[];
+};
 export type Audit = {
   id: string;
   employeeId: string;
@@ -61,36 +189,17 @@ export type Audit = {
   templateId: string;
   answers: Record<string, Answer>;
 };
-
 function getDatabase() {
   const url = process.env.DATABASE_URL;
-
   if (!url) {
     throw new Error("DATABASE_URL is not configured");
   }
-
   return neon(url);
 }
-
 export async function readAudits(): Promise<Audit[]> {
   const sql = getDatabase();
-
-  const rows = await sql`
-    SELECT
-      id,
-      employee_id,
-      employee_name,
-      customer,
-      location,
-      date,
-      status,
-      score,
-      template_id,
-      answers
-    FROM audits
-    ORDER BY created_at DESC
-  `;
-
+  const rows =
+    await sql` SELECT id, employee_id, employee_name, customer, location, date, status, score, template_id, answers FROM audits ORDER BY created_at DESC `;
   return rows.map((row: any) => ({
     id: row.id,
     employeeId: row.employee_id,
@@ -101,66 +210,43 @@ export async function readAudits(): Promise<Audit[]> {
     status: row.status,
     score: row.score ?? undefined,
     templateId: row.template_id,
-    answers: row.answers || {},
+    answers:
+      typeof row.answers === "string"
+        ? JSON.parse(row.answers)
+        : row.answers || {},
   }));
 }
-
+/** * Returns a new unique audit ID. * * Example: * AUD-001 * AUD-004 * AUD-009 * * If AUD-009 is currently the highest ID, * the next ID will be AUD-010. */ export async function generateAuditId(): Promise<string> {
+  const sql = getDatabase();
+  const rows =
+    await sql` SELECT COALESCE( MAX( CAST( NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER ) ), 0 ) + 1 AS next_number FROM audits WHERE id ~ '^AUD-[0-9]+$' `;
+  const nextNumber = Number(rows[0]?.next_number || 1);
+  return `AUD-${String(nextNumber).padStart(3, "0")}`;
+}
 export async function writeAudits(audits: Audit[]) {
   const sql = getDatabase();
-
-  // This keeps your existing API structure working:
-  // writeAudits([...audits]) replaces the stored list.
-  //
-  // For the current demo, we synchronize the database
-  // with the supplied audit array.
-
-  await sql`DELETE FROM audits`;
-
+  /* * IMPORTANT: * * This function replaces the stored audit list. * Existing API code can continue calling: * * writeAudits([...audits]) */ await sql`DELETE FROM audits`;
   for (const audit of audits) {
-    await sql`
-      INSERT INTO audits (
-        id,
-        employee_id,
-        employee_name,
-        customer,
-        location,
-        date,
-        status,
-        score,
-        template_id,
-        answers
-      )
-      VALUES (
-        ${audit.id},
-        ${audit.employeeId},
-        ${audit.employeeName},
-        ${audit.customer},
-        ${audit.location},
-        ${audit.date},
-        ${audit.status},
-        ${audit.score ?? null},
-        ${audit.templateId},
-        ${JSON.stringify(audit.answers)}::jsonb
-      )
-    `;
+    await sql` INSERT INTO audits ( id, employee_id, employee_name, customer, location, date, status, score, template_id, answers ) VALUES ( ${audit.id}, ${audit.employeeId}, ${audit.employeeName}, ${audit.customer}, ${audit.location}, ${audit.date}, ${audit.status}, ${audit.score ?? null}, ${audit.templateId}, ${JSON.stringify(audit.answers)}::jsonb ) `;
   }
 }
-
 export function scoreAudit(audit: Audit) {
   const values = Object.values(audit.answers)
-    .map((a) => a.status)
-    .filter(Boolean);
-
-  const eligible = values.filter((v) => v !== "N/A");
-
+    .map((answer) => {
+      if (typeof answer.value === "string") {
+        return answer.value;
+      }
+      return undefined;
+    })
+    .filter(Boolean) as string[];
+  const eligible = values.filter((value) => value !== "N/A");
   return eligible.length
     ? Math.round(
-        (values.filter((v) => v === "PASS").length / eligible.length) * 100,
+        (values.filter((value) => value === "PASS").length / eligible.length) *
+          100,
       )
     : 0;
 }
-
 export async function getSession() {
   return null;
 }
-

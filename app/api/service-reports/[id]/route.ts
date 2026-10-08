@@ -26,3 +26,30 @@ export async function PUT(
   await writeServiceReports(items);
   return NextResponse.json(items[i]);
 }
+
+export async function DELETE(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const items = await readServiceReports();
+
+  const index = items.findIndex((x) => x.id === id);
+
+  if (index < 0) {
+    return NextResponse.json(
+      { error: "Not found" },
+      { status: 404 },
+    );
+  }
+
+  items.splice(index, 1);
+
+  await writeServiceReports(items);
+
+  return NextResponse.json({
+    success: true,
+    message: "Service report deleted successfully.",
+  });
+}

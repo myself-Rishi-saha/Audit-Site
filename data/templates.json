@@ -1,34 +1,116 @@
 [
   {
     "id": "multiplex-fire-safety",
-    "title": "MULTIPLEX FIRE SAFETY AND EVACUATION AUDIT",
+    "type": "AUDIT",
+    "name": "Multiplex Fire Safety and Evacuation Audit",
+    "title": "AUDIT FORM",
     "sections": [
       {
-        "title": "CHECKLIST FINDINGS",
-        "questions": [
+        "id": "checklist-findings",
+        "name": "CHECKLIST FINDINGS",
+        "fields": [
           {
             "id": "fda-panel",
-            "text": "FDA PANEL WORKING STATUS?",
+            "label": "FDA PANEL WORKING STATUS?",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "PASS",
+              "FAIL",
+              "N/A"
+            ]
+          },
+          {
+            "id": "fda-panel-photo",
+            "label": "FDA PANEL PHOTO",
+            "type": "camera-photo",
             "required": true
           },
           {
             "id": "fire-pump",
-            "text": "FIRE PUMP WORKING STATUS?",
-            "required": true
+            "label": "FIRE PUMP WORKING STATUS?",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "PASS",
+              "FAIL",
+              "N/A"
+            ]
+          },
+          {
+            "id": "fire-pump-photo",
+            "label": "FIRE PUMP PHOTO",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "fire-pump-video",
+            "label": "FIRE PUMP VIDEO",
+            "type": "camera-video",
+            "required": false
           }
         ]
       },
       {
-        "title": "GENERAL",
-        "questions": [
+        "id": "general",
+        "name": "GENERAL",
+        "fields": [
           {
             "id": "extinguishers",
-            "text": "FIRE EXTINGUISHERS AVAILABLE?",
-            "required": true
+            "label": "FIRE EXTINGUISHERS AVAILABLE?",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "PASS",
+              "FAIL",
+              "N/A"
+            ]
+          },
+          {
+            "id": "extinguishers-photo",
+            "label": "FIRE EXTINGUISHERS PHOTO",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "extinguishers-video",
+            "label": "FIRE EXTINGUISHERS VIDEO",
+            "type": "camera-video",
+            "required": false
           },
           {
             "id": "exit-clear",
-            "text": "EMERGENCY EXIT CLEAR?",
+            "label": "EMERGENCY EXIT CLEAR?",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "PASS",
+              "FAIL",
+              "N/A"
+            ]
+          },
+          {
+            "id": "exit-clear-photo",
+            "label": "EMERGENCY EXIT PHOTO",
+            "type": "camera-photo",
+            "required": false
+          },
+          {
+            "id": "exit-clear-video",
+            "label": "EMERGENCY EXIT VIDEO",
+            "type": "camera-video",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "customer-evidence-1791441204491",
+        "name": "CUSTOMER EVIDENCE",
+        "fields": [
+          {
+            "id": "customer-photot-1791441229469",
+            "label": "CUSTOMER PHOTOT",
+            "type": "camera-photo",
             "required": true
           }
         ]
@@ -39,7 +121,7 @@
     "id": "service-report",
     "type": "SERVICE_REPORT",
     "name": "Equipment Service & Maintenance Report",
-    "title": "Equipment Service & Maintenance Report",
+    "title": "Service Report Form",
     "sections": [
       {
         "id": "job-information",
@@ -156,7 +238,7 @@
             "id": "customer-photo",
             "label": "Customer Photo",
             "type": "camera-photo",
-            "required": false
+            "required": true
           },
           {
             "id": "customer-remarks",

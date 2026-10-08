@@ -284,12 +284,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CameraCapture } from "@/components/camera-capture";
 
@@ -360,11 +355,7 @@ const keyMap: Record<string, keyof ServiceData> = {
   "customer-remarks": "customerRemarks",
 };
 
-export function ServiceReportDraft({
-  report,
-}: {
-  report: any;
-}) {
+export function ServiceReportDraft({ report }: { report: any }) {
   const router = useRouter();
 
   const [template, setTemplate] = useState<ServiceTemplate | null>(
@@ -467,8 +458,7 @@ export function ServiceReportDraft({
 
     if (Array.isArray(value)) {
       return (
-        value.length === 0 ||
-        value.every((item) => !String(item || "").trim())
+        value.length === 0 || value.every((item) => !String(item || "").trim())
       );
     }
 
@@ -516,10 +506,7 @@ export function ServiceReportDraft({
       ...current,
       evidence: {
         ...current.evidence,
-        [fieldId]: [
-          ...(current.evidence?.[fieldId] || []),
-          item,
-        ],
+        [fieldId]: [...(current.evidence?.[fieldId] || []), item],
       },
     }));
 
@@ -540,9 +527,9 @@ export function ServiceReportDraft({
       ...current,
       evidence: {
         ...current.evidence,
-        [fieldId]: (
-          current.evidence?.[fieldId] || []
-        ).filter((_, i) => i !== index),
+        [fieldId]: (current.evidence?.[fieldId] || []).filter(
+          (_, i) => i !== index,
+        ),
       },
     }));
   }
@@ -589,6 +576,44 @@ export function ServiceReportDraft({
     return false;
   }
 
+  async function deleteDraft() {
+    if (saving) return;
+
+    const confirmed = confirm(
+      "Delete this service report draft?\n\nThis action cannot be undone.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSaving(true);
+
+      const response = await fetch(`/api/service-reports/${report.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        let message = "Failed to delete draft.";
+
+        try {
+          const result = await response.json();
+          message = result?.error || message;
+        } catch {}
+
+        throw new Error(message);
+      }
+
+      router.push("/employee");
+      router.refresh();
+    } catch (error) {
+      console.error("DELETE SERVICE REPORT ERROR:", error);
+
+      alert(error instanceof Error ? error.message : "Failed to delete draft.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   /*
    * Save current report data.
    */
@@ -598,19 +623,16 @@ export function ServiceReportDraft({
     try {
       setSaving(true);
 
-      const response = await fetch(
-        `/api/service-reports/${report.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...data,
-            status: "DRAFT",
-          }),
+      const response = await fetch(`/api/service-reports/${report.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          ...data,
+          status: "DRAFT",
+        }),
+      });
 
       if (!response.ok) {
         let message = "Failed to save draft.";
@@ -627,11 +649,7 @@ export function ServiceReportDraft({
     } catch (error) {
       console.error("SAVE SERVICE REPORT ERROR:", error);
 
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to save draft.",
-      );
+      alert(error instanceof Error ? error.message : "Failed to save draft.");
     } finally {
       setSaving(false);
     }
@@ -649,9 +667,7 @@ export function ServiceReportDraft({
     const valid = validateRequiredFields();
 
     if (!valid) {
-      alert(
-        "Please complete all required fields before submitting.",
-      );
+      alert("Please complete all required fields before submitting.");
       return;
     }
 
@@ -667,19 +683,16 @@ export function ServiceReportDraft({
       /*
        * Save latest data first.
        */
-      const saveResponse = await fetch(
-        `/api/service-reports/${report.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...data,
-            status: "DRAFT",
-          }),
+      const saveResponse = await fetch(`/api/service-reports/${report.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          ...data,
+          status: "DRAFT",
+        }),
+      });
 
       if (!saveResponse.ok) {
         let message = "Failed to save service report.";
@@ -745,10 +758,7 @@ export function ServiceReportDraft({
       return (
         <div className="space-y-3">
           {actions.map((action, index) => (
-            <div
-              key={index}
-              className="flex items-start gap-2"
-            >
+            <div key={index} className="flex items-start gap-2">
               <Textarea
                 value={String(action || "")}
                 onChange={(e) => {
@@ -770,9 +780,7 @@ export function ServiceReportDraft({
                   onClick={() => {
                     setValue(
                       field,
-                      actions.filter(
-                        (_, i) => i !== index,
-                      ),
+                      actions.filter((_, i) => i !== index),
                     );
                   }}
                 >
@@ -786,9 +794,7 @@ export function ServiceReportDraft({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() =>
-              setValue(field, [...actions, ""])
-            }
+            onClick={() => setValue(field, [...actions, ""])}
           >
             <Plus data-icon="inline-start" />
             Add Action
@@ -804,14 +810,10 @@ export function ServiceReportDraft({
       return (
         <Textarea
           value={String(value || "")}
-          onChange={(e) =>
-            setValue(field, e.target.value)
-          }
+          onChange={(e) => setValue(field, e.target.value)}
           placeholder={`Enter ${field.label.toLowerCase()}...`}
           className={`min-h-28 resize-y ${
-            hasError
-              ? "border-red-500 focus-visible:ring-red-500"
-              : ""
+            hasError ? "border-red-500 focus-visible:ring-red-500" : ""
           }`}
         />
       );
@@ -824,9 +826,7 @@ export function ServiceReportDraft({
       return (
         <div
           className={`rounded-xl ${
-            hasError
-              ? "border border-red-500 bg-red-50/30 p-2"
-              : ""
+            hasError ? "border border-red-500 bg-red-50/30 p-2" : ""
           }`}
         >
           <div className="flex flex-wrap gap-2">
@@ -834,18 +834,14 @@ export function ServiceReportDraft({
               <button
                 key={option}
                 type="button"
-                onClick={() =>
-                  setValue(field, option)
-                }
+                onClick={() => setValue(field, option)}
                 className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition ${
                   value === option
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background hover:border-primary/40 hover:bg-muted"
                 }`}
               >
-                {value === option && (
-                  <Check className="mr-1 inline size-4" />
-                )}
+                {value === option && <Check className="mr-1 inline size-4" />}
 
                 {option}
               </button>
@@ -859,16 +855,12 @@ export function ServiceReportDraft({
      * Multiple choice.
      */
     if (field.type === "multiple-choice") {
-      const selected = Array.isArray(value)
-        ? value
-        : [];
+      const selected = Array.isArray(value) ? value : [];
 
       return (
         <div
           className={`grid gap-2 rounded-xl ${
-            hasError
-              ? "border border-red-500 bg-red-50/30 p-3"
-              : ""
+            hasError ? "border border-red-500 bg-red-50/30 p-3" : ""
           }`}
         >
           {(field.options || []).map((option) => {
@@ -888,25 +880,18 @@ export function ServiceReportDraft({
                   checked={checked}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setValue(field, [
-                        ...selected,
-                        option,
-                      ]);
+                      setValue(field, [...selected, option]);
                     } else {
                       setValue(
                         field,
-                        selected.filter(
-                          (item) => item !== option,
-                        ),
+                        selected.filter((item) => item !== option),
                       );
                     }
                   }}
                   className="size-4"
                 />
 
-                <span className="text-sm">
-                  {option}
-                </span>
+                <span className="text-sm">{option}</span>
               </label>
             );
           })}
@@ -917,19 +902,13 @@ export function ServiceReportDraft({
     /*
      * Camera photo / video.
      */
-    if (
-      field.type === "camera-photo" ||
-      field.type === "camera-video"
-    ) {
-      const evidence =
-        data.evidence?.[field.id] || [];
+    if (field.type === "camera-photo" || field.type === "camera-video") {
+      const evidence = data.evidence?.[field.id] || [];
 
       return (
         <div
           className={`rounded-xl ${
-            hasError
-              ? "border border-red-500 bg-red-50/30 p-3"
-              : ""
+            hasError ? "border border-red-500 bg-red-50/30 p-3" : ""
           }`}
         >
           <div className="flex flex-wrap gap-2">
@@ -940,27 +919,17 @@ export function ServiceReportDraft({
               onClick={() => {
                 setCameraFieldId(field.id);
                 setCameraMode(
-                  field.type === "camera-video"
-                    ? "video"
-                    : "photo",
+                  field.type === "camera-video" ? "video" : "photo",
                 );
               }}
             >
               {field.type === "camera-video" ? (
-                <Video
-                  data-icon="inline-start"
-                  className="size-4"
-                />
+                <Video data-icon="inline-start" className="size-4" />
               ) : (
-                <Camera
-                  data-icon="inline-start"
-                  className="size-4"
-                />
+                <Camera data-icon="inline-start" className="size-4" />
               )}
 
-              {field.type === "camera-video"
-                ? "Record Video"
-                : "Capture Photo"}
+              {field.type === "camera-video" ? "Record Video" : "Capture Photo"}
             </Button>
           </div>
 
@@ -988,12 +957,7 @@ export function ServiceReportDraft({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      removeEvidence(
-                        field.id,
-                        index,
-                      )
-                    }
+                    onClick={() => removeEvidence(field.id, index)}
                     className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
                     aria-label="Remove evidence"
                   >
@@ -1001,9 +965,7 @@ export function ServiceReportDraft({
                   </button>
 
                   <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
-                    {item.type === "video"
-                      ? "VIDEO"
-                      : "PHOTO"}
+                    {item.type === "video" ? "VIDEO" : "PHOTO"}
                   </div>
                 </div>
               ))}
@@ -1028,14 +990,10 @@ export function ServiceReportDraft({
         <Input
           type="text"
           value={String(value || "")}
-          onChange={(e) =>
-            setValue(field, e.target.value)
-          }
+          onChange={(e) => setValue(field, e.target.value)}
           placeholder="DD/MM/YYYY"
           className={
-            hasError
-              ? "border-red-500 focus-visible:ring-red-500"
-              : ""
+            hasError ? "border-red-500 focus-visible:ring-red-500" : ""
           }
         />
       );
@@ -1049,14 +1007,10 @@ export function ServiceReportDraft({
         <Input
           type="text"
           value={String(value || "")}
-          onChange={(e) =>
-            setValue(field, e.target.value)
-          }
+          onChange={(e) => setValue(field, e.target.value)}
           placeholder="e.g. 11:30 AM"
           className={
-            hasError
-              ? "border-red-500 focus-visible:ring-red-500"
-              : ""
+            hasError ? "border-red-500 focus-visible:ring-red-500" : ""
           }
         />
       );
@@ -1069,15 +1023,9 @@ export function ServiceReportDraft({
       <Input
         type={field.type === "number" ? "number" : "text"}
         value={String(value || "")}
-        onChange={(e) =>
-          setValue(field, e.target.value)
-        }
+        onChange={(e) => setValue(field, e.target.value)}
         placeholder={`Enter ${field.label.toLowerCase()}...`}
-        className={
-          hasError
-            ? "border-red-500 focus-visible:ring-red-500"
-            : ""
-        }
+        className={hasError ? "border-red-500 focus-visible:ring-red-500" : ""}
       />
     );
   }
@@ -1099,10 +1047,7 @@ export function ServiceReportDraft({
   return (
     <main className="mobile-safe-bottom mx-auto max-w-6xl px-5 py-8 sm:px-8">
       {/* Back */}
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/employee")}
-      >
+      <Button variant="ghost" onClick={() => router.push("/employee")}>
         <ArrowLeft data-icon="inline-start" />
         Back to Dashboard
       </Button>
@@ -1125,8 +1070,7 @@ export function ServiceReportDraft({
               </h1>
 
               <p className="mt-2 text-sm text-muted-foreground">
-                Complete the service report and add supporting
-                evidence.
+                Complete the service report and add supporting evidence.
               </p>
 
               <p className="mt-2 font-mono text-xs text-muted-foreground">
@@ -1134,10 +1078,7 @@ export function ServiceReportDraft({
               </p>
             </div>
 
-            <Badge
-              variant="secondary"
-              className="w-fit"
-            >
+            <Badge variant="secondary" className="w-fit">
               DRAFT
             </Badge>
           </div>
@@ -1149,9 +1090,7 @@ export function ServiceReportDraft({
         <div className="flex flex-col gap-6">
           {/* Dynamic template sections */}
           {sections.map((section, sectionIndex) => (
-            <section
-              key={`${section.id || section.name}-${sectionIndex}`}
-            >
+            <section key={`${section.id || section.name}-${sectionIndex}`}>
               {/* Section heading */}
               <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
                 <div className="flex items-center gap-3">
@@ -1161,8 +1100,7 @@ export function ServiceReportDraft({
 
                   <div>
                     <h2 className="font-semibold">
-                      {section.name ||
-                        section.title}
+                      {section.name || section.title}
                     </h2>
 
                     <p className="text-xs text-muted-foreground">
@@ -1173,9 +1111,7 @@ export function ServiceReportDraft({
 
                 <Badge variant="secondary">
                   {section.fields.length}{" "}
-                  {section.fields.length === 1
-                    ? "field"
-                    : "fields"}
+                  {section.fields.length === 1 ? "field" : "fields"}
                 </Badge>
               </div>
 
@@ -1195,20 +1131,14 @@ export function ServiceReportDraft({
                       <div
                         key={field.id}
                         data-field-id={field.id}
-                        className={
-                          fullWidth
-                            ? "sm:col-span-2"
-                            : ""
-                        }
+                        className={fullWidth ? "sm:col-span-2" : ""}
                       >
                         <label className="block text-sm font-medium">
                           <span className="flex items-center gap-1">
                             {field.label}
 
                             {field.required && (
-                              <span className="text-red-500">
-                                *
-                              </span>
+                              <span className="text-red-500">*</span>
                             )}
                           </span>
 
@@ -1219,9 +1149,7 @@ export function ServiceReportDraft({
                           )}
                         </label>
 
-                        <div className="mt-2">
-                          {renderField(field)}
-                        </div>
+                        <div className="mt-2">{renderField(field)}</div>
 
                         {errors[field.id] && (
                           <p className="mt-1 text-xs font-medium text-red-500">
@@ -1246,8 +1174,7 @@ export function ServiceReportDraft({
               </CardTitle>
 
               <p className="text-sm text-muted-foreground">
-                {completedRequired} of{" "}
-                {requiredFields.length} required fields
+                {completedRequired} of {requiredFields.length} required fields
                 completed
               </p>
             </CardHeader>
@@ -1282,14 +1209,34 @@ export function ServiceReportDraft({
                     Status
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold">
-                    DRAFT
-                  </p>
+                  <p className="mt-1 text-sm font-semibold">DRAFT</p>
                 </div>
               </div>
 
               {/* Desktop buttons */}
+              {/* Desktop buttons */}
               <div className="mt-5 hidden flex-col gap-2 border-t pt-4 lg:flex">
+                <Button variant="outline" onClick={saveDraft} disabled={saving}>
+                  <Save data-icon="inline-start" />
+                  {saving ? "Saving..." : "Save Draft"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={deleteDraft}
+                  disabled={saving}
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 data-icon="inline-start" />
+                  Delete Draft
+                </Button>
+
+                <Button onClick={submitReport} disabled={saving}>
+                  <Send data-icon="inline-start" />
+                  {saving ? "Processing..." : "Submit Report"}
+                </Button>
+              </div>
+              {/* <div className="mt-5 hidden flex-col gap-2 border-t pt-4 lg:flex">
                 <Button
                   variant="outline"
                   onClick={saveDraft}
@@ -1310,14 +1257,42 @@ export function ServiceReportDraft({
                     ? "Processing..."
                     : "Submit Report"}
                 </Button>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
         </aside>
       </div>
 
       {/* Mobile bottom buttons */}
+      {/* Mobile bottom buttons */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-6xl gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={saveDraft}
+            disabled={saving}
+          >
+            <Save data-icon="inline-start" />
+            {saving ? "Saving..." : "Save"}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={deleteDraft}
+            disabled={saving}
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 data-icon="inline-start" />
+          </Button>
+
+          <Button className="flex-1" onClick={submitReport} disabled={saving}>
+            <Send data-icon="inline-start" />
+            {saving ? "Processing..." : "Submit"}
+          </Button>
+        </div>
+      </div>
+      {/* <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-card/95 p-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-6xl gap-2">
           <Button
             variant="outline"
@@ -1329,16 +1304,12 @@ export function ServiceReportDraft({
             {saving ? "Saving..." : "Save Draft"}
           </Button>
 
-          <Button
-            className="flex-1"
-            onClick={submitReport}
-            disabled={saving}
-          >
+          <Button className="flex-1" onClick={submitReport} disabled={saving}>
             <Send data-icon="inline-start" />
             {saving ? "Processing..." : "Submit"}
           </Button>
         </div>
-      </div>
+      </div> */}
 
       {/* Camera */}
       {cameraMode && cameraFieldId && (
