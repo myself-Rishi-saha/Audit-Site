@@ -1,6 +1,3 @@
-
-
-
 // "use client";
 
 // import { useEffect, useState } from "react";
@@ -878,12 +875,13 @@
 //   );
 // }
 
-
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -931,10 +929,10 @@ type ServiceReport = {
   employeeId?: string;
   employeeName?: string;
 
-  templateId: string;
+  customerName?: string;
+  customerAddress?: string | null;
 
-  // IMPORTANT:
-  // Exact template used when this report was created.
+  templateId: string;
   templateSnapshot: Template;
 
   formData: Record<string, unknown>;
@@ -946,28 +944,39 @@ type ServiceReport = {
   updatedAt?: string;
 };
 
-export function AdminServiceEditor({
-  report,
-}: {
-  report: ServiceReport;
-}) {
+// type ServiceReport = {
+//   id: string;
+//   employeeId?: string;
+//   employeeName?: string;
+
+//   templateId: string;
+
+//   // IMPORTANT:
+//   // Exact template used when this report was created.
+//   templateSnapshot: Template;
+
+//   formData: Record<string, unknown>;
+//   evidence: Record<string, EvidenceItem[]>;
+//   signatures: Record<string, SignatureData>;
+
+//   status?: string;
+//   createdAt?: string;
+//   updatedAt?: string;
+// };
+
+export function AdminServiceEditor({ report }: { report: ServiceReport }) {
   const router = useRouter();
 
   const [value, setValue] = useState<ServiceReport>({
     ...report,
 
-    templateId:
-      report?.templateId ||
-      "service-report",
+    templateId: report?.templateId || "service-report",
 
-    templateSnapshot:
-      report?.templateSnapshot || {
-        id:
-          report?.templateId ||
-          "service-report",
-        title: "Service Report",
-        sections: [],
-      },
+    templateSnapshot: report?.templateSnapshot || {
+      id: report?.templateId || "service-report",
+      title: "Service Report",
+      sections: [],
+    },
 
     formData:
       report?.formData &&
@@ -991,11 +1000,9 @@ export function AdminServiceEditor({
         : {},
   });
 
-  const [editing, setEditing] =
-    useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
   /*
    * IMPORTANT:
@@ -1005,16 +1012,12 @@ export function AdminServiceEditor({
    * The report already contains the exact
    * template that was used when it was created.
    */
-  const template =
-    value.templateSnapshot;
+  const template = value.templateSnapshot;
 
   /*
    * Update a normal dynamic form field.
    */
-  function setFieldValue(
-    fieldId: string,
-    fieldValue: unknown,
-  ) {
+  function setFieldValue(fieldId: string, fieldValue: unknown) {
     setValue((current) => ({
       ...current,
 
@@ -1028,39 +1031,27 @@ export function AdminServiceEditor({
   /*
    * Read a dynamic form field.
    */
-  function getFieldValue(
-    fieldId: string,
-  ) {
-    return (
-      value.formData?.[fieldId] ??
-      ""
-    );
+  function getFieldValue(fieldId: string) {
+    return value.formData?.[fieldId] ?? "";
   }
 
   /*
    * Evidence is stored by field ID.
    */
-  const evidence = Object.values(
-    value.evidence || {},
-  ).flat();
+  const evidence = Object.values(value.evidence || {}).flat();
 
   /*
    * Render a dynamic form field.
    */
   function renderField(field: Field) {
-    const fieldValue =
-      getFieldValue(field.id);
+    const fieldValue = getFieldValue(field.id);
 
     const commonLabel = (
       <label className="block text-sm font-medium">
         <span>
           {field.label}
 
-          {field.required && (
-            <span className="ml-1 text-destructive">
-              *
-            </span>
-          )}
+          {field.required && <span className="ml-1 text-destructive">*</span>}
         </span>
       </label>
     );
@@ -1076,15 +1067,8 @@ export function AdminServiceEditor({
           <Input
             className="mt-2"
             disabled={!editing}
-            value={String(
-              fieldValue ?? "",
-            )}
-            onChange={(event) =>
-              setFieldValue(
-                field.id,
-                event.target.value,
-              )
-            }
+            value={String(fieldValue ?? "")}
+            onChange={(event) => setFieldValue(field.id, event.target.value)}
           />
         </div>
       );
@@ -1102,15 +1086,8 @@ export function AdminServiceEditor({
             type="number"
             className="mt-2"
             disabled={!editing}
-            value={String(
-              fieldValue ?? "",
-            )}
-            onChange={(event) =>
-              setFieldValue(
-                field.id,
-                event.target.value,
-              )
-            }
+            value={String(fieldValue ?? "")}
+            onChange={(event) => setFieldValue(field.id, event.target.value)}
           />
         </div>
       );
@@ -1128,15 +1105,8 @@ export function AdminServiceEditor({
             type="date"
             className="mt-2"
             disabled={!editing}
-            value={String(
-              fieldValue ?? "",
-            )}
-            onChange={(event) =>
-              setFieldValue(
-                field.id,
-                event.target.value,
-              )
-            }
+            value={String(fieldValue ?? "")}
+            onChange={(event) => setFieldValue(field.id, event.target.value)}
           />
         </div>
       );
@@ -1154,15 +1124,8 @@ export function AdminServiceEditor({
             type="time"
             className="mt-2"
             disabled={!editing}
-            value={String(
-              fieldValue ?? "",
-            )}
-            onChange={(event) =>
-              setFieldValue(
-                field.id,
-                event.target.value,
-              )
-            }
+            value={String(fieldValue ?? "")}
+            onChange={(event) => setFieldValue(field.id, event.target.value)}
           />
         </div>
       );
@@ -1172,15 +1135,11 @@ export function AdminServiceEditor({
      * TEXTAREA
      */
     if (field.type === "textarea") {
-      const isMultiple =
-        field.multiple === true;
+      const isMultiple = field.multiple === true;
 
-      const textareaValue =
-        Array.isArray(fieldValue)
-          ? fieldValue.join("\n")
-          : String(
-              fieldValue ?? "",
-            );
+      const textareaValue = Array.isArray(fieldValue)
+        ? fieldValue.join("\n")
+        : String(fieldValue ?? "");
 
       return (
         <div key={field.id}>
@@ -1191,17 +1150,14 @@ export function AdminServiceEditor({
             disabled={!editing}
             value={textareaValue}
             onChange={(event) => {
-              const nextValue =
-                event.target.value;
+              const nextValue = event.target.value;
 
               setFieldValue(
                 field.id,
                 isMultiple
                   ? nextValue
                       .split("\n")
-                      .map((item) =>
-                        item.trim(),
-                      )
+                      .map((item) => item.trim())
                       .filter(Boolean)
                   : nextValue,
               );
@@ -1210,8 +1166,7 @@ export function AdminServiceEditor({
 
           {isMultiple && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Enter each item on a new
-              line.
+              Enter each item on a new line.
             </p>
           )}
         </div>
@@ -1221,47 +1176,31 @@ export function AdminServiceEditor({
     /*
      * SINGLE CHOICE
      */
-    if (
-      field.type ===
-      "single-choice"
-    ) {
+    if (field.type === "single-choice") {
       return (
         <div key={field.id}>
           {commonLabel}
 
           <div className="mt-2 flex flex-wrap gap-2">
-            {(field.options || []).map(
-              (option) => {
-                const selected =
-                  fieldValue ===
-                  option;
+            {(field.options || []).map((option) => {
+              const selected = fieldValue === option;
 
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={!editing}
-                    onClick={() =>
-                      setFieldValue(
-                        field.id,
-                        option,
-                      )
-                    }
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-background hover:bg-muted"
-                    } ${
-                      !editing
-                        ? "cursor-default opacity-80"
-                        : ""
-                    }`}
-                  >
-                    {option}
-                  </button>
-                );
-              },
-            )}
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={!editing}
+                  onClick={() => setFieldValue(field.id, option)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted"
+                  } ${!editing ? "cursor-default opacity-80" : ""}`}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -1270,67 +1209,42 @@ export function AdminServiceEditor({
     /*
      * MULTIPLE CHOICE
      */
-    if (
-      field.type ===
-      "multiple-choice"
-    ) {
-      const selectedValues =
-        Array.isArray(fieldValue)
-          ? fieldValue
-          : [];
+    if (field.type === "multiple-choice") {
+      const selectedValues = Array.isArray(fieldValue) ? fieldValue : [];
 
       return (
         <div key={field.id}>
           {commonLabel}
 
           <div className="mt-2 flex flex-wrap gap-2">
-            {(field.options || []).map(
-              (option) => {
-                const selected =
-                  selectedValues.includes(
-                    option,
-                  );
+            {(field.options || []).map((option) => {
+              const selected = selectedValues.includes(option);
 
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={!editing}
-                    onClick={() => {
-                      if (selected) {
-                        setFieldValue(
-                          field.id,
-                          selectedValues.filter(
-                            (item) =>
-                              item !==
-                              option,
-                          ),
-                        );
-                      } else {
-                        setFieldValue(
-                          field.id,
-                          [
-                            ...selectedValues,
-                            option,
-                          ],
-                        );
-                      }
-                    }}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-background hover:bg-muted"
-                    } ${
-                      !editing
-                        ? "cursor-default opacity-80"
-                        : ""
-                    }`}
-                  >
-                    {option}
-                  </button>
-                );
-              },
-            )}
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={!editing}
+                  onClick={() => {
+                    if (selected) {
+                      setFieldValue(
+                        field.id,
+                        selectedValues.filter((item) => item !== option),
+                      );
+                    } else {
+                      setFieldValue(field.id, [...selectedValues, option]);
+                    }
+                  }}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted"
+                  } ${!editing ? "cursor-default opacity-80" : ""}`}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -1339,79 +1253,51 @@ export function AdminServiceEditor({
     /*
      * CAMERA PHOTO
      */
-    if (
-      field.type ===
-      "camera-photo"
-    ) {
-      const fieldEvidence =
-        value.evidence?.[
-          field.id
-        ] || [];
+    if (field.type === "camera-photo") {
+      const fieldEvidence = value.evidence?.[field.id] || [];
 
       return (
-        <div
-          key={field.id}
-          className="rounded-xl border bg-muted/20 p-4"
-        >
+        <div key={field.id} className="rounded-xl border bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium">
-                {field.label}
-              </p>
+              <p className="text-sm font-medium">{field.label}</p>
 
               {field.required && (
-                <span className="text-xs text-destructive">
-                  Required
-                </span>
+                <span className="text-xs text-destructive">Required</span>
               )}
             </div>
 
             <span className="text-xs text-muted-foreground">
               {fieldEvidence.length}{" "}
-              {fieldEvidence.length ===
-              1
-                ? "file"
-                : "files"}
+              {fieldEvidence.length === 1 ? "file" : "files"}
             </span>
           </div>
 
-          {fieldEvidence.length >
-            0 && (
+          {fieldEvidence.length > 0 && (
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {fieldEvidence.map(
-                (
-                  item,
-                  index,
-                ) => (
-                  <div
-                    key={`${item.url}-${index}`}
-                    className="overflow-hidden rounded-lg border bg-background"
-                  >
-                    <img
-                      src={
-                        item.url
-                      }
-                      alt={`${field.label} ${
-                        index + 1
-                      }`}
-                      className="aspect-video w-full object-cover"
-                    />
+              {fieldEvidence.map((item, index) => (
+                <div
+                  key={`${item.url}-${index}`}
+                  className="overflow-hidden rounded-lg border bg-background"
+                >
+                  <img
+                    src={item.url}
+                    alt={`${field.label} ${index + 1}`}
+                    className="aspect-video w-full object-cover"
+                  />
 
-                    <div className="p-2">
-                      <a
-                        href={
-                          item.url
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Open image
-                      </a>
-                    </div>
+                  <div className="p-2">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Open image
+                    </a>
                   </div>
-                ),
-              )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1421,78 +1307,52 @@ export function AdminServiceEditor({
     /*
      * CAMERA VIDEO
      */
-    if (
-      field.type ===
-      "camera-video"
-    ) {
-      const fieldEvidence =
-        value.evidence?.[
-          field.id
-        ] || [];
+    if (field.type === "camera-video") {
+      const fieldEvidence = value.evidence?.[field.id] || [];
 
       return (
-        <div
-          key={field.id}
-          className="rounded-xl border bg-muted/20 p-4"
-        >
+        <div key={field.id} className="rounded-xl border bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium">
-                {field.label}
-              </p>
+              <p className="text-sm font-medium">{field.label}</p>
 
               {field.required && (
-                <span className="text-xs text-destructive">
-                  Required
-                </span>
+                <span className="text-xs text-destructive">Required</span>
               )}
             </div>
 
             <span className="text-xs text-muted-foreground">
               {fieldEvidence.length}{" "}
-              {fieldEvidence.length ===
-              1
-                ? "file"
-                : "files"}
+              {fieldEvidence.length === 1 ? "file" : "files"}
             </span>
           </div>
 
-          {fieldEvidence.length >
-            0 && (
+          {fieldEvidence.length > 0 && (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {fieldEvidence.map(
-                (
-                  item,
-                  index,
-                ) => (
-                  <div
-                    key={`${item.url}-${index}`}
-                    className="overflow-hidden rounded-lg border bg-background"
-                  >
-                    <video
-                      src={
-                        item.url
-                      }
-                      controls
-                      playsInline
-                      className="aspect-video w-full object-cover"
-                    />
+              {fieldEvidence.map((item, index) => (
+                <div
+                  key={`${item.url}-${index}`}
+                  className="overflow-hidden rounded-lg border bg-background"
+                >
+                  <video
+                    src={item.url}
+                    controls
+                    playsInline
+                    className="aspect-video w-full object-cover"
+                  />
 
-                    <div className="p-2">
-                      <a
-                        href={
-                          item.url
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Open video
-                      </a>
-                    </div>
+                  <div className="p-2">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Open video
+                    </a>
                   </div>
-                ),
-              )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1502,30 +1362,17 @@ export function AdminServiceEditor({
     /*
      * SIGNATURE
      */
-    if (
-      field.type ===
-      "signature"
-    ) {
-      const signature =
-        value.signatures?.[
-          field.id
-        ];
+    if (field.type === "signature") {
+      const signature = value.signatures?.[field.id];
 
       return (
-        <div
-          key={field.id}
-          className="rounded-xl border bg-muted/20 p-4"
-        >
-          <p className="text-sm font-medium">
-            {field.label}
-          </p>
+        <div key={field.id} className="rounded-xl border bg-muted/20 p-4">
+          <p className="text-sm font-medium">{field.label}</p>
 
           {signature?.signature ? (
             <div className="mt-3 overflow-hidden rounded-lg border bg-white">
               <img
-                src={
-                  signature.signature
-                }
+                src={signature.signature}
                 alt={`${field.label} signature`}
                 className="max-h-40 w-full object-contain"
               />
@@ -1536,12 +1383,25 @@ export function AdminServiceEditor({
             </p>
           )}
 
+          {/* {signature?.signedAt && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Signed: {new Date(signature.signedAt).toLocaleString()}
+            </p>
+          )} */}
+
           {signature?.signedAt && (
             <p className="mt-2 text-xs text-muted-foreground">
               Signed:{" "}
-              {new Date(
-                signature.signedAt,
-              ).toLocaleString()}
+              {new Date(signature.signedAt).toLocaleString("en-GB", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              })}
             </p>
           )}
         </div>
@@ -1558,20 +1418,12 @@ export function AdminServiceEditor({
         <Input
           className="mt-2"
           disabled={!editing}
-          value={String(
-            fieldValue ?? "",
-          )}
-          onChange={(event) =>
-            setFieldValue(
-              field.id,
-              event.target.value,
-            )
-          }
+          value={String(fieldValue ?? "")}
+          onChange={(event) => setFieldValue(field.id, event.target.value)}
         />
 
         <p className="mt-1 text-xs text-muted-foreground">
-          Field type:{" "}
-          {field.type}
+          Field type: {field.type}
         </p>
       </div>
     );
@@ -1584,47 +1436,33 @@ export function AdminServiceEditor({
     setSaving(true);
 
     try {
-      const response =
-        await fetch(
-          `/api/service-reports/${value.id}`,
-          {
-            method: "PUT",
+      const response = await fetch(`/api/service-reports/${value.id}`, {
+        method: "PUT",
 
-            headers: {
-              "content-type":
-                "application/json",
-            },
+        headers: {
+          "content-type": "application/json",
+        },
 
-            body: JSON.stringify({
-              ...value,
+        body: JSON.stringify({
+          ...value,
 
-              lastUpdatedBy:
-                "ADMIN001",
+          lastUpdatedBy: "ADMIN001",
 
-              lastUpdatedAt:
-                new Date().toISOString(),
-            }),
-          },
-        );
+          lastUpdatedAt: new Date().toISOString(),
+        }),
+      });
 
       if (!response.ok) {
-        const errorText =
-          await response.text();
+        const errorText = await response.text();
 
-        console.error(
-          "Failed to save service report:",
-          errorText,
-        );
+        console.error("Failed to save service report:", errorText);
 
-        alert(
-          "Failed to save service report.",
-        );
+        alert("Failed to save service report.");
 
         return;
       }
 
-      const updated =
-        await response.json();
+      const updated = await response.json();
 
       setValue((current) => ({
         ...current,
@@ -1633,38 +1471,22 @@ export function AdminServiceEditor({
         /*
          * Keep the original snapshot.
          */
-        templateSnapshot:
-          updated.templateSnapshot ||
-          current.templateSnapshot,
+        templateSnapshot: updated.templateSnapshot || current.templateSnapshot,
 
-        formData:
-          updated.formData ||
-          current.formData ||
-          {},
+        formData: updated.formData || current.formData || {},
 
-        evidence:
-          updated.evidence ||
-          current.evidence ||
-          {},
+        evidence: updated.evidence || current.evidence || {},
 
-        signatures:
-          updated.signatures ||
-          current.signatures ||
-          {},
+        signatures: updated.signatures || current.signatures || {},
       }));
 
       setEditing(false);
 
       router.refresh();
     } catch (error) {
-      console.error(
-        "Save error:",
-        error,
-      );
+      console.error("Save error:", error);
 
-      alert(
-        "Failed to save service report.",
-      );
+      alert("Failed to save service report.");
     } finally {
       setSaving(false);
     }
@@ -1673,29 +1495,22 @@ export function AdminServiceEditor({
   /*
    * SAFETY FALLBACK
    */
-  if (
-    !template ||
-    !template.sections
-  ) {
+  if (!template || !template.sections) {
     return (
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
           <p className="font-medium">
-            Saved report template
-            could not be loaded.
+            Saved report template could not be loaded.
           </p>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Report ID:{" "}
-            {value.id}
+            Report ID: {value.id}
           </p>
 
           <Button
             className="mt-4"
             variant="outline"
-            onClick={() =>
-              router.back()
-            }
+            onClick={() => router.back()}
           >
             Go Back
           </Button>
@@ -1710,184 +1525,190 @@ export function AdminServiceEditor({
 
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Admin review
-          </p>
+          <p className="text-sm font-medium text-primary">Admin review</p>
 
           <h1 className="mt-1 text-3xl font-semibold">
-            {template.title ||
-              template.name ||
-              "Service Report"}
+            {template.title || template.name || "Service Report"}
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Report ID:{" "}
-            {value.id}
+            Report ID: {value.id}
           </p>
 
           {value.employeeName && (
             <p className="mt-1 text-sm text-muted-foreground">
-              Employee:{" "}
-              {value.employeeName}
+              Employee: {value.employeeName}
             </p>
           )}
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              window.print()
-            }
-          >
+          <Button variant="outline" onClick={() => window.print()}>
             Generate PDF
           </Button>
 
           <Button
-            onClick={() =>
-              editing
-                ? save()
-                : setEditing(true)
-            }
+            onClick={() => (editing ? save() : setEditing(true))}
             disabled={saving}
           >
-            {saving
-              ? "Saving…"
-              : editing
-                ? "Save Changes"
-                : "Edit Report"}
+            {saving ? "Saving…" : editing ? "Save Changes" : "Edit Report"}
           </Button>
         </div>
       </div>
 
+      {/* SERVICE REPORT INFORMATION */}
+      <Card>
+        <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
+          <label className="text-sm font-medium">
+            Customer
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerName || ""}
+              onChange={(e) =>
+                setValue((current) => ({
+                  ...current,
+                  customerName: e.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Location
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerAddress || ""}
+              onChange={(e) =>
+                setValue((current) => ({
+                  ...current,
+                  customerAddress: e.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Report date</span>
+            <p className="mt-2 font-semibold">
+              {value.createdAt
+                ? new Date(value.createdAt).toLocaleDateString("en-GB", {
+                    timeZone: "Asia/Kolkata",
+                  })
+                : "—"}
+            </p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Report ID</span>
+            <p className="mt-2 font-semibold">{value.id}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Auditor</span>
+            <p className="mt-2 font-semibold">{value.employeeName || "—"}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <p className="mt-2">
+              <Badge>{String(value.status || "DRAFT").toUpperCase()}</Badge>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* DYNAMIC TEMPLATE SECTIONS */}
 
-      {template.sections?.map(
-        (section) => (
-          <Card
-            key={section.id}
-            className="mb-6"
-          >
-            <CardHeader>
-              <CardTitle>
-                {section.name ||
-                  section.title}
-              </CardTitle>
-            </CardHeader>
+      {template.sections?.map((section) => (
+        <Card key={section.id} className="mb-6">
+          <CardHeader>
+            <CardTitle>{section.name || section.title}</CardTitle>
+          </CardHeader>
 
-            <CardContent
-              className={
-                section.fields?.some(
-                  (field) =>
-                    field.type ===
-                      "camera-photo" ||
-                    field.type ===
-                      "camera-video" ||
-                    field.type ===
-                      "signature",
-                )
-                  ? "space-y-5"
-                  : "grid gap-5 sm:grid-cols-2"
-              }
-            >
-              {section.fields?.map(
+          <CardContent
+            className={
+              section.fields?.some(
                 (field) =>
-                  renderField(
-                    field,
-                  ),
-              )}
-            </CardContent>
-          </Card>
-        ),
-      )}
+                  field.type === "camera-photo" ||
+                  field.type === "camera-video" ||
+                  field.type === "signature",
+              )
+                ? "space-y-5"
+                : "grid gap-5 sm:grid-cols-2"
+            }
+          >
+            {section.fields?.map((field) => renderField(field))}
+          </CardContent>
+        </Card>
+      ))}
 
       {/* EVIDENCE GALLERY */}
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>
-            Evidence
-          </CardTitle>
+          <CardTitle>Evidence</CardTitle>
         </CardHeader>
 
         <CardContent>
           {evidence.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {evidence.map(
-                (
-                  item: EvidenceItem,
-                  index: number,
-                ) => (
-                  <div
-                    key={`${item.url}-${index}`}
-                    className="overflow-hidden rounded-xl border bg-muted"
-                  >
-                    {item.type ===
-                    "video" ? (
-                      <video
-                        src={
-                          item.url
-                        }
-                        controls
-                        playsInline
-                        className="aspect-video w-full object-cover"
-                      />
-                    ) : (
-                      <img
-                        src={
-                          item.url
-                        }
-                        alt={`Evidence ${
-                          index + 1
-                        }`}
-                        className="aspect-video w-full object-cover"
-                      />
-                    )}
+              {evidence.map((item: EvidenceItem, index: number) => (
+                <div
+                  key={`${item.url}-${index}`}
+                  className="overflow-hidden rounded-xl border bg-muted"
+                >
+                  {item.type === "video" ? (
+                    <video
+                      src={item.url}
+                      controls
+                      playsInline
+                      className="aspect-video w-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt={`Evidence ${index + 1}`}
+                      className="aspect-video w-full object-cover"
+                    />
+                  )}
 
-                    <div className="flex items-center justify-between p-3">
-                      <div>
-                        <p className="text-sm font-medium capitalize">
-                          {item.type ===
-                          "video"
-                            ? "Video"
-                            : "Photo"}
+                  <div className="flex items-center justify-between p-3">
+                    <div>
+                      <p className="text-sm font-medium capitalize">
+                        {item.type === "video" ? "Video" : "Photo"}
+                      </p>
+
+                      {item.fileName && (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {item.fileName}
                         </p>
-
-                        {item.fileName && (
-                          <p className="mt-1 truncate text-xs text-muted-foreground">
-                            {
-                              item.fileName
-                            }
-                          </p>
-                        )}
-                      </div>
-
-                      <a
-                        href={
-                          item.url
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Open
-                      </a>
+                      )}
                     </div>
+
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Open
+                    </a>
                   </div>
-                ),
-              )}
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No evidence
-              attached.
+              No evidence attached.
             </p>
           )}
         </CardContent>
       </Card>
 
       {/* SIGNATURE SUMMARY */}
-{/* 
+      {/* 
       {Object.keys(
         value.signatures || {},
       ).length > 0 && (
@@ -1955,4 +1776,3 @@ export function AdminServiceEditor({
     </main>
   );
 }
-

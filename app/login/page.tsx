@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardCheck, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -43,8 +44,18 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          {/* <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <ClipboardCheck />
+          </div> */}
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-white">
+            <Image
+               src="/logo-without-background-.png"
+              alt="Company Logo"
+              width={48}
+              height={48}
+              className="object-contain"
+              priority
+            />
           </div>
           <CardTitle className="text-2xl">Welcome to AuditDesk</CardTitle>
           <CardDescription>

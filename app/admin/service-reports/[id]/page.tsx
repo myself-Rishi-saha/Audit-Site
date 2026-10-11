@@ -14,7 +14,7 @@ export default async function AdminServiceReport({
   );
   if (!response.ok) return notFound();
   return (
-    <AppShell user="A. Sen · Admin">
+    <AppShell>
       <AdminServiceEditor report={await response.json()} />
     </AppShell>
   );

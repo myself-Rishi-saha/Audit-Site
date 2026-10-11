@@ -1,5 +1,4 @@
 
-
 // "use client";
 
 // import { useEffect, useState } from "react";
@@ -9,18 +8,20 @@
 //   ClipboardCheck,
 //   FileText,
 //   LayoutTemplate,
+//   Plus,
+//   UserRound,
 //   Wrench,
 // } from "lucide-react";
 
 // import { AppShell } from "@/components/app-shell";
+// import { Badge } from "@/components/ui/badge";
+// import { Button } from "@/components/ui/button";
 // import {
 //   Card,
 //   CardContent,
 //   CardHeader,
 //   CardTitle,
 // } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
 
 // export default function Admin() {
 //   const [audits, setAudits] = useState<any[]>([]);
@@ -28,33 +29,86 @@
 //   const router = useRouter();
 
 //   useEffect(() => {
-//     Promise.all([
-//       fetch("/api/audits").then((r) => r.json()),
-//       fetch("/api/service-reports").then((r) => r.json()),
-//     ]).then(([auditData, serviceData]) => {
-//       setAudits(Array.isArray(auditData) ? auditData : []);
-//       setServices(Array.isArray(serviceData) ? serviceData : []);
-//     });
+//     async function loadData() {
+//       try {
+//         const [auditResponse, serviceResponse] =
+//           await Promise.all([
+//             fetch("/api/audits", {
+//               cache: "no-store",
+//             }),
+//             fetch("/api/service-reports", {
+//               cache: "no-store",
+//             }),
+//           ]);
+
+//         if (auditResponse.ok) {
+//           const auditData = await auditResponse.json();
+
+//           setAudits(
+//             Array.isArray(auditData)
+//               ? auditData
+//               : [],
+//           );
+//         }
+
+//         if (serviceResponse.ok) {
+//           const serviceData =
+//             await serviceResponse.json();
+
+//           setServices(
+//             Array.isArray(serviceData)
+//               ? serviceData
+//               : [],
+//           );
+//         }
+//       } catch (error) {
+//         console.error(
+//           "Failed to load admin dashboard data:",
+//           error,
+//         );
+//       }
+//     }
+
+//     loadData();
 //   }, []);
 
-//   // Only completed audits
+//   // ---------------------------------------
+//   // COMPLETED AUDITS
+//   // ---------------------------------------
+
 //   const completed = audits.filter(
-//     (a) => a.status === "COMPLETED",
+//     (audit) =>
+//       String(audit.status || "").toUpperCase() ===
+//       "COMPLETED",
 //   );
 
-//   // Only completed service reports
+//   // ---------------------------------------
+//   // COMPLETED SERVICE REPORTS
+//   // ---------------------------------------
+
 //   const completedServices = services.filter(
-//     (report) => report.status === "COMPLETED",
+//     (report) =>
+//       String(report.status || "").toUpperCase() ===
+//       "COMPLETED",
 //   );
+
+//   // ---------------------------------------
+//   // AVERAGE AUDIT SCORE
+//   // ---------------------------------------
 
 //   const average = completed.length
 //     ? Math.round(
 //         completed.reduce(
-//           (sum, a) => sum + (a.score || 0),
+//           (sum, audit) =>
+//             sum + Number(audit.score || 0),
 //           0,
 //         ) / completed.length,
 //       )
 //     : 0;
+
+//   // ---------------------------------------
+//   // STATISTICS
+//   // ---------------------------------------
 
 //   const stats = [
 //     {
@@ -72,7 +126,9 @@
 //     {
 //       label: "Drafts",
 //       value: audits.filter(
-//         (a) => a.status === "DRAFT",
+//         (audit) =>
+//           String(audit.status || "").toUpperCase() ===
+//           "DRAFT",
 //       ).length,
 //       icon: Wrench,
 //       tone: "bg-amber-50 text-amber-700",
@@ -86,9 +142,13 @@
 //   ];
 
 //   return (
-//     <AppShell user="A. Sen · Admin">
+//     <AppShell>
 //       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-//         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+//         {/* ---------------------------------- */}
+//         {/* HEADER */}
+//         {/* ---------------------------------- */}
+
+//         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
 //           <div>
 //             <p className="text-sm font-semibold text-primary">
 //               Administration
@@ -99,45 +159,88 @@
 //             </h1>
 
 //             <p className="mt-2 text-muted-foreground">
-//               Overview of inspections and service activity.
+//               Overview of inspections and service
+//               activity.
 //             </p>
 //           </div>
 
-//           <Button
-//             variant="outline"
-//             onClick={() =>
-//               router.push("/admin/form-templates")
-//             }
-//           >
-//             <LayoutTemplate data-icon="inline-start" />
-//             Manage templates
-//           </Button>
+//           {/* ADMIN QUICK ACTIONS */}
+//           <div className="flex flex-wrap gap-3">
+//             <Button
+//               variant="outline"
+//               className="h-11"
+//               onClick={() =>
+//                 router.push("/admin/add-employee")
+//               }
+//             >
+//               <UserRound data-icon="inline-start" />
+//               Add Employee
+//             </Button>
+
+//             <Button
+//               variant="outline"
+//               className="h-11"
+//               onClick={() =>
+//                 router.push("/admin/add-customer")
+//               }
+//             >
+//               <Plus data-icon="inline-start" />
+//               Add Customer
+//             </Button>
+
+//             <Button
+//               variant="outline"
+//               className="h-11"
+//               onClick={() =>
+//                 router.push("/admin/form-templates")
+//               }
+//             >
+//               <LayoutTemplate data-icon="inline-start" />
+//               Manage Templates
+//             </Button>
+//           </div>
 //         </div>
 
-//         {/* Statistics */}
+//         {/* ---------------------------------- */}
+//         {/* STATISTICS */}
+//         {/* ---------------------------------- */}
+
 //         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-//           {stats.map(({ label, value, icon: Icon, tone }) => (
-//             <Card key={label} className="shadow-sm">
-//               <CardContent className="p-5">
-//                 <span
-//                   className={`flex size-9 items-center justify-center rounded-lg ${tone}`}
-//                 >
-//                   <Icon />
-//                 </span>
+//           {stats.map(
+//             ({
+//               label,
+//               value,
+//               icon: Icon,
+//               tone,
+//             }) => (
+//               <Card
+//                 key={label}
+//                 className="shadow-sm"
+//               >
+//                 <CardContent className="p-5">
+//                   <span
+//                     className={`flex size-9 items-center justify-center rounded-lg ${tone}`}
+//                   >
+//                     <Icon />
+//                   </span>
 
-//                 <p className="mt-4 text-sm text-muted-foreground">
-//                   {label}
-//                 </p>
+//                   <p className="mt-4 text-sm text-muted-foreground">
+//                     {label}
+//                   </p>
 
-//                 <p className="mt-1 text-2xl font-bold">
-//                   {value}
-//                 </p>
-//               </CardContent>
-//             </Card>
-//           ))}
+//                   <p className="mt-1 text-2xl font-bold">
+//                     {value}
+//                   </p>
+//                 </CardContent>
+//               </Card>
+//             ),
+//           )}
 //         </div>
 
-//         {/* Completed Audits */}
+//         {/* ---------------------------------- */}
+//         {/* COMPLETED AUDITS */}
+//         {/* ---------------------------------- */}
+
 //         <DataCard
 //           className="mt-8"
 //           title="Completed audits"
@@ -149,70 +252,104 @@
 //             "Location",
 //             "Date",
 //             "Status",
-//             "Score",
 //             "",
 //           ]}
 //         >
 //           <>
-//             {completed.map((audit) => (
-//               <tr
-//                 key={audit.id}
-//                 className="border-b transition last:border-0 hover:bg-muted/40"
-//               >
-//                 <td className="px-3 py-4 font-semibold text-primary">
-//                   {audit.id}
-//                 </td>
-
-//                 <td className="px-3 py-4">
-//                   {audit.employee_name ||
-//                     audit.employeeName ||
-//                     "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 font-medium">
-//                   {audit.customer || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 text-muted-foreground">
-//                   {audit.location || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 text-muted-foreground">
-//                   {audit.date || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4">
-//                   <Badge variant="default">
-//                     {audit.status}
-//                   </Badge>
-//                 </td>
-
-//                 <td className="px-3 py-4 font-semibold">
-//                   {audit.score != null
-//                     ? `${audit.score}%`
-//                     : "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 text-right">
-//                   <Button
-//                     size="sm"
-//                     variant="ghost"
-//                     onClick={() =>
-//                       router.push(
-//                         `/admin/audits/${audit.id}`,
-//                       )
-//                     }
-//                   >
-//                     View{" "}
-//                     <ArrowUpRight data-icon="inline-end" />
-//                   </Button>
+//             {completed.length === 0 ? (
+//               <tr>
+//                 <td
+//                   colSpan={8}
+//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
+//                 >
+//                   No completed audits yet.
 //                 </td>
 //               </tr>
-//             ))}
+//             ) : (
+//               completed.map((audit) => {
+//                 const employee =
+//                   audit.employeeName ||
+//                   audit.employee_name ||
+//                   "—";
+
+//                 const customer =
+//                   audit.customerName || "—";
+
+//                 const location =
+//                   audit.customerAddress || "—";
+
+//                 const date = audit?.createdAt
+//                   ? new Date(
+//                       audit.createdAt,
+//                     ).toLocaleDateString("en-GB")
+//                   : "—";
+
+//                 const status = String(
+//                   audit.status || "DRAFT",
+//                 ).toUpperCase();
+
+//                 return (
+//                   <tr
+//                     key={audit.id}
+//                     className="border-b transition last:border-0 hover:bg-muted/40"
+//                   >
+//                     <td className="px-3 py-4 font-semibold text-primary">
+//                       {audit.id}
+//                     </td>
+
+//                     <td className="px-3 py-4">
+//                       {employee}
+//                     </td>
+
+//                     <td className="px-3 py-4 font-medium">
+//                       {customer}
+//                     </td>
+
+//                     <td className="px-3 py-4 text-muted-foreground">
+//                       {location}
+//                     </td>
+
+//                     <td className="px-3 py-4 text-muted-foreground">
+//                       {date}
+//                     </td>
+
+//                     <td className="px-3 py-4">
+//                       <Badge variant="default">
+//                         {status}
+//                       </Badge>
+//                     </td>
+
+//                     {/* <td className="px-3 py-4 font-semibold">
+//                       {audit.score != null
+//                         ? `${audit.score}%`
+//                         : "—"}
+//                     </td> */}
+
+//                     <td className="px-3 py-4 text-right">
+//                       <Button
+//                         size="sm"
+//                         variant="ghost"
+//                         onClick={() =>
+//                           router.push(
+//                             `/admin/audits/${audit.id}`,
+//                           )
+//                         }
+//                       >
+//                         View
+//                         <ArrowUpRight data-icon="inline-end" />
+//                       </Button>
+//                     </td>
+//                   </tr>
+//                 );
+//               })
+//             )}
 //           </>
 //         </DataCard>
 
-//         {/* Completed Service Reports */}
+//         {/* ---------------------------------- */}
+//         {/* COMPLETED SERVICE REPORTS */}
+//         {/* ---------------------------------- */}
+
 //         <DataCard
 //           className="mt-6"
 //           title="Completed service reports"
@@ -228,51 +365,87 @@
 //           ]}
 //         >
 //           <>
-//             {completedServices.map((report) => (
-//               <tr
-//                 key={report.id}
-//                 className="border-b transition last:border-0 hover:bg-muted/40"
-//               >
-//                 <td className="px-3 py-4 font-semibold text-primary">
-//                   {report.id}
-//                 </td>
-
-//                 <td className="px-3 py-4 font-medium">
-//                   {report.formData?.["customer-name"] || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4">
-//                   {report.formData?.["engineer-name"] || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 text-muted-foreground">
-//                   {report.formData?.["equipment"] || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4 text-muted-foreground">
-//                   {report.formData?.["service-call-date"] || "—"}
-//                 </td>
-
-//                 <td className="px-3 py-4">
-//                   <Badge variant="default">
-//                     {report.status}
-//                   </Badge>
-//                 </td>
-
-//                 <td className="px-3 py-4 text-right">
-//                   <Button
-//                     size="sm"
-//                     onClick={() =>
-//                       router.push(
-//                         `/admin/service-reports/${report.id}`,
-//                       )
-//                     }
-//                   >
-//                     View &amp; Edit
-//                   </Button>
+//             {completedServices.length === 0 ? (
+//               <tr>
+//                 <td
+//                   colSpan={7}
+//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
+//                 >
+//                   No completed service reports yet.
 //                 </td>
 //               </tr>
-//             ))}
+//             ) : (
+//               completedServices.map((report) => {
+//                 const customer =
+//                   report.customerName || "—";
+
+//                 const engineer =
+//                   report.formData?.[
+//                     "engineer-name"
+//                   ] || "—";
+
+//                 const equipment =
+//                   report.formData?.[
+//                     "equipment"
+//                   ] || "—";
+
+//                 const date = report?.createdAt
+//                   ? new Date(
+//                       report.createdAt,
+//                     ).toLocaleDateString("en-GB")
+//                   : "—";
+
+//                 const status = String(
+//                   report.status || "DRAFT",
+//                 ).toUpperCase();
+
+//                 return (
+//                   <tr
+//                     key={report.id}
+//                     className="border-b transition last:border-0 hover:bg-muted/40"
+//                   >
+//                     <td className="px-3 py-4 font-semibold text-primary">
+//                       {report.id}
+//                     </td>
+
+//                     <td className="px-3 py-4 font-medium">
+//                       {customer}
+//                     </td>
+
+//                     <td className="px-3 py-4">
+//                       {engineer}
+//                     </td>
+
+//                     <td className="px-3 py-4 text-muted-foreground">
+//                       {equipment}
+//                     </td>
+
+//                     <td className="px-3 py-4 text-muted-foreground">
+//                       {date}
+//                     </td>
+
+//                     <td className="px-3 py-4">
+//                       <Badge variant="default">
+//                         {status}
+//                       </Badge>
+//                     </td>
+
+//                     <td className="px-3 py-4 text-right">
+//                       <Button
+//                         size="sm"
+//                         onClick={() =>
+//                           router.push(
+//                             `/admin/service-reports/${report.id}`,
+//                           )
+//                         }
+//                       >
+//                         View &amp; Edit
+//                       </Button>
+//                     </td>
+//                   </tr>
+//                 );
+//               })
+//             )}
 //           </>
 //         </DataCard>
 //       </main>
@@ -286,7 +459,13 @@
 //   headers,
 //   children,
 //   className = "",
-// }: any) {
+// }: {
+//   title: string;
+//   subtitle: string;
+//   headers: string[];
+//   children: React.ReactNode;
+//   className?: string;
+// }) {
 //   return (
 //     <Card className={`shadow-sm ${className}`}>
 //       <CardHeader>
@@ -302,10 +481,10 @@
 //           <table className="w-full min-w-[760px] text-left text-sm">
 //             <thead>
 //               <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground">
-//                 {headers.map((head: string) => (
+//                 {headers.map((head, index) => (
 //                   <th
 //                     className="px-3 py-3 font-medium"
-//                     key={head}
+//                     key={`${head}-${index}`}
 //                   >
 //                     {head}
 //                   </th>
@@ -320,18 +499,23 @@
 //     </Card>
 //   );
 // }
+
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
+  CalendarDays,
   ClipboardCheck,
   FileText,
   LayoutTemplate,
   Plus,
+  Search,
   UserRound,
   Wrench,
+  X,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -344,92 +528,231 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+function getLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getFormData(report: any): Record<string, any> {
+  const value = report?.formData ?? report?.form_data;
+
+  if (value && typeof value === "object") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function getEmployeeName(report: any): string {
+  const formData = getFormData(report);
+
+  return (
+    report.employeeName ||
+    report.employee_name ||
+    report.engineerName ||
+    report.engineer_name ||
+    report.employee ||
+    formData["engineer-name"] ||
+    "—"
+  );
+}
+
+function getCustomerName(report: any): string {
+  const formData = getFormData(report);
+
+  return (
+    report.customerName ||
+    report.customer_name ||
+    (typeof report.customer === "string" ? report.customer : "") ||
+    formData["customer-name"] ||
+    formData["customer"] ||
+    "—"
+  );
+}
+
+function getAuditDate(audit: any): unknown {
+  return (
+    audit.auditDate ??
+    audit.audit_date ??
+    audit.date ??
+    audit.createdAt ??
+    audit.created_at ??
+    audit.submittedAt ??
+    audit.submitted_at
+  );
+}
+
+function getServiceDate(report: any): unknown {
+  const formData = getFormData(report);
+
+  return (
+    formData["service-call-date"] ??
+    report.serviceCallDate ??
+    report.service_call_date ??
+    report.date ??
+    report.createdAt ??
+    report.created_at ??
+    report.submittedAt ??
+    report.submitted_at
+  );
+}
+
+function formatDate(value: unknown): string {
+  if (!value) return "—";
+
+  if (typeof value === "string") {
+    const raw = value.trim();
+
+    // Preserve date-only ISO values without timezone conversion.
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (isoMatch) {
+      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+
+    // Interpret slash-separated dates as DD/MM/YYYY.
+    const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (slashMatch) {
+      return `${slashMatch[1].padStart(2, "0")}/${slashMatch[2].padStart(2, "0")}/${slashMatch[3]}`;
+    }
+  }
+
+  const date = value instanceof Date ? value : new Date(value as string | number);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString("en-GB");
+}
+
 export default function Admin() {
   const [audits, setAudits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+
+  // Shared filters displayed in both report card headers.
+  const [selectedDate, setSelectedDate] = useState("");
+  const [search, setSearch] = useState("");
+
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState("");
+
   const router = useRouter();
 
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Default date: today in the browser's local timezone.
   useEffect(() => {
+    setSelectedDate(getLocalDateKey(new Date()));
+  }, []);
+
+  // Fetch reports whenever the date or search changes.
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    let cancelled = false;
+
     async function loadData() {
+      setReportsLoading(true);
+      setReportsError("");
+
       try {
-        const [auditResponse, serviceResponse] =
-          await Promise.all([
-            fetch("/api/audits", {
-              cache: "no-store",
-            }),
-            fetch("/api/service-reports", {
-              cache: "no-store",
-            }),
-          ]);
+        const params = new URLSearchParams({
+          date: selectedDate,
+        });
 
-        if (auditResponse.ok) {
-          const auditData = await auditResponse.json();
-
-          setAudits(
-            Array.isArray(auditData)
-              ? auditData
-              : [],
-          );
+        if (search.trim()) {
+          params.set("search", search.trim());
         }
 
-        if (serviceResponse.ok) {
-          const serviceData =
-            await serviceResponse.json();
+        const query = params.toString();
 
-          setServices(
-            Array.isArray(serviceData)
-              ? serviceData
-              : [],
-          );
+        const [auditResponse, serviceResponse] = await Promise.all([
+          fetch(`/api/audits?${query}`, {
+            cache: "no-store",
+          }),
+          fetch(`/api/service-reports?${query}`, {
+            cache: "no-store",
+          }),
+        ]);
+
+        if (!auditResponse.ok || !serviceResponse.ok) {
+          throw new Error("Failed to fetch reports.");
+        }
+
+        const [auditData, serviceData] = await Promise.all([
+          auditResponse.json(),
+          serviceResponse.json(),
+        ]);
+
+        if (!cancelled) {
+          setAudits(Array.isArray(auditData) ? auditData : []);
+          setServices(Array.isArray(serviceData) ? serviceData : []);
         }
       } catch (error) {
-        console.error(
-          "Failed to load admin dashboard data:",
-          error,
-        );
+        if (!cancelled) {
+          console.error("Failed to load admin reports:", error);
+          setReportsError("Unable to load reports. Please try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setReportsLoading(false);
+        }
       }
     }
 
-    loadData();
-  }, []);
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
 
-  // ---------------------------------------
-  // COMPLETED AUDITS
-  // ---------------------------------------
+    // Debounce search requests; date changes trigger an immediate request.
+    searchTimeout.current = setTimeout(
+      () => void loadData(),
+      search.trim() ? 300 : 0,
+    );
 
+    return () => {
+      cancelled = true;
+
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
+  }, [selectedDate, search]);
+
+  // Only completed reports appear in the tables.
   const completed = audits.filter(
     (audit) =>
-      String(audit.status || "").toUpperCase() ===
-      "COMPLETED",
+      String(audit.status || "").toUpperCase() === "COMPLETED",
   );
-
-  // ---------------------------------------
-  // COMPLETED SERVICE REPORTS
-  // ---------------------------------------
 
   const completedServices = services.filter(
     (report) =>
-      String(report.status || "").toUpperCase() ===
-      "COMPLETED",
+      String(report.status || "").toUpperCase() === "COMPLETED",
   );
 
-  // ---------------------------------------
-  // AVERAGE AUDIT SCORE
-  // ---------------------------------------
-
+  // These statistics reflect the currently returned audit results.
+  // For organization-wide statistics independent of filters, use a
+  // separate summary endpoint or unfiltered statistics request.
   const average = completed.length
     ? Math.round(
         completed.reduce(
-          (sum, audit) =>
-            sum + Number(audit.score || 0),
+          (sum, audit) => sum + Number(audit.score || 0),
           0,
         ) / completed.length,
       )
     : 0;
-
-  // ---------------------------------------
-  // STATISTICS
-  // ---------------------------------------
 
   const stats = [
     {
@@ -448,8 +771,7 @@ export default function Admin() {
       label: "Drafts",
       value: audits.filter(
         (audit) =>
-          String(audit.status || "").toUpperCase() ===
-          "DRAFT",
+          String(audit.status || "").toUpperCase() === "DRAFT",
       ).length,
       icon: Wrench,
       tone: "bg-amber-50 text-amber-700",
@@ -462,13 +784,15 @@ export default function Admin() {
     },
   ];
 
+  function resetFilters() {
+    setSelectedDate(getLocalDateKey(new Date()));
+    setSearch("");
+  }
+
   return (
     <AppShell>
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        {/* ---------------------------------- */}
         {/* HEADER */}
-        {/* ---------------------------------- */}
-
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
             <p className="text-sm font-semibold text-primary">
@@ -480,8 +804,7 @@ export default function Admin() {
             </h1>
 
             <p className="mt-2 text-muted-foreground">
-              Overview of inspections and service
-              activity.
+              Overview of inspections and service activity.
             </p>
           </div>
 
@@ -490,9 +813,7 @@ export default function Admin() {
             <Button
               variant="outline"
               className="h-11"
-              onClick={() =>
-                router.push("/admin/add-employee")
-              }
+              onClick={() => router.push("/admin/add-employee")}
             >
               <UserRound data-icon="inline-start" />
               Add Employee
@@ -501,9 +822,7 @@ export default function Admin() {
             <Button
               variant="outline"
               className="h-11"
-              onClick={() =>
-                router.push("/admin/add-customer")
-              }
+              onClick={() => router.push("/admin/add-customer")}
             >
               <Plus data-icon="inline-start" />
               Add Customer
@@ -512,9 +831,7 @@ export default function Admin() {
             <Button
               variant="outline"
               className="h-11"
-              onClick={() =>
-                router.push("/admin/form-templates")
-              }
+              onClick={() => router.push("/admin/form-templates")}
             >
               <LayoutTemplate data-icon="inline-start" />
               Manage Templates
@@ -522,46 +839,28 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* ---------------------------------- */}
         {/* STATISTICS */}
-        {/* ---------------------------------- */}
-
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {stats.map(
-            ({
-              label,
-              value,
-              icon: Icon,
-              tone,
-            }) => (
-              <Card
-                key={label}
-                className="shadow-sm"
-              >
-                <CardContent className="p-5">
-                  <span
-                    className={`flex size-9 items-center justify-center rounded-lg ${tone}`}
-                  >
-                    <Icon />
-                  </span>
+          {stats.map(({ label, value, icon: Icon, tone }) => (
+            <Card key={label} className="shadow-sm">
+              <CardContent className="p-5">
+                <span
+                  className={`flex size-9 items-center justify-center rounded-lg ${tone}`}
+                >
+                  <Icon />
+                </span>
 
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    {label}
-                  </p>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  {label}
+                </p>
 
-                  <p className="mt-1 text-2xl font-bold">
-                    {value}
-                  </p>
-                </CardContent>
-              </Card>
-            ),
-          )}
+                <p className="mt-1 text-2xl font-bold">{value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* ---------------------------------- */}
         {/* COMPLETED AUDITS */}
-        {/* ---------------------------------- */}
-
         <DataCard
           className="mt-8"
           title="Completed audits"
@@ -575,38 +874,41 @@ export default function Admin() {
             "Status",
             "",
           ]}
+          selectedDate={selectedDate}
+          search={search}
+          onDateChange={setSelectedDate}
+          onSearchChange={setSearch}
+          onReset={resetFilters}
         >
           <>
             {completed.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={7}
                   className="px-3 py-10 text-center text-sm text-muted-foreground"
                 >
-                  No completed audits yet.
+                  {reportsLoading
+                    ? "Loading audit reports..."
+                    : reportsError
+                      ? "Audit reports could not be loaded."
+                      : "No completed audits for the selected date and search."}
                 </td>
               </tr>
             ) : (
               completed.map((audit) => {
-                const employee =
-                  audit.employeeName ||
-                  audit.employee_name ||
-                  "—";
-
-                const customer =
-                  audit.customerName || "—";
+                const employee = getEmployeeName(audit);
+                const customer = getCustomerName(audit);
 
                 const location =
-                  audit.customerAddress || "—";
+                  audit.customerAddress ||
+                  audit.customer_address ||
+                  audit.address ||
+                  "—";
 
-                const date = audit?.createdAt
-                  ? new Date(
-                      audit.createdAt,
-                    ).toLocaleDateString("en-GB")
-                  : "—";
+                const date = formatDate(getAuditDate(audit));
 
                 const status = String(
-                  audit.status || "DRAFT",
+                  audit.status || "COMPLETED",
                 ).toUpperCase();
 
                 return (
@@ -618,9 +920,7 @@ export default function Admin() {
                       {audit.id}
                     </td>
 
-                    <td className="px-3 py-4">
-                      {employee}
-                    </td>
+                    <td className="px-3 py-4">{employee}</td>
 
                     <td className="px-3 py-4 font-medium">
                       {customer}
@@ -635,25 +935,15 @@ export default function Admin() {
                     </td>
 
                     <td className="px-3 py-4">
-                      <Badge variant="default">
-                        {status}
-                      </Badge>
+                      <Badge variant="default">{status}</Badge>
                     </td>
-
-                    {/* <td className="px-3 py-4 font-semibold">
-                      {audit.score != null
-                        ? `${audit.score}%`
-                        : "—"}
-                    </td> */}
 
                     <td className="px-3 py-4 text-right">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() =>
-                          router.push(
-                            `/admin/audits/${audit.id}`,
-                          )
+                          router.push(`/admin/audits/${audit.id}`)
                         }
                       >
                         View
@@ -667,10 +957,7 @@ export default function Admin() {
           </>
         </DataCard>
 
-        {/* ---------------------------------- */}
         {/* COMPLETED SERVICE REPORTS */}
-        {/* ---------------------------------- */}
-
         <DataCard
           className="mt-6"
           title="Completed service reports"
@@ -684,6 +971,11 @@ export default function Admin() {
             "Status",
             "",
           ]}
+          selectedDate={selectedDate}
+          search={search}
+          onDateChange={setSelectedDate}
+          onSearchChange={setSearch}
+          onReset={resetFilters}
         >
           <>
             {completedServices.length === 0 ? (
@@ -692,32 +984,29 @@ export default function Admin() {
                   colSpan={7}
                   className="px-3 py-10 text-center text-sm text-muted-foreground"
                 >
-                  No completed service reports yet.
+                  {reportsLoading
+                    ? "Loading service reports..."
+                    : reportsError
+                      ? "Service reports could not be loaded."
+                      : "No completed service reports for the selected date and search."}
                 </td>
               </tr>
             ) : (
               completedServices.map((report) => {
-                const customer =
-                  report.customerName || "—";
+                const formData = getFormData(report);
 
-                const engineer =
-                  report.formData?.[
-                    "engineer-name"
-                  ] || "—";
+                const customer = getCustomerName(report);
+                const engineer = getEmployeeName(report);
 
                 const equipment =
-                  report.formData?.[
-                    "equipment"
-                  ] || "—";
+                  formData["equipment"] ||
+                  report.equipment ||
+                  "—";
 
-                const date = report?.createdAt
-                  ? new Date(
-                      report.createdAt,
-                    ).toLocaleDateString("en-GB")
-                  : "—";
+                const date = formatDate(getServiceDate(report));
 
                 const status = String(
-                  report.status || "DRAFT",
+                  report.status || "COMPLETED",
                 ).toUpperCase();
 
                 return (
@@ -733,9 +1022,7 @@ export default function Admin() {
                       {customer}
                     </td>
 
-                    <td className="px-3 py-4">
-                      {engineer}
-                    </td>
+                    <td className="px-3 py-4">{engineer}</td>
 
                     <td className="px-3 py-4 text-muted-foreground">
                       {equipment}
@@ -746,18 +1033,14 @@ export default function Admin() {
                     </td>
 
                     <td className="px-3 py-4">
-                      <Badge variant="default">
-                        {status}
-                      </Badge>
+                      <Badge variant="default">{status}</Badge>
                     </td>
 
                     <td className="px-3 py-4 text-right">
                       <Button
                         size="sm"
                         onClick={() =>
-                          router.push(
-                            `/admin/service-reports/${report.id}`,
-                          )
+                          router.push(`/admin/service-reports/${report.id}`)
                         }
                       >
                         View &amp; Edit
@@ -780,21 +1063,84 @@ function DataCard({
   headers,
   children,
   className = "",
+  selectedDate,
+  search,
+  onDateChange,
+  onSearchChange,
+  onReset,
 }: {
   title: string;
   subtitle: string;
   headers: string[];
   children: React.ReactNode;
   className?: string;
+  selectedDate: string;
+  search: string;
+  onDateChange: (value: string) => void;
+  onSearchChange: (value: string) => void;
+  onReset: () => void;
 }) {
   return (
     <Card className={`shadow-sm ${className}`}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+          <div>
+            <CardTitle>{title}</CardTitle>
 
-        <p className="text-sm text-muted-foreground">
-          {subtitle}
-        </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {subtitle}
+            </p>
+          </div>
+
+          {/* FILTERS INLINE WITH THE EXISTING CARD HEADER */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+              <input
+                aria-label="Filter reports by date"
+                type="date"
+                value={selectedDate}
+                onChange={(event) => onDateChange(event.target.value)}
+                className="h-9 w-[155px] rounded-md border border-input bg-background pl-9 pr-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+              <input
+                aria-label="Search employee or customer"
+                type="search"
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Employee or customer"
+                className="h-9 w-[190px] rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => onSearchChange("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              className="h-9 px-2"
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent>
