@@ -87,20 +87,18 @@ function mapAudit(row: any) {
     status: String(row.status).toUpperCase(),
 
     score:
-      row.score === null || row.score === undefined
+      row.score === null || row.score === undefined ? null : Number(row.score),
+
+    createdAt: row.created_at?.toISOString?.() || String(row.created_at),
+
+    updatedAt: row.updated_at?.toISOString?.() || String(row.updated_at),
+
+    submittedAt:
+      row.submitted_at == null
         ? null
-        : Number(row.score),
-
-    createdAt:
-      row.created_at?.toISOString?.() ||
-      String(row.created_at),
-
-    updatedAt:
-      row.updated_at?.toISOString?.() ||
-      String(row.updated_at),
+        : row.submitted_at?.toISOString?.() || String(row.submitted_at),
   };
 }
-
 
 /**
  * GET /api/audits
@@ -129,16 +127,10 @@ export async function GET(request: Request) {
     // --------------------------------------------------
     if (adminToken) {
       try {
-        const { payload } = await jwtVerify(
-          adminToken,
-          getAuthSecret(),
-        );
+        const { payload } = await jwtVerify(adminToken, getAuthSecret());
 
         if (payload.role !== "admin") {
-          return NextResponse.json(
-            { error: "Unauthorized" },
-            { status: 401 },
-          );
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         // Read query parameters.
@@ -149,9 +141,7 @@ export async function GET(request: Request) {
 
         // Validate YYYY-MM-DD and reject impossible dates.
         if (date) {
-          const match = date.match(
-            /^(\d{4})-(\d{2})-(\d{2})$/,
-          );
+          const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
           if (!match) {
             return NextResponse.json(
@@ -164,9 +154,7 @@ export async function GET(request: Request) {
           const month = Number(match[2]);
           const day = Number(match[3]);
 
-          const parsedDate = new Date(
-            Date.UTC(year, month - 1, day),
-          );
+          const parsedDate = new Date(Date.UTC(year, month - 1, day));
 
           if (
             parsedDate.getUTCFullYear() !== year ||
@@ -184,37 +172,78 @@ export async function GET(request: Request) {
 
         // Apply filters in PostgreSQL.
         // Audit date currently means created_at.
-        const rows = await sql`
-          SELECT
-            id,
-            employee_id,
-            employee_name,
-            template_id,
-            template_snapshot,
-            customer_id,
-            customer_name,
-            customer_address,
-            form_data,
-            evidence,
-            signatures,
-            status,
-            score,
-            created_at,
-            updated_at
-          FROM audits
-          WHERE UPPER(status) = 'COMPLETED'
-            AND (
-              ${date}::date IS NULL
-              OR created_at::date = ${date}::date
-            )
-            AND (
-              ${searchTerm} = ''
-              OR employee_name ILIKE ${searchPattern}
-              OR customer_name ILIKE ${searchPattern}
-            )
-          ORDER BY created_at DESC
-        `;
+        // const rows = await sql`
+        //   SELECT
+        //     id,
+        //     employee_id,
+        //     employee_name,
+        //     template_id,
+        //     template_snapshot,
+        //     customer_id,
+        //     customer_name,
+        //     customer_address,
+        //     form_data,
+        //     evidence,
+        //     signatures,
+        //     status,
+        //     score,
+        //     created_at,
+        //     updated_at
+        //   FROM audits
+        //   WHERE UPPER(status) = 'COMPLETED'
+        //     AND (
+        //       ${date}::date IS NULL
+        //       OR created_at::date = ${date}::date
+        //     )
+        //     AND (
+        //       ${searchTerm} = ''
+        //       OR employee_name ILIKE ${searchPattern}
+        //       OR customer_name ILIKE ${searchPattern}
+        //     )
+        //   ORDER BY created_at DESC
+        // `;
 
+        const rows = await sql`
+  SELECT
+    id,
+    employee_id,
+    employee_name,
+    template_id,
+    template_snapshot,
+    customer_id,
+    customer_name,
+    customer_address,
+    form_data,
+    evidence,
+    signatures,
+    status,
+    score,
+    created_at,
+    updated_at,
+    submitted_at
+  FROM audits
+  WHERE UPPER(status) = 'COMPLETED'
+    AND submitted_at IS NOT NULL
+    AND (
+      ${date}::date IS NULL
+      OR (
+        submitted_at >= (
+          ${date}::date::timestamp
+          AT TIME ZONE 'Asia/Kolkata'
+        )
+        AND submitted_at < (
+          (${date}::date + 1)::timestamp
+          AT TIME ZONE 'Asia/Kolkata'
+        )
+      )
+    )
+    AND (
+      ${searchTerm} = ''
+      OR employee_name ILIKE ${searchPattern}
+      OR customer_name ILIKE ${searchPattern}
+    )
+  ORDER BY submitted_at DESC
+`;
         return NextResponse.json(rows.map(mapAudit));
       } catch (error) {
         console.error("Admin audits GET error:", error);
@@ -233,16 +262,10 @@ export async function GET(request: Request) {
     // --------------------------------------------------
     if (employeeToken) {
       try {
-        const { payload } = await jwtVerify(
-          employeeToken,
-          getAuthSecret(),
-        );
+        const { payload } = await jwtVerify(employeeToken, getAuthSecret());
 
         if (payload.role !== "auditor") {
-          return NextResponse.json(
-            { error: "Unauthorized" },
-            { status: 401 },
-          );
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         if (!payload.id) {
@@ -254,28 +277,50 @@ export async function GET(request: Request) {
 
         const employeeId = String(payload.id);
 
-        const rows = await sql`
-          SELECT
-            id,
-            employee_id,
-            employee_name,
-            template_id,
-            template_snapshot,
-            customer_id,
-            customer_name,
-            customer_address,
-            form_data,
-            evidence,
-            signatures,
-            status,
-            score,
-            created_at,
-            updated_at
-          FROM audits
-          WHERE employee_id = ${employeeId}
-          ORDER BY created_at DESC
-        `;
+        // const rows = await sql`
+        //   SELECT
+        //     id,
+        //     employee_id,
+        //     employee_name,
+        //     template_id,
+        //     template_snapshot,
+        //     customer_id,
+        //     customer_name,
+        //     customer_address,
+        //     form_data,
+        //     evidence,
+        //     signatures,
+        //     status,
+        //     score,
+        //     created_at,
+        //     updated_at
+        //   FROM audits
+        //   WHERE employee_id = ${employeeId}
+        //   ORDER BY created_at DESC
+        // `;
 
+        const rows = await sql`
+  SELECT
+    id,
+    employee_id,
+    employee_name,
+    template_id,
+    template_snapshot,
+    customer_id,
+    customer_name,
+    customer_address,
+    form_data,
+    evidence,
+    signatures,
+    status,
+    score,
+    created_at,
+    updated_at,
+    submitted_at
+  FROM audits
+  WHERE employee_id = ${employeeId}
+  ORDER BY created_at DESC
+`;
         return NextResponse.json(rows.map(mapAudit));
       } catch {
         return NextResponse.json(
@@ -476,8 +521,7 @@ export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
 
-    const employeeToken =
-      cookieStore.get(EMPLOYEE_COOKIE)?.value;
+    const employeeToken = cookieStore.get(EMPLOYEE_COOKIE)?.value;
 
     // --------------------------------------------------
     // NO EMPLOYEE SESSION
@@ -497,10 +541,7 @@ export async function POST(req: Request) {
     let payload;
 
     try {
-      const result = await jwtVerify(
-        employeeToken,
-        getAuthSecret(),
-      );
+      const result = await jwtVerify(employeeToken, getAuthSecret());
 
       payload = result.payload;
     } catch {
@@ -518,8 +559,7 @@ export async function POST(req: Request) {
     if (payload.role !== "auditor") {
       return NextResponse.json(
         {
-          error:
-            "Only authenticated auditors can create audits.",
+          error: "Only authenticated auditors can create audits.",
         },
         { status: 403 },
       );
@@ -544,16 +584,14 @@ export async function POST(req: Request) {
     // --------------------------------------------------
     // AUDIT DATA
     // --------------------------------------------------
-    const templateId =
-      body.templateId || "multiplex-fire-safety";
+    const templateId = body.templateId || "multiplex-fire-safety";
 
-    const templateSnapshot =
-      body.templateSnapshot || {
-        id: templateId,
-        type: "AUDIT",
-        title: "Audit Form",
-        sections: [],
-      };
+    const templateSnapshot = body.templateSnapshot || {
+      id: templateId,
+      type: "AUDIT",
+      title: "Audit Form",
+      sections: [],
+    };
 
     // --------------------------------------------------
     // CUSTOMER DATA
@@ -561,28 +599,22 @@ export async function POST(req: Request) {
     // These are stored in separate database columns.
     // They are NOT added to formData.
     // --------------------------------------------------
-    const customerId =
-      body.customerId ?? null;
+    const customerId = body.customerId ?? null;
 
-    const customerName =
-      body.customerName ?? null;
+    const customerName = body.customerName ?? null;
 
-    const customerAddress =
-      body.customerAddress ?? null;
+    const customerAddress = body.customerAddress ?? null;
 
     // --------------------------------------------------
     // FORM DATA
     //
     // Customer information should NOT be placed here.
     // --------------------------------------------------
-    const formData =
-      body.formData || {};
+    const formData = body.formData || {};
 
-    const evidence =
-      body.evidence || {};
+    const evidence = body.evidence || {};
 
-    const signatures =
-      body.signatures || {};
+    const signatures = body.signatures || {};
 
     const sql = getDatabase();
 
@@ -614,8 +646,7 @@ export async function POST(req: Request) {
     if (!employee.is_active) {
       return NextResponse.json(
         {
-          error:
-            "Your employee account is inactive.",
+          error: "Your employee account is inactive.",
         },
         { status: 403 },
       );
@@ -650,11 +681,9 @@ export async function POST(req: Request) {
       WHERE id ~ '^AUD-[0-9]+$'
     `;
 
-    const nextNumber =
-      Number(idRows[0]?.next_number || 1);
+    const nextNumber = Number(idRows[0]?.next_number || 1);
 
-    const auditId =
-      `AUD-${String(nextNumber).padStart(3, "0")}`;
+    const auditId = `AUD-${String(nextNumber).padStart(3, "0")}`;
 
     // --------------------------------------------------
     // INSERT AUDIT
@@ -727,15 +756,9 @@ export async function POST(req: Request) {
         updated_at
     `;
 
-    return NextResponse.json(
-      mapAudit(rows[0]),
-      { status: 201 },
-    );
+    return NextResponse.json(mapAudit(rows[0]), { status: 201 });
   } catch (error) {
-    console.error(
-      "Create audit error:",
-      error,
-    );
+    console.error("Create audit error:", error);
 
     return NextResponse.json(
       {

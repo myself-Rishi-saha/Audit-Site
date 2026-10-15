@@ -1,6 +1,6 @@
 [
   {
-    "id": "multiplex-fire-safety",
+    "id": "audit-report",
     "type": "AUDIT",
     "name": "Multiplex Fire Safety and Evacuation Audit",
     "title": "AUDIT FORM",
@@ -20,6 +20,17 @@
             "label": "CUSTOMER NAME",
             "type": "text",
             "required": true
+          },
+          {
+            "id": "xx-1792065926379",
+            "label": "xx",
+            "type": "single-choice",
+            "required": true,
+            "options": [
+              "PASS",
+              "FAIL",
+              "N/A"
+            ]
           }
         ]
       },
@@ -192,6 +203,12 @@
             "label": "Serial Number",
             "type": "text",
             "required": true
+          },
+          {
+            "id": "xx-1792065939428",
+            "label": "xx",
+            "type": "text",
+            "required": false
           }
         ]
       },

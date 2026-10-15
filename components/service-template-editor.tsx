@@ -639,40 +639,90 @@ export function ServiceTemplateEditor() {
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadTemplate() {
-      try {
-        const response = await fetch(
-          "/api/templates/service-report",
-        );
+  // useEffect(() => {
+  //   async function loadTemplate() {
+  //     try {
+  //       const response = await fetch(
+  //         "/api/templates/service-report",
+  //       );
 
-        if (!response.ok) {
-          throw new Error(
-            "Failed to load service report template.",
-          );
-        }
+  //       if (!response.ok) {
+  //         throw new Error(
+  //           "Failed to load service report template.",
+  //         );
+  //       }
 
-        const data: Template =
-          await response.json();
+  //       const data: Template =
+  //         await response.json();
 
-        setTemplate(data);
-      } catch (error) {
-        console.error(
-          "Failed to load template:",
-          error,
-        );
+  //       setTemplate(data);
+  //     } catch (error) {
+  //       console.error(
+  //         "Failed to load template:",
+  //         error,
+  //       );
 
-        alert(
+  //       alert(
+  //         "Failed to load service report template.",
+  //       );
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+
+  //   loadTemplate();
+  // }, []);
+useEffect(() => {
+  async function loadTemplate() {
+    try {
+      const response = await fetch(
+        "/api/templates/service-report",
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        throw new Error(
           "Failed to load service report template.",
         );
-      } finally {
-        setLoading(false);
       }
+
+      const data = await response.json();
+
+      setTemplate({
+        ...data,
+        sections: Array.isArray(data.sections)
+          ? data.sections.map((section: any, index: number) => ({
+              ...section,
+              id: section.id || `section-${index}`,
+              name: section.name || section.title || "Untitled Section",
+              fields: Array.isArray(section.fields)
+                ? section.fields
+                : Array.isArray(section.questions)
+                  ? section.questions.map((question: any) => ({
+                      id: question.id || createFieldId(
+                        question.label || question.text || "field",
+                      ),
+                      label: question.label || question.text || "",
+                      type: question.type || "text",
+                      required: question.required ?? false,
+                      ...(Array.isArray(question.options)
+                        ? { options: question.options }
+                        : {}),
+                    }))
+                  : [],
+            }))
+          : [],
+      });
+    } catch (error) {
+      console.error("Failed to load template:", error);
+      alert("Failed to load service report template.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    loadTemplate();
-  }, []);
-
+  loadTemplate();
+}, []);
   function openField(
     sectionIndex: number,
     fieldIndex?: number,

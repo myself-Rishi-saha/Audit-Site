@@ -1866,14 +1866,20 @@ type Section = {
   fields: Field[];
 };
 
+// type Template = {
+//   id: string;
+//   type: string;
+//   name: string;
+//   title: string;
+//   sections: Section[];
+// };
 type Template = {
   id: string;
   type: string;
   name: string;
-  title: string;
+  title?: string;
   sections: Section[];
 };
-
 type EvidenceItem = {
   reportId?: string;
   type: "image" | "video";
@@ -1951,33 +1957,91 @@ export default function AuditForm() {
 
   const [signatureField, setSignatureField] = useState<Field | null>(null);
 
+  // // --------------------------------------------------
+  // // LOAD LATEST TEMPLATE
+  // // --------------------------------------------------
+
+  // useEffect(() => {
+  //   async function loadTemplate() {
+  //     try {
+  //       const response = await fetch("/api/templates");
+
+  //       if (!response.ok) {
+  //         throw new Error("Failed to load audit template");
+  //       }
+
+  //       const templates: Template[] = await response.json();
+
+  //       const auditTemplate = templates.find((item) => item.type === "AUDIT");
+
+  //       if (!auditTemplate) {
+  //         throw new Error("Audit template not found");
+  //       }
+
+  //       // This is the latest template
+  //       // from template.json.
+  //       setTemplate(auditTemplate);
+
+  //       // Create initial values
+  //       // from the latest template.
+  //       const initialData: FormData = {};
+
+  //       auditTemplate.sections.forEach((section) => {
+  //         section.fields.forEach((field) => {
+  //           if (field.type === "multiple-choice") {
+  //             initialData[field.id] = {
+  //               value: [],
+  //             };
+  //           } else if (field.multiple) {
+  //             initialData[field.id] = {
+  //               value: [""],
+  //             };
+  //           } else {
+  //             initialData[field.id] = {
+  //               value: "",
+  //             };
+  //           }
+  //         });
+  //       });
+
+  //       setData(initialData);
+  //     } catch (error) {
+  //       console.error("Failed to load audit template:", error);
+  //     }
+  //   }
+
+  //   loadTemplate();
+  // }, []);
+
   // --------------------------------------------------
-  // LOAD LATEST TEMPLATE
+  // LOAD LATEST AUDIT TEMPLATE FROM DATABASE
   // --------------------------------------------------
 
   useEffect(() => {
     async function loadTemplate() {
       try {
-        const response = await fetch("/api/templates");
+        const response = await fetch("/api/templates/audit", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to load audit template");
         }
 
-        const templates: Template[] = await response.json();
+        const auditTemplate: Template = await response.json();
 
-        const auditTemplate = templates.find((item) => item.type === "AUDIT");
-
-        if (!auditTemplate) {
-          throw new Error("Audit template not found");
+        if (
+          auditTemplate.id !== "audit-report" ||
+          !Array.isArray(auditTemplate.sections)
+        ) {
+          throw new Error("Invalid audit template returned by API");
         }
 
-        // This is the latest template
-        // from template.json.
         setTemplate(auditTemplate);
 
-        // Create initial values
-        // from the latest template.
+        // Initialize values for all fields in the template.
         const initialData: FormData = {};
 
         auditTemplate.sections.forEach((section) => {

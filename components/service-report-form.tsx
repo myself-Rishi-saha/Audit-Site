@@ -1,4 +1,3 @@
-
 // "use client";
 
 // import { useEffect, useState } from "react";
@@ -1212,11 +1211,19 @@ type Section = {
   fields: Field[];
 };
 
+// type Template = {
+//   id: string;
+//   type: string;
+//   name: string;
+//   title: string;
+//   sections: Section[];
+// };
+
 type Template = {
   id: string;
   type: string;
   name: string;
-  title: string;
+  title?: string;
   sections: Section[];
 };
 
@@ -1252,30 +1259,25 @@ type FormState = {
 export default function ServiceReportForm() {
   const router = useRouter();
 
-  const [template, setTemplate] =
-    useState<Template | null>(null);
+  const [template, setTemplate] = useState<Template | null>(null);
 
-  const [serviceReportId, setServiceReportId] =
-    useState("");
+  const [serviceReportId, setServiceReportId] = useState("");
 
   // --------------------------------------------------
   // CUSTOMER STATE
   // --------------------------------------------------
 
-  const [customers, setCustomers] =
-    useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [selectedCustomerId, setSelectedCustomerId] =
-    useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
 
-  const [customersLoading, setCustomersLoading] =
-    useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
 
-  const [customerLoadError, setCustomerLoadError] =
-    useState(false);
+  const [customerLoadError, setCustomerLoadError] = useState(false);
 
   // --------------------------------------------------
   // FORM STATE
@@ -1299,79 +1301,112 @@ export default function ServiceReportForm() {
     signatures: {},
   });
 
-  const [errors, setErrors] =
-    useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const [camera, setCamera] = useState<{
     mode: "photo" | "video";
     field: Field;
   } | null>(null);
 
-  const [signatureField, setSignatureField] =
-    useState<Field | null>(null);
+  const [signatureField, setSignatureField] = useState<Field | null>(null);
 
   // --------------------------------------------------
   // LOAD TEMPLATE
   // --------------------------------------------------
 
+  // useEffect(() => {
+  //   async function loadTemplate() {
+  //     try {
+  //       const response = await fetch("/api/templates/service-report");
+
+  //       if (!response.ok) {
+  //         throw new Error("Failed to load service report template");
+  //       }
+
+  //       const templateData: Template = await response.json();
+
+  //       setTemplate(templateData);
+
+  //       const initialFormData: Record<string, unknown> = {};
+
+  //       templateData.sections.forEach((section) => {
+  //         section.fields.forEach((field) => {
+  //           if (field.type === "multiple-choice") {
+  //             initialFormData[field.id] = [];
+  //           } else if (field.multiple) {
+  //             initialFormData[field.id] = [""];
+  //           } else {
+  //             initialFormData[field.id] = "";
+  //           }
+  //         });
+  //       });
+
+  //       setData({
+  //         templateId: templateData.id,
+
+  //         templateSnapshot: templateData,
+
+  //         formData: initialFormData,
+
+  //         evidence: {},
+
+  //         signatures: {},
+  //       });
+  //     } catch (error) {
+  //       console.error("Failed to load service report template:", error);
+  //     }
+  //   }
+
+  //   loadTemplate();
+  // }, []);
+
   useEffect(() => {
     async function loadTemplate() {
       try {
-        const response = await fetch(
-          "/api/templates/service-report",
-        );
+        const response = await fetch("/api/templates/service-report", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         if (!response.ok) {
-          throw new Error(
-            "Failed to load service report template",
-          );
+          throw new Error("Failed to load service report template");
         }
 
-        const templateData: Template =
-          await response.json();
+        const templateData: Template = await response.json();
+
+        if (
+          templateData.id !== "service-report" ||
+          !Array.isArray(templateData.sections)
+        ) {
+          throw new Error("Invalid service report template returned by API");
+        }
 
         setTemplate(templateData);
 
-        const initialFormData: Record<
-          string,
-          unknown
-        > = {};
+        const initialFormData: Record<string, unknown> = {};
 
-        templateData.sections.forEach(
-          (section) => {
-            section.fields.forEach((field) => {
-              if (
-                field.type ===
-                "multiple-choice"
-              ) {
-                initialFormData[field.id] = [];
-              } else if (field.multiple) {
-                initialFormData[field.id] = [
-                  "",
-                ];
-              } else {
-                initialFormData[field.id] = "";
-              }
-            });
-          },
-        );
+        templateData.sections.forEach((section) => {
+          section.fields.forEach((field) => {
+            if (field.type === "multiple-choice") {
+              initialFormData[field.id] = [];
+            } else if (field.multiple) {
+              initialFormData[field.id] = [""];
+            } else {
+              initialFormData[field.id] = "";
+            }
+          });
+        });
 
         setData({
           templateId: templateData.id,
-
           templateSnapshot: templateData,
-
           formData: initialFormData,
-
           evidence: {},
-
           signatures: {},
         });
       } catch (error) {
-        console.error(
-          "Failed to load service report template:",
-          error,
-        );
+        console.error("Failed to load service report template:", error);
       }
     }
 
@@ -1388,30 +1423,21 @@ export default function ServiceReportForm() {
         setCustomersLoading(true);
         setCustomerLoadError(false);
 
-        const response = await fetch(
-          "/employee/customers",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
+        const response = await fetch("/employee/customers", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         if (!response.ok) {
-          throw new Error(
-            "Failed to load customers",
-          );
+          throw new Error("Failed to load customers");
         }
 
-        const customerData: Customer[] =
-          await response.json();
+        const customerData: Customer[] = await response.json();
 
         setCustomers(customerData);
       } catch (error) {
-        console.error(
-          "Failed to load customers:",
-          error,
-        );
+        console.error("Failed to load customers:", error);
 
         setCustomerLoadError(true);
       } finally {
@@ -1426,15 +1452,10 @@ export default function ServiceReportForm() {
   // CUSTOMER CHANGE
   // --------------------------------------------------
 
-  function handleCustomerChange(
-    customerId: string,
-  ) {
+  function handleCustomerChange(customerId: string) {
     setSelectedCustomerId(customerId);
 
-    const customer =
-      customers.find(
-        (item) => item.id === customerId,
-      ) || null;
+    const customer = customers.find((item) => item.id === customerId) || null;
 
     setSelectedCustomer(customer);
 
@@ -1461,10 +1482,7 @@ export default function ServiceReportForm() {
   // SET VALUE
   // --------------------------------------------------
 
-  function setValue(
-    field: Field,
-    value: unknown,
-  ) {
+  function setValue(field: Field, value: unknown) {
     setData((current) => ({
       ...current,
 
@@ -1499,8 +1517,7 @@ export default function ServiceReportForm() {
       return false;
     }
 
-    const newErrors: Record<string, boolean> =
-      {};
+    const newErrors: Record<string, boolean> = {};
 
     // ------------------------------------------------
     // CUSTOMER
@@ -1525,10 +1542,7 @@ export default function ServiceReportForm() {
         // ------------------------------------------
 
         if (field.type === "signature") {
-          if (
-            !data.signatures?.[field.id]
-              ?.signature
-          ) {
+          if (!data.signatures?.[field.id]?.signature) {
             newErrors[field.id] = true;
           }
 
@@ -1539,10 +1553,7 @@ export default function ServiceReportForm() {
         // CAMERA
         // ------------------------------------------
 
-        if (
-          field.type === "camera-photo" ||
-          field.type === "camera-video"
-        ) {
+        if (field.type === "camera-photo" || field.type === "camera-video") {
           if (
             !data.evidence?.[field.id] ||
             data.evidence[field.id].length === 0
@@ -1562,19 +1573,12 @@ export default function ServiceReportForm() {
         if (Array.isArray(value)) {
           const empty =
             value.length === 0 ||
-            value.every(
-              (item) =>
-                !String(
-                  item ?? "",
-                ).trim(),
-            );
+            value.every((item) => !String(item ?? "").trim());
 
           if (empty) {
             newErrors[field.id] = true;
           }
-        } else if (
-          !String(value ?? "").trim()
-        ) {
+        } else if (!String(value ?? "").trim()) {
           newErrors[field.id] = true;
         }
       }
@@ -1582,33 +1586,25 @@ export default function ServiceReportForm() {
 
     setErrors(newErrors);
 
-    if (
-      Object.keys(newErrors).length === 0
-    ) {
+    if (Object.keys(newErrors).length === 0) {
       return true;
     }
 
-    const firstMissingId =
-      Object.keys(newErrors)[0];
+    const firstMissingId = Object.keys(newErrors)[0];
 
     // Customer is outside dynamic fields
     if (firstMissingId === "customer") {
-      document
-        .getElementById(
-          "customer-selector",
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+      document.getElementById("customer-selector")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
 
       return false;
     }
 
-    const firstField =
-      document.querySelector(
-        `[data-field-id="${firstMissingId}"]`,
-      );
+    const firstField = document.querySelector(
+      `[data-field-id="${firstMissingId}"]`,
+    );
 
     firstField?.scrollIntoView({
       behavior: "smooth",
@@ -1623,8 +1619,7 @@ export default function ServiceReportForm() {
   // --------------------------------------------------
 
   function renderCameraField(field: Field) {
-    const evidence =
-      data.evidence?.[field.id] || [];
+    const evidence = data.evidence?.[field.id] || [];
 
     const hasError = !!errors[field.id];
 
@@ -1641,96 +1636,72 @@ export default function ServiceReportForm() {
           variant="outline"
           onClick={() =>
             setCamera({
-              mode:
-                field.type ===
-                "camera-video"
-                  ? "video"
-                  : "photo",
+              mode: field.type === "camera-video" ? "video" : "photo",
 
               field,
             })
           }
         >
-          {field.type ===
-          "camera-video" ? (
+          {field.type === "camera-video" ? (
             <Video data-icon="inline-start" />
           ) : (
             <Camera data-icon="inline-start" />
           )}
 
-          {field.type ===
-          "camera-video"
-            ? "Capture Video"
-            : "Capture Photo"}
+          {field.type === "camera-video" ? "Capture Video" : "Capture Photo"}
         </Button>
 
         {evidence.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {evidence.map(
-              (item, index) => (
-                <div
-                  key={`${item.url}-${index}`}
-                  className="group relative overflow-hidden rounded-xl border bg-muted"
+            {evidence.map((item, index) => (
+              <div
+                key={`${item.url}-${index}`}
+                className="group relative overflow-hidden rounded-xl border bg-muted"
+              >
+                {item.type === "video" ? (
+                  <video
+                    src={item.url}
+                    controls
+                    playsInline
+                    className="aspect-video w-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={item.url}
+                    alt={`Evidence ${index + 1}`}
+                    className="aspect-video w-full object-cover"
+                  />
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setData((current) => ({
+                      ...current,
+
+                      evidence: {
+                        ...current.evidence,
+
+                        [field.id]: evidence.filter((_, i) => i !== index),
+                      },
+                    }));
+                  }}
+                  className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
+                  aria-label="Remove evidence"
                 >
-                  {item.type ===
-                  "video" ? (
-                    <video
-                      src={item.url}
-                      controls
-                      playsInline
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={item.url}
-                      alt={`Evidence ${
-                        index + 1
-                      }`}
-                      className="aspect-video w-full object-cover"
-                    />
-                  )}
+                  <X className="size-4" />
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setData(
-                        (current) => ({
-                          ...current,
-
-                          evidence: {
-                            ...current.evidence,
-
-                            [field.id]:
-                              evidence.filter(
-                                (_, i) =>
-                                  i !==
-                                  index,
-                              ),
-                          },
-                        }),
-                      );
-                    }}
-                    className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600"
-                    aria-label="Remove evidence"
-                  >
-                    <X className="size-4" />
-                  </button>
-
-                  <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
-                    {item.type ===
-                    "video"
-                      ? "VIDEO"
-                      : "PHOTO"}
-                  </div>
+                <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
+                  {item.type === "video" ? "VIDEO" : "PHOTO"}
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </div>
         )}
 
         <p className="text-xs text-muted-foreground">
-          Add supporting photo or video
-          evidence when available.
+          Add supporting photo or video evidence when available.
         </p>
       </div>
     );
@@ -1740,11 +1711,8 @@ export default function ServiceReportForm() {
   // SIGNATURE
   // --------------------------------------------------
 
-  function renderSignatureField(
-    field: Field,
-  ) {
-    const signature =
-      data.signatures?.[field.id];
+  function renderSignatureField(field: Field) {
+    const signature = data.signatures?.[field.id];
 
     const hasError = !!errors[field.id];
 
@@ -1769,11 +1737,8 @@ export default function ServiceReportForm() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
                 Signed on{" "}
-                {new Date(
-                  signature.signedAt,
-                ).toLocaleString("en-IN", {
-                  timeZone:
-                    "Asia/Kolkata",
+                {new Date(signature.signedAt).toLocaleString("en-IN", {
+                  timeZone: "Asia/Kolkata",
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}{" "}
@@ -1783,11 +1748,7 @@ export default function ServiceReportForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  setSignatureField(
-                    field,
-                  )
-                }
+                onClick={() => setSignatureField(field)}
               >
                 Re-sign
               </Button>
@@ -1798,9 +1759,7 @@ export default function ServiceReportForm() {
             type="button"
             variant="outline"
             className="h-24 w-full border-dashed"
-            onClick={() =>
-              setSignatureField(field)
-            }
+            onClick={() => setSignatureField(field)}
           >
             Sign on Touch Pad
           </Button>
@@ -1826,18 +1785,9 @@ export default function ServiceReportForm() {
       return (
         <Textarea
           value={
-            Array.isArray(value)
-              ? String(
-                  value[0] || "",
-                )
-              : String(value || "")
+            Array.isArray(value) ? String(value[0] || "") : String(value || "")
           }
-          onChange={(e) =>
-            setValue(
-              field,
-              e.target.value,
-            )
-          }
+          onChange={(e) => setValue(field, e.target.value)}
           className={
             hasError
               ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
@@ -1851,10 +1801,7 @@ export default function ServiceReportForm() {
     // SINGLE CHOICE
     // ------------------------------------------------
 
-    if (
-      field.type ===
-      "single-choice"
-    ) {
+    if (field.type === "single-choice") {
       return (
         <div
           className={
@@ -1864,27 +1811,16 @@ export default function ServiceReportForm() {
           }
         >
           <div className="flex flex-wrap gap-2">
-            {(field.options || []).map(
-              (option) => (
-                <Button
-                  key={option}
-                  type="button"
-                  variant={
-                    value === option
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() =>
-                    setValue(
-                      field,
-                      option,
-                    )
-                  }
-                >
-                  {option}
-                </Button>
-              ),
-            )}
+            {(field.options || []).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                variant={value === option ? "default" : "outline"}
+                onClick={() => setValue(field, option)}
+              >
+                {option}
+              </Button>
+            ))}
           </div>
         </div>
       );
@@ -1894,14 +1830,8 @@ export default function ServiceReportForm() {
     // MULTIPLE CHOICE
     // ------------------------------------------------
 
-    if (
-      field.type ===
-      "multiple-choice"
-    ) {
-      const selected =
-        Array.isArray(value)
-          ? value.map(String)
-          : [];
+    if (field.type === "multiple-choice") {
+      const selected = Array.isArray(value) ? value.map(String) : [];
 
       return (
         <div
@@ -1912,38 +1842,27 @@ export default function ServiceReportForm() {
           }
         >
           <div className="grid gap-2">
-            {(field.options || []).map(
-              (option) => (
-                <label
-                  key={option}
-                  className="flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(
-                      option,
-                    )}
-                    onChange={(e) => {
-                      setValue(
-                        field,
-                        e.target.checked
-                          ? [
-                              ...selected,
-                              option,
-                            ]
-                          : selected.filter(
-                              (item) =>
-                                item !==
-                                option,
-                            ),
-                      );
-                    }}
-                  />
+            {(field.options || []).map((option) => (
+              <label
+                key={option}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option)}
+                  onChange={(e) => {
+                    setValue(
+                      field,
+                      e.target.checked
+                        ? [...selected, option]
+                        : selected.filter((item) => item !== option),
+                    );
+                  }}
+                />
 
-                  {option}
-                </label>
-              ),
-            )}
+                {option}
+              </label>
+            ))}
           </div>
         </div>
       );
@@ -1953,28 +1872,16 @@ export default function ServiceReportForm() {
     // CAMERA
     // ------------------------------------------------
 
-    if (
-      field.type ===
-        "camera-photo" ||
-      field.type ===
-        "camera-video"
-    ) {
-      return renderCameraField(
-        field,
-      );
+    if (field.type === "camera-photo" || field.type === "camera-video") {
+      return renderCameraField(field);
     }
 
     // ------------------------------------------------
     // SIGNATURE
     // ------------------------------------------------
 
-    if (
-      field.type ===
-      "signature"
-    ) {
-      return renderSignatureField(
-        field,
-      );
+    if (field.type === "signature") {
+      return renderSignatureField(field);
     }
 
     // ------------------------------------------------
@@ -1983,24 +1890,11 @@ export default function ServiceReportForm() {
 
     return (
       <Input
-        type={
-          field.type === "number"
-            ? "number"
-            : field.type
-        }
+        type={field.type === "number" ? "number" : field.type}
         value={
-          Array.isArray(value)
-            ? String(
-                value[0] || "",
-              )
-            : String(value || "")
+          Array.isArray(value) ? String(value[0] || "") : String(value || "")
         }
-        onChange={(e) =>
-          setValue(
-            field,
-            e.target.value,
-          )
-        }
+        onChange={(e) => setValue(field, e.target.value)}
         className={
           hasError
             ? "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
@@ -2014,16 +1908,10 @@ export default function ServiceReportForm() {
   // MULTIPLE FIELD
   // --------------------------------------------------
 
-  function renderMultipleField(
-    field: Field,
-  ) {
+  function renderMultipleField(field: Field) {
     const value = getValue(field);
 
-    const values = Array.isArray(
-      value,
-    )
-      ? value.map(String)
-      : [""];
+    const values = Array.isArray(value) ? value.map(String) : [""];
 
     const hasError = !!errors[field.id];
 
@@ -2035,60 +1923,41 @@ export default function ServiceReportForm() {
             : "flex flex-col gap-2"
         }
       >
-        {values.map(
-          (item, index) => (
-            <div
-              key={index}
-              className="flex gap-2"
-            >
-              <Textarea
-                value={item}
-                onChange={(e) => {
-                  const updated = [
-                    ...values,
-                  ];
+        {values.map((item, index) => (
+          <div key={index} className="flex gap-2">
+            <Textarea
+              value={item}
+              onChange={(e) => {
+                const updated = [...values];
 
-                  updated[index] =
-                    e.target.value;
+                updated[index] = e.target.value;
 
+                setValue(field, updated);
+              }}
+            />
+
+            {index > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
                   setValue(
                     field,
-                    updated,
+                    values.filter((_, i) => i !== index),
                   );
                 }}
-              />
-
-              {index > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setValue(
-                      field,
-                      values.filter(
-                        (_, i) =>
-                          i !== index,
-                      ),
-                    );
-                  }}
-                >
-                  <Trash2 />
-                </Button>
-              )}
-            </div>
-          ),
-        )}
+              >
+                <Trash2 />
+              </Button>
+            )}
+          </div>
+        ))}
 
         <Button
           type="button"
           variant="outline"
           className="self-start"
-          onClick={() =>
-            setValue(
-              field,
-              [...values, ""],
-            )
-          }
+          onClick={() => setValue(field, [...values, ""])}
         >
           <Plus data-icon="inline-start" />
           Add
@@ -2101,30 +1970,21 @@ export default function ServiceReportForm() {
   // SAVE / SUBMIT
   // --------------------------------------------------
 
-  async function save(
-    submit = false,
-  ) {
+  async function save(submit = false) {
     // ------------------------------------------------
     // CUSTOMER REQUIRED FOR BOTH SAVE + SUBMIT
     // ------------------------------------------------
 
-    if (
-      !selectedCustomerId ||
-      !selectedCustomer
-    ) {
+    if (!selectedCustomerId || !selectedCustomer) {
       setErrors((current) => ({
         ...current,
         customer: true,
       }));
 
-      document
-        .getElementById(
-          "customer-selector",
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+      document.getElementById("customer-selector")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
 
       return;
     }
@@ -2155,41 +2015,29 @@ export default function ServiceReportForm() {
       // ----------------------------------------------
 
       const payload = {
-        templateId:
-          data.templateId,
+        templateId: data.templateId,
 
-        templateSnapshot:
-          data.templateSnapshot,
+        templateSnapshot: data.templateSnapshot,
 
         // Customer is stored outside formData
-        customerId:
-          selectedCustomer.id,
+        customerId: selectedCustomer.id,
 
-        customerName:
-          selectedCustomer.name,
+        customerName: selectedCustomer.name,
 
-        customerAddress:
-          selectedCustomer.address,
+        customerAddress: selectedCustomer.address,
 
-        formData:
-          data.formData,
+        formData: data.formData,
 
-        evidence:
-          data.evidence,
+        evidence: data.evidence,
 
-        signatures:
-          data.signatures,
+        signatures: data.signatures,
 
         status: "DRAFT",
       };
 
       console.log(
         "FINAL SERVICE REPORT DATA:",
-        JSON.stringify(
-          payload,
-          null,
-          2,
-        ),
+        JSON.stringify(payload, null, 2),
       );
 
       // ----------------------------------------------
@@ -2197,39 +2045,25 @@ export default function ServiceReportForm() {
       // ----------------------------------------------
 
       if (!id) {
-        const response =
-          await fetch(
-            "/api/service-reports",
-            {
-              method: "POST",
+        const response = await fetch("/api/service-reports", {
+          method: "POST",
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-              body: JSON.stringify(
-                payload,
-              ),
-            },
-          );
+          body: JSON.stringify(payload),
+        });
 
         if (!response.ok) {
-          const error =
-            await response.text();
+          const error = await response.text();
 
-          console.error(
-            "Create service report failed:",
-            error,
-          );
+          console.error("Create service report failed:", error);
 
-          throw new Error(
-            "Failed to create service report",
-          );
+          throw new Error("Failed to create service report");
         }
 
-        const created =
-          await response.json();
+        const created = await response.json();
 
         id = created.id;
 
@@ -2239,37 +2073,23 @@ export default function ServiceReportForm() {
       // ----------------------------------------------
       // UPDATE
       // ----------------------------------------------
-
       else {
-        const response =
-          await fetch(
-            `/api/service-reports/${id}`,
-            {
-              method: "PUT",
+        const response = await fetch(`/api/service-reports/${id}`, {
+          method: "PUT",
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-              body: JSON.stringify(
-                payload,
-              ),
-            },
-          );
+          body: JSON.stringify(payload),
+        });
 
         if (!response.ok) {
-          const error =
-            await response.text();
+          const error = await response.text();
 
-          console.error(
-            "Update service report failed:",
-            error,
-          );
+          console.error("Update service report failed:", error);
 
-          throw new Error(
-            "Failed to save service report",
-          );
+          throw new Error("Failed to save service report");
         }
       }
 
@@ -2278,41 +2098,26 @@ export default function ServiceReportForm() {
       // ----------------------------------------------
 
       if (submit) {
-        const response =
-          await fetch(
-            `/api/service-reports/${id}/submit`,
-            {
-              method: "POST",
-            },
-          );
+        const response = await fetch(`/api/service-reports/${id}/submit`, {
+          method: "POST",
+        });
 
         if (!response.ok) {
-          const error =
-            await response.text();
+          const error = await response.text();
 
-          console.error(
-            "Submit service report failed:",
-            error,
-          );
+          console.error("Submit service report failed:", error);
 
-          throw new Error(
-            "Failed to submit service report",
-          );
+          throw new Error("Failed to submit service report");
         }
 
-        router.push(
-          `/employee/service-reports/${id}`,
-        );
+        router.push(`/employee/service-reports/${id}`);
 
         router.refresh();
       } else {
         alert("Draft saved.");
       }
     } catch (error) {
-      console.error(
-        "SAVE SERVICE REPORT ERROR:",
-        error,
-      );
+      console.error("SAVE SERVICE REPORT ERROR:", error);
 
       alert(
         error instanceof Error
@@ -2329,8 +2134,7 @@ export default function ServiceReportForm() {
   if (!template) {
     return (
       <main className="p-8 text-muted-foreground">
-        Loading service report
-        template…
+        Loading service report template…
       </main>
     );
   }
@@ -2343,12 +2147,7 @@ export default function ServiceReportForm() {
     <main className="mobile-safe-bottom mx-auto max-w-6xl px-5 py-8 sm:px-8">
       {/* BACK */}
 
-      <Button
-        variant="ghost"
-        onClick={() =>
-          router.push("/employee")
-        }
-      >
+      <Button variant="ghost" onClick={() => router.push("/employee")}>
         <ArrowLeft data-icon="inline-start" />
         Back to Service Reports
       </Button>
@@ -2364,131 +2163,88 @@ export default function ServiceReportForm() {
               </p>
 
               <h1 className="mt-2 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-                {template.title ||
-                  template.name}
+                {template.title || template.name}
               </h1>
 
               <p className="mt-2 text-sm text-muted-foreground">
-                Record service calls,
-                reported faults, and
-                corrective actions taken.
+                Record service calls, reported faults, and corrective actions
+                taken.
               </p>
             </div>
 
-            <Badge variant="secondary">
-              Draft
-            </Badge>
+            <Badge variant="secondary">Draft</Badge>
           </div>
         </CardContent>
       </Card>
 
       {/* CUSTOMER */}
 
-      <Card
-        id="customer-selector"
-        className="mt-6 shadow-sm"
-      >
+      <Card id="customer-selector" className="mt-6 shadow-sm">
         <CardContent className="p-5 sm:p-6">
           <div className="mb-4">
-            <h2 className="font-semibold">
-              Customer Information
-            </h2>
+            <h2 className="font-semibold">Customer Information</h2>
 
             <p className="text-sm text-muted-foreground">
-              Select the customer for
-              this service report.
+              Select the customer for this service report.
             </p>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Customer
-              <span className="ml-1 text-red-500">
-                *
-              </span>
+              <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
-              value={
-                selectedCustomerId
-              }
-              onChange={(e) =>
-                handleCustomerChange(
-                  e.target.value,
-                )
-              }
-              disabled={
-                customersLoading
-              }
+              value={selectedCustomerId}
+              onChange={(e) => handleCustomerChange(e.target.value)}
+              disabled={customersLoading}
               className={`w-full rounded-lg border bg-background px-3 py-2 text-sm ${
-                errors.customer
-                  ? "border-red-500 ring-1 ring-red-500"
-                  : ""
+                errors.customer ? "border-red-500 ring-1 ring-red-500" : ""
               }`}
             >
               <option value="">
-                {customersLoading
-                  ? "Loading customers..."
-                  : "Select customer"}
+                {customersLoading ? "Loading customers..." : "Select customer"}
               </option>
 
-              {customers.map(
-                (customer) => (
-                  <option
-                    key={customer.id}
-                    value={customer.id}
-                  >
-                    {customer.name}
-                  </option>
-                ),
-              )}
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
             </select>
 
             {errors.customer && (
               <p className="text-xs font-medium text-red-500">
-                Please select a
-                customer.
+                Please select a customer.
               </p>
             )}
 
             {customerLoadError && (
               <p className="text-xs font-medium text-red-500">
-                Failed to load
-                customers.
+                Failed to load customers.
               </p>
             )}
           </div>
 
           {selectedCustomer && (
             <div className="mt-4 rounded-xl border bg-muted/30 p-4">
-              <p className="font-medium">
-                {selectedCustomer.name}
-              </p>
+              <p className="font-medium">{selectedCustomer.name}</p>
 
               <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-                {
-                  selectedCustomer.address
-                }
+                {selectedCustomer.address}
               </p>
 
               {selectedCustomer.gstNo && (
                 <p className="mt-2 text-sm">
-                  <span className="font-medium">
-                    GST:
-                  </span>{" "}
-                  {
-                    selectedCustomer.gstNo
-                  }
+                  <span className="font-medium">GST:</span>{" "}
+                  {selectedCustomer.gstNo}
                 </p>
               )}
 
               <p className="mt-1 text-sm">
-                <span className="font-medium">
-                  Contact:
-                </span>{" "}
-                {
-                  selectedCustomer.contactNumber
-                }
+                <span className="font-medium">Contact:</span>{" "}
+                {selectedCustomer.contactNumber}
               </p>
             </div>
           )}
@@ -2498,132 +2254,84 @@ export default function ServiceReportForm() {
       {/* SECTIONS */}
 
       <div className="mt-6 flex flex-col gap-6">
-        {template.sections.map(
-          (section) => (
-            <section
-              key={section.id}
-            >
-              {/* SECTION HEADER */}
+        {template.sections.map((section) => (
+          <section key={section.id}>
+            {/* SECTION HEADER */}
 
-              <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-                <div>
-                  <h2 className="font-semibold">
-                    {section.name ||
-                      section.title}
-                  </h2>
+            <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+              <div>
+                <h2 className="font-semibold">
+                  {section.name || section.title}
+                </h2>
 
-                  <p className="text-xs text-muted-foreground">
-                    Complete the
-                    information below.
-                  </p>
-                </div>
-
-                <Badge variant="secondary">
-                  {
-                    section.fields
-                      .length
-                  }{" "}
-                  {section.fields
-                    .length === 1
-                    ? "field"
-                    : "fields"}
-                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  Complete the information below.
+                </p>
               </div>
 
-              {/* FIELDS */}
+              <Badge variant="secondary">
+                {section.fields.length}{" "}
+                {section.fields.length === 1 ? "field" : "fields"}
+              </Badge>
+            </div>
 
-              <Card className="shadow-sm">
-                <CardContent className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
-                  {section.fields.map(
-                    (field) => {
-                      const fullWidth =
-                        field.type ===
-                          "textarea" ||
-                        field.type ===
-                          "multiple-choice" ||
-                        field.type ===
-                          "single-choice" ||
-                        field.type ===
-                          "camera-photo" ||
-                        field.type ===
-                          "camera-video" ||
-                        field.type ===
-                          "signature" ||
-                        field.multiple;
+            {/* FIELDS */}
 
-                      return (
-                        <div
-                          key={
-                            field.id
-                          }
-                          data-field-id={
-                            field.id
-                          }
-                          className={
-                            fullWidth
-                              ? "sm:col-span-2"
-                              : ""
-                          }
-                        >
-                          <label className="flex flex-col gap-2 text-sm font-medium">
-                            <span>
-                              {
-                                field.label
-                              }
+            <Card className="shadow-sm">
+              <CardContent className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                {section.fields.map((field) => {
+                  const fullWidth =
+                    field.type === "textarea" ||
+                    field.type === "multiple-choice" ||
+                    field.type === "single-choice" ||
+                    field.type === "camera-photo" ||
+                    field.type === "camera-video" ||
+                    field.type === "signature" ||
+                    field.multiple;
 
-                              {field.required && (
-                                <span className="ml-1 text-red-500">
-                                  *
-                                </span>
-                              )}
-                            </span>
+                  return (
+                    <div
+                      key={field.id}
+                      data-field-id={field.id}
+                      className={fullWidth ? "sm:col-span-2" : ""}
+                    >
+                      <label className="flex flex-col gap-2 text-sm font-medium">
+                        <span>
+                          {field.label}
 
-                            {field.multiple
-                              ? renderMultipleField(
-                                  field,
-                                )
-                              : fieldControl(
-                                  field,
-                                )}
-                          </label>
-
-                          {errors[
-                            field.id
-                          ] && (
-                            <p className="mt-1 text-xs font-medium text-red-500">
-                              This field is
-                              required.
-                            </p>
+                          {field.required && (
+                            <span className="ml-1 text-red-500">*</span>
                           )}
-                        </div>
-                      );
-                    },
-                  )}
-                </CardContent>
-              </Card>
-            </section>
-          ),
-        )}
+                        </span>
+
+                        {field.multiple
+                          ? renderMultipleField(field)
+                          : fieldControl(field)}
+                      </label>
+
+                      {errors[field.id] && (
+                        <p className="mt-1 text-xs font-medium text-red-500">
+                          This field is required.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </section>
+        ))}
       </div>
 
       {/* ACTIONS */}
 
       <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-        <Button
-          variant="outline"
-          onClick={() =>
-            save(false)
-          }
-        >
+        <Button variant="outline" onClick={() => save(false)}>
           <Save data-icon="inline-start" />
           Save Draft
         </Button>
 
-        <Button
-          onClick={() =>
-            save(true)
-          }
-        >
+        <Button onClick={() => save(true)}>
           <Send data-icon="inline-start" />
           Submit Report
         </Button>
@@ -2634,49 +2342,30 @@ export default function ServiceReportForm() {
       {camera && (
         <CameraCapture
           mode={camera.mode}
-          reportId={
-            serviceReportId ||
-            "new-service-report"
-          }
-          onCancel={() =>
-            setCamera(null)
-          }
-          onUse={(
-            item: EvidenceItem,
-          ) => {
-            const fieldId =
-              camera.field.id;
+          reportId={serviceReportId || "new-service-report"}
+          onCancel={() => setCamera(null)}
+          onUse={(item: EvidenceItem) => {
+            const fieldId = camera.field.id;
 
-            setData(
-              (current) => ({
-                ...current,
+            setData((current) => ({
+              ...current,
 
-                evidence: {
-                  ...current.evidence,
+              evidence: {
+                ...current.evidence,
 
-                  [fieldId]: [
-                    ...(current.evidence?.[
-                      fieldId
-                    ] || []),
-                    item,
-                  ],
-                },
-              }),
-            );
-
-            setErrors(
-              (current) => {
-                const updated = {
-                  ...current,
-                };
-
-                delete updated[
-                  fieldId
-                ];
-
-                return updated;
+                [fieldId]: [...(current.evidence?.[fieldId] || []), item],
               },
-            );
+            }));
+
+            setErrors((current) => {
+              const updated = {
+                ...current,
+              };
+
+              delete updated[fieldId];
+
+              return updated;
+            });
 
             setCamera(null);
           }}
@@ -2688,40 +2377,30 @@ export default function ServiceReportForm() {
       {signatureField && (
         <SignaturePad
           field={signatureField}
-          onCancel={() =>
-            setSignatureField(null)
-          }
+          onCancel={() => setSignatureField(null)}
           onSave={(signature) => {
-            setData(
-              (current) => ({
-                ...current,
+            setData((current) => ({
+              ...current,
 
-                signatures: {
-                  ...current.signatures,
+              signatures: {
+                ...current.signatures,
 
-                  [signatureField.id]:
-                    {
-                      signature,
-                      signedAt:
-                        new Date().toISOString(),
-                    },
+                [signatureField.id]: {
+                  signature,
+                  signedAt: new Date().toISOString(),
                 },
-              }),
-            );
-
-            setErrors(
-              (current) => {
-                const updated = {
-                  ...current,
-                };
-
-                delete updated[
-                  signatureField.id
-                ];
-
-                return updated;
               },
-            );
+            }));
+
+            setErrors((current) => {
+              const updated = {
+                ...current,
+              };
+
+              delete updated[signatureField.id];
+
+              return updated;
+            });
 
             setSignatureField(null);
           }}
@@ -2744,21 +2423,16 @@ function SignaturePad({
   onCancel: () => void;
   onSave: (signature: string) => void;
 }) {
-  const [canvas, setCanvas] =
-    useState<HTMLCanvasElement | null>(
-      null,
-    );
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
-  const [drawing, setDrawing] =
-    useState(false);
+  const [drawing, setDrawing] = useState(false);
 
   useEffect(() => {
     if (!canvas) {
       return;
     }
 
-    const context =
-      canvas.getContext("2d");
+    const context = canvas.getContext("2d");
 
     if (!context) {
       return;
@@ -2766,12 +2440,7 @@ function SignaturePad({
 
     context.fillStyle = "#ffffff";
 
-    context.fillRect(
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.lineWidth = 2;
     context.lineCap = "round";
@@ -2791,12 +2460,10 @@ function SignaturePad({
       };
     }
 
-    const rect =
-      canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
 
     if ("touches" in event) {
-      const touch =
-        event.touches[0];
+      const touch = event.touches[0];
 
       if (!touch) {
         return {
@@ -2806,32 +2473,16 @@ function SignaturePad({
       }
 
       return {
-        x:
-          ((touch.clientX -
-            rect.left) /
-            rect.width) *
-          canvas.width,
+        x: ((touch.clientX - rect.left) / rect.width) * canvas.width,
 
-        y:
-          ((touch.clientY -
-            rect.top) /
-            rect.height) *
-          canvas.height,
+        y: ((touch.clientY - rect.top) / rect.height) * canvas.height,
       };
     }
 
     return {
-      x:
-        ((event.clientX -
-          rect.left) /
-          rect.width) *
-        canvas.width,
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
 
-      y:
-        ((event.clientY -
-          rect.top) /
-          rect.height) *
-        canvas.height,
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
     };
   }
 
@@ -2846,22 +2497,17 @@ function SignaturePad({
       return;
     }
 
-    const context =
-      canvas.getContext("2d");
+    const context = canvas.getContext("2d");
 
     if (!context) {
       return;
     }
 
-    const position =
-      getPosition(event);
+    const position = getPosition(event);
 
     context.beginPath();
 
-    context.moveTo(
-      position.x,
-      position.y,
-    );
+    context.moveTo(position.x, position.y);
 
     setDrawing(true);
   }
@@ -2873,27 +2519,19 @@ function SignaturePad({
   ) {
     event.preventDefault();
 
-    if (
-      !drawing ||
-      !canvas
-    ) {
+    if (!drawing || !canvas) {
       return;
     }
 
-    const context =
-      canvas.getContext("2d");
+    const context = canvas.getContext("2d");
 
     if (!context) {
       return;
     }
 
-    const position =
-      getPosition(event);
+    const position = getPosition(event);
 
-    context.lineTo(
-      position.x,
-      position.y,
-    );
+    context.lineTo(position.x, position.y);
 
     context.stroke();
   }
@@ -2907,8 +2545,7 @@ function SignaturePad({
       return;
     }
 
-    const context =
-      canvas.getContext("2d");
+    const context = canvas.getContext("2d");
 
     if (!context) {
       return;
@@ -2916,12 +2553,7 @@ function SignaturePad({
 
     context.fillStyle = "#ffffff";
 
-    context.fillRect(
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.strokeStyle = "#000000";
   }
@@ -2931,10 +2563,7 @@ function SignaturePad({
       return;
     }
 
-    const signature =
-      canvas.toDataURL(
-        "image/png",
-      );
+    const signature = canvas.toDataURL("image/png");
 
     onSave(signature);
   }
@@ -2944,21 +2573,14 @@ function SignaturePad({
       <div className="w-full max-w-2xl rounded-2xl bg-background p-5 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">
-              {field.label}
-            </h2>
+            <h2 className="text-lg font-semibold">{field.label}</h2>
 
             <p className="text-sm text-muted-foreground">
-              Sign using touch, mouse,
-              or trackpad.
+              Sign using touch, mouse, or trackpad.
             </p>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onCancel}
-          >
+          <Button variant="ghost" size="icon" onClick={onCancel}>
             <X />
           </Button>
         </div>
@@ -2969,52 +2591,27 @@ function SignaturePad({
             width={1000}
             height={400}
             className="h-64 w-full touch-none"
-            onMouseDown={
-              startDrawing
-            }
+            onMouseDown={startDrawing}
             onMouseMove={draw}
-            onMouseUp={
-              stopDrawing
-            }
-            onMouseLeave={
-              stopDrawing
-            }
-            onTouchStart={
-              startDrawing
-            }
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
             onTouchMove={draw}
-            onTouchEnd={
-              stopDrawing
-            }
+            onTouchEnd={stopDrawing}
           />
         </div>
 
         <div className="mt-4 flex justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={
-              clearSignature
-            }
-          >
+          <Button type="button" variant="outline" onClick={clearSignature}>
             Clear
           </Button>
 
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-            >
+            <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
             </Button>
 
-            <Button
-              type="button"
-              onClick={
-                saveSignature
-              }
-            >
+            <Button type="button" onClick={saveSignature}>
               Save Signature
             </Button>
           </div>

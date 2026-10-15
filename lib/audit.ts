@@ -1,5 +1,4 @@
 
-
 // import { neon } from "@neondatabase/serverless";
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
@@ -45,9 +44,12 @@
 //   id: string;
 //   employeeId: string;
 //   employeeName: string;
+
+//   // Customer information is stored in separate database columns.
 //   customerId: string | null;
 //   customerName: string | null;
 //   customerAddress: string | null;
+
 //   templateId: string;
 //   templateSnapshot: TemplateSnapshot;
 
@@ -75,54 +77,54 @@
 // export async function readAudits(): Promise<Audit[]> {
 //   const sql = getDatabase();
 
-//   // const rows = await sql`
-//   //   SELECT
-//   //     id,
-//   //     employee_id,
-//   //     employee_name,
-//   //     template_id,
-//   //     template_snapshot,
-//   //     form_data,
-//   //     evidence,
-//   //     signatures,
-//   //     status,
-//   //     score,
-//   //     created_at,
-//   //     updated_at
-//   //   FROM audits
-//   //   ORDER BY created_at DESC
-//   // `;
 //   const rows = await sql`
-//   SELECT
-//     id,
-//     employee_id,
-//     employee_name,
-//     template_id,
-//     template_snapshot,
-//     customer_id,
-//     customer_name,
-//     customer_address,
-//     form_data,
-//     evidence,
-//     signatures,
-//     status,
-//     score,
-//     created_at,
-//     updated_at
-//   FROM audits
-//   ORDER BY created_at DESC
-// `;
+//     SELECT
+//       id,
+//       employee_id,
+//       employee_name,
+//       template_id,
+//       template_snapshot,
+
+//       customer_id,
+//       customer_name,
+//       customer_address,
+
+//       form_data,
+//       evidence,
+//       signatures,
+//       status,
+//       score,
+//       created_at,
+//       updated_at
+//     FROM audits
+//     ORDER BY created_at DESC
+//   `;
+
 //   return rows.map((row: any) => ({
-//     id: row.id,
+//     id: String(row.id),
 
-//     employeeId: row.employee_id,
-//     employeeName: row.employee_name,
-//     customerId: row.customer_id ? String(row.customer_id) : null,
+//     employeeId: String(row.employee_id),
+//     employeeName: String(row.employee_name),
 
-//     customerName: row.customer_name ? String(row.customer_name) : null,
+//     customerId:
+//       row.customer_id === null ||
+//       row.customer_id === undefined
+//         ? null
+//         : String(row.customer_id),
 
-//     customerAddress: row.customer_address ? String(row.customer_address) : null,
-//     templateId: row.template_id || "",
+//     customerName:
+//       row.customer_name === null ||
+//       row.customer_name === undefined
+//         ? null
+//         : String(row.customer_name),
+
+//     customerAddress:
+//       row.customer_address === null ||
+//       row.customer_address === undefined
+//         ? null
+//         : String(row.customer_address),
+
+//     templateId: String(row.template_id || ""),
 
 //     templateSnapshot:
 //       row.template_snapshot &&
@@ -157,16 +159,23 @@
 //         ? row.signatures
 //         : {},
 
-//     status: row.status,
+//     status: String(row.status).toUpperCase() as
+//       | "DRAFT"
+//       | "COMPLETED",
 
 //     score:
-//       row.score === null || row.score === undefined
+//       row.score === null ||
+//       row.score === undefined
 //         ? undefined
 //         : Number(row.score),
 
-//     createdAt: row.created_at?.toISOString?.() || String(row.created_at),
+//     createdAt:
+//       row.created_at?.toISOString?.() ||
+//       String(row.created_at),
 
-//     updatedAt: row.updated_at?.toISOString?.() || String(row.updated_at),
+//     updatedAt:
+//       row.updated_at?.toISOString?.() ||
+//       String(row.updated_at),
 //   }));
 // }
 
@@ -178,7 +187,10 @@
 //       COALESCE(
 //         MAX(
 //           CAST(
-//             NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER
+//             NULLIF(
+//               SUBSTRING(id FROM 5),
+//               ''
+//             ) AS INTEGER
 //           )
 //         ),
 //         0
@@ -187,7 +199,8 @@
 //     WHERE id ~ '^AUD-[0-9]+$'
 //   `;
 
-//   const nextNumber = Number(rows[0]?.next_number || 1);
+//   const nextNumber =
+//     Number(rows[0]?.next_number || 1);
 
 //   return `AUD-${String(nextNumber).padStart(3, "0")}`;
 // }
@@ -205,6 +218,11 @@
 //         employee_name,
 //         template_id,
 //         template_snapshot,
+
+//         customer_id,
+//         customer_name,
+//         customer_address,
+
 //         form_data,
 //         evidence,
 //         signatures,
@@ -219,6 +237,11 @@
 //         ${audit.employeeName},
 //         ${audit.templateId},
 //         ${JSON.stringify(audit.templateSnapshot)}::jsonb,
+
+//         ${audit.customerId},
+//         ${audit.customerName},
+//         ${audit.customerAddress},
+
 //         ${JSON.stringify(audit.formData)}::jsonb,
 //         ${JSON.stringify(audit.evidence)}::jsonb,
 //         ${JSON.stringify(audit.signatures)}::jsonb,
@@ -242,18 +265,25 @@
 //     })
 //     .filter(Boolean) as string[];
 
-//   const eligible = values.filter((value) => value !== "N/A");
+//   const eligible = values.filter(
+//     (value) => value !== "N/A",
+//   );
 
 //   return eligible.length
 //     ? Math.round(
-//         (values.filter((value) => value === "PASS").length / eligible.length) *
+//         (values.filter(
+//           (value) => value === "PASS",
+//         ).length /
+//           eligible.length) *
 //           100,
 //       )
 //     : 0;
 // }
 
 // export async function getSession() {
-//   const value = (await cookies()).get("auditdesk_session")?.value;
+//   const value = (await cookies())
+//     .get("auditdesk_session")
+//     ?.value;
 
 //   if (!value) {
 //     throw new Error("Authentication required");
@@ -263,19 +293,35 @@
 //     const secret = process.env.AUTH_SECRET;
 
 //     if (!secret) {
-//       throw new Error("AUTH_SECRET is not configured");
+//       throw new Error(
+//         "AUTH_SECRET is not configured",
+//       );
 //     }
 
-//     const secretKey = new TextEncoder().encode(secret);
+//     const secretKey =
+//       new TextEncoder().encode(secret);
 
-//     const { payload } = await jwtVerify(value, secretKey);
+//     const { payload } = await jwtVerify(
+//       value,
+//       secretKey,
+//     );
 
-//     if (!payload.id || !payload.name || !payload.role) {
-//       throw new Error("Invalid session payload");
+//     if (
+//       !payload.id ||
+//       !payload.name ||
+//       !payload.role
+//     ) {
+//       throw new Error(
+//         "Invalid session payload",
+//       );
 //     }
 
-//     if (String(payload.role) !== "auditor") {
-//       throw new Error("Only auditors can access audits");
+//     if (
+//       String(payload.role) !== "auditor"
+//     ) {
+//       throw new Error(
+//         "Only auditors can access audits",
+//       );
 //     }
 
 //     return {
@@ -284,11 +330,47 @@
 //       role: "auditor" as const,
 //     };
 //   } catch (error) {
-//     console.error("Invalid auditdesk session:", error);
+//     console.error(
+//       "Invalid auditdesk session:",
+//       error,
+//     );
 
-//     throw new Error("Invalid or expired session");
+//     throw new Error(
+//       "Invalid or expired session",
+//     );
 //   }
 // }
+// export async function submitAuditInDatabase(
+//   id: string,
+// ): Promise<{ submittedAt: string; updatedAt: string } | null> {
+//   const sql = getDatabase();
+
+//   const rows = await sql`
+//     UPDATE audits
+//     SET
+//       status = 'COMPLETED',
+//       submitted_at = COALESCE(submitted_at, NOW()),
+//       updated_at = NOW()
+//     WHERE id = ${id}
+//     RETURNING submitted_at, updated_at
+//   `;
+
+//   if (rows.length === 0) {
+//     return null;
+//   }
+
+//   const row = rows[0];
+
+//   return {
+//     submittedAt:
+//       row.submitted_at?.toISOString?.() ??
+//       String(row.submitted_at),
+//     updatedAt:
+//       row.updated_at?.toISOString?.() ??
+//       String(row.updated_at),
+//   };
+// }
+
 import { neon } from "@neondatabase/serverless";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -335,7 +417,6 @@ export type Audit = {
   employeeId: string;
   employeeName: string;
 
-  // Customer information is stored in separate database columns.
   customerId: string | null;
   customerName: string | null;
   customerAddress: string | null;
@@ -352,6 +433,7 @@ export type Audit = {
 
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string | null;
 };
 
 function getDatabase() {
@@ -364,6 +446,20 @@ function getDatabase() {
   return neon(url);
 }
 
+function toIsoString(value: any): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Invalid database timestamp");
+  }
+
+  return date.toISOString();
+}
+
 export async function readAudits(): Promise<Audit[]> {
   const sql = getDatabase();
 
@@ -374,18 +470,17 @@ export async function readAudits(): Promise<Audit[]> {
       employee_name,
       template_id,
       template_snapshot,
-
       customer_id,
       customer_name,
       customer_address,
-
       form_data,
       evidence,
       signatures,
       status,
       score,
       created_at,
-      updated_at
+      updated_at,
+      submitted_at
     FROM audits
     ORDER BY created_at DESC
   `;
@@ -397,20 +492,17 @@ export async function readAudits(): Promise<Audit[]> {
     employeeName: String(row.employee_name),
 
     customerId:
-      row.customer_id === null ||
-      row.customer_id === undefined
+      row.customer_id == null
         ? null
         : String(row.customer_id),
 
     customerName:
-      row.customer_name === null ||
-      row.customer_name === undefined
+      row.customer_name == null
         ? null
         : String(row.customer_name),
 
     customerAddress:
-      row.customer_address === null ||
-      row.customer_address === undefined
+      row.customer_address == null
         ? null
         : String(row.customer_address),
 
@@ -454,18 +546,17 @@ export async function readAudits(): Promise<Audit[]> {
       | "COMPLETED",
 
     score:
-      row.score === null ||
-      row.score === undefined
+      row.score == null
         ? undefined
         : Number(row.score),
 
-    createdAt:
-      row.created_at?.toISOString?.() ||
-      String(row.created_at),
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
 
-    updatedAt:
-      row.updated_at?.toISOString?.() ||
-      String(row.updated_at),
+    submittedAt:
+      row.submitted_at == null
+        ? null
+        : toIsoString(row.submitted_at),
   }));
 }
 
@@ -477,10 +568,7 @@ export async function generateAuditId(): Promise<string> {
       COALESCE(
         MAX(
           CAST(
-            NULLIF(
-              SUBSTRING(id FROM 5),
-              ''
-            ) AS INTEGER
+            NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER
           )
         ),
         0
@@ -489,16 +577,19 @@ export async function generateAuditId(): Promise<string> {
     WHERE id ~ '^AUD-[0-9]+$'
   `;
 
-  const nextNumber =
-    Number(rows[0]?.next_number || 1);
+  const nextNumber = Number(rows[0]?.next_number || 1);
 
   return `AUD-${String(nextNumber).padStart(3, "0")}`;
 }
 
+/**
+ * Insert or update only the supplied audits.
+ * This does not delete unrelated database records.
+ * Existing submission timestamps are preserved when omitted
+ * from an audit object.
+ */
 export async function writeAudits(audits: Audit[]) {
   const sql = getDatabase();
-
-  await sql`DELETE FROM audits`;
 
   for (const audit of audits) {
     await sql`
@@ -508,18 +599,17 @@ export async function writeAudits(audits: Audit[]) {
         employee_name,
         template_id,
         template_snapshot,
-
         customer_id,
         customer_name,
         customer_address,
-
         form_data,
         evidence,
         signatures,
         status,
         score,
         created_at,
-        updated_at
+        updated_at,
+        submitted_at
       )
       VALUES (
         ${audit.id},
@@ -527,21 +617,74 @@ export async function writeAudits(audits: Audit[]) {
         ${audit.employeeName},
         ${audit.templateId},
         ${JSON.stringify(audit.templateSnapshot)}::jsonb,
-
         ${audit.customerId},
         ${audit.customerName},
         ${audit.customerAddress},
-
         ${JSON.stringify(audit.formData)}::jsonb,
         ${JSON.stringify(audit.evidence)}::jsonb,
         ${JSON.stringify(audit.signatures)}::jsonb,
         ${audit.status},
         ${audit.score ?? null},
         ${audit.createdAt},
-        ${audit.updatedAt}
+        ${audit.updatedAt},
+        ${audit.submittedAt ?? null}
       )
+      ON CONFLICT (id) DO UPDATE SET
+        employee_id = EXCLUDED.employee_id,
+        employee_name = EXCLUDED.employee_name,
+        template_id = EXCLUDED.template_id,
+        template_snapshot = EXCLUDED.template_snapshot,
+        customer_id = EXCLUDED.customer_id,
+        customer_name = EXCLUDED.customer_name,
+        customer_address = EXCLUDED.customer_address,
+        form_data = EXCLUDED.form_data,
+        evidence = EXCLUDED.evidence,
+        signatures = EXCLUDED.signatures,
+        status = EXCLUDED.status,
+        score = EXCLUDED.score,
+        updated_at = EXCLUDED.updated_at,
+        submitted_at = COALESCE(
+          EXCLUDED.submitted_at,
+          audits.submitted_at
+        )
     `;
   }
+}
+
+/**
+ * Submit a draft audit directly in PostgreSQL.
+ * Only DRAFT records can be submitted by this function.
+ * The first submission timestamp is preserved.
+ */
+export async function submitAuditInDatabase(
+  id: string,
+): Promise<{
+  submittedAt: string;
+  updatedAt: string;
+} | null> {
+  const sql = getDatabase();
+
+  const rows = await sql`
+    UPDATE audits
+    SET
+      status = 'COMPLETED',
+      submitted_at = COALESCE(submitted_at, NOW()),
+      updated_at = NOW()
+    WHERE id = ${id}
+      AND status = 'DRAFT'
+    RETURNING submitted_at, updated_at
+  `;
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const row = rows[0];
+
+  return {
+    submittedAt: toIsoString(row.submitted_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
 }
 
 export function scoreAudit(audit: Audit) {
@@ -561,9 +704,7 @@ export function scoreAudit(audit: Audit) {
 
   return eligible.length
     ? Math.round(
-        (values.filter(
-          (value) => value === "PASS",
-        ).length /
+        (values.filter((value) => value === "PASS").length /
           eligible.length) *
           100,
       )
@@ -583,35 +724,19 @@ export async function getSession() {
     const secret = process.env.AUTH_SECRET;
 
     if (!secret) {
-      throw new Error(
-        "AUTH_SECRET is not configured",
-      );
+      throw new Error("AUTH_SECRET is not configured");
     }
 
-    const secretKey =
-      new TextEncoder().encode(secret);
+    const secretKey = new TextEncoder().encode(secret);
 
-    const { payload } = await jwtVerify(
-      value,
-      secretKey,
-    );
+    const { payload } = await jwtVerify(value, secretKey);
 
-    if (
-      !payload.id ||
-      !payload.name ||
-      !payload.role
-    ) {
-      throw new Error(
-        "Invalid session payload",
-      );
+    if (!payload.id || !payload.name || !payload.role) {
+      throw new Error("Invalid session payload");
     }
 
-    if (
-      String(payload.role) !== "auditor"
-    ) {
-      throw new Error(
-        "Only auditors can access audits",
-      );
+    if (String(payload.role) !== "auditor") {
+      throw new Error("Only auditors can access audits");
     }
 
     return {
@@ -620,13 +745,8 @@ export async function getSession() {
       role: "auditor" as const,
     };
   } catch (error) {
-    console.error(
-      "Invalid auditdesk session:",
-      error,
-    );
+    console.error("Invalid auditdesk session:", error);
 
-    throw new Error(
-      "Invalid or expired session",
-    );
+    throw new Error("Invalid or expired session");
   }
 }

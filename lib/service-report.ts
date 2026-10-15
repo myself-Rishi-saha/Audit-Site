@@ -1,5 +1,4 @@
 
-
 // import { neon } from "@neondatabase/serverless";
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
@@ -53,7 +52,18 @@
 //   employeeId: string;
 //   employeeName: string;
 
-//   // Which admin-created template was used
+//   // --------------------------------------------------
+//   // CUSTOMER
+//   // --------------------------------------------------
+
+//   customerId: string | null;
+//   customerName: string | null;
+//   customerAddress: string | null;
+
+//   // --------------------------------------------------
+//   // TEMPLATE
+//   // --------------------------------------------------
+
 //   templateId: string;
 
 //   /*
@@ -65,31 +75,60 @@
 //    */
 //   templateSnapshot: TemplateSnapshot;
 
+//   // --------------------------------------------------
+//   // FORM DATA
+//   // --------------------------------------------------
+
 //   // ALL normal form answers are stored here
 //   formData: Record<string, unknown>;
+
+//   // --------------------------------------------------
+//   // EVIDENCE
+//   // --------------------------------------------------
 
 //   // Photos/videos
 //   evidence: Record<string, Evidence[]>;
 
+//   // --------------------------------------------------
+//   // SIGNATURES
+//   // --------------------------------------------------
+
 //   // Employee/customer signatures
 //   signatures: Record<string, SignatureData>;
 
+//   // --------------------------------------------------
+//   // STATUS
+//   // --------------------------------------------------
+
 //   status: "DRAFT" | "COMPLETED";
+
 //   createdAt: string;
 //   updatedAt: string;
 // };
+
+// // ----------------------------------------------------
+// // DATABASE
+// // ----------------------------------------------------
 
 // function getDatabase() {
 //   const url = process.env.DATABASE_URL;
 
 //   if (!url) {
-//     throw new Error("DATABASE_URL is not configured");
+//     throw new Error(
+//       "DATABASE_URL is not configured",
+//     );
 //   }
 
 //   return neon(url);
 // }
 
-// export async function readServiceReports(): Promise<ServiceReport[]> {
+// // ----------------------------------------------------
+// // READ SERVICE REPORTS
+// // ----------------------------------------------------
+
+// export async function readServiceReports(): Promise<
+//   ServiceReport[]
+// > {
 //   const sql = getDatabase();
 
 //   const rows = await sql`
@@ -97,6 +136,11 @@
 //       id,
 //       employee_id,
 //       employee_name,
+
+//       customer_id,
+//       customer_name,
+//       customer_address,
+
 //       template_id,
 //       template_snapshot,
 //       form_data,
@@ -105,72 +149,157 @@
 //       status,
 //       created_at,
 //       updated_at
+
 //     FROM service_reports
+
 //     ORDER BY created_at DESC
 //   `;
 
 //   return rows.map((row: any) => ({
-//     id: row.id,
+//     // ------------------------------------------------
+//     // BASIC
+//     // ------------------------------------------------
 
-//     employeeId: row.employee_id,
+//     id: String(row.id),
 
-//     employeeName: row.employee_name,
+//     employeeId: String(
+//       row.employee_id,
+//     ),
 
-//     templateId: row.template_id || "",
+//     employeeName: String(
+//       row.employee_name,
+//     ),
+
+//     // ------------------------------------------------
+//     // CUSTOMER
+//     // ------------------------------------------------
+
+//     customerId:
+//       row.customer_id === null ||
+//       row.customer_id === undefined
+//         ? null
+//         : String(row.customer_id),
+
+//     customerName:
+//       row.customer_name === null ||
+//       row.customer_name === undefined
+//         ? null
+//         : String(row.customer_name),
+
+//     customerAddress:
+//       row.customer_address === null ||
+//       row.customer_address === undefined
+//         ? null
+//         : String(
+//             row.customer_address,
+//           ),
+
+//     // ------------------------------------------------
+//     // TEMPLATE
+//     // ------------------------------------------------
+
+//     templateId: String(
+//       row.template_id || "",
+//     ),
 
 //     /*
 //      * Exact template used by this report.
 //      */
 //     templateSnapshot:
 //       row.template_snapshot &&
-//       typeof row.template_snapshot === "object" &&
-//       !Array.isArray(row.template_snapshot)
+//       typeof row.template_snapshot ===
+//         "object" &&
+//       !Array.isArray(
+//         row.template_snapshot,
+//       )
 //         ? row.template_snapshot
 //         : {
-//             id: row.template_id || "service-report",
+//             id:
+//               row.template_id ||
+//               "service-report",
+
+//             type: "SERVICE_REPORT",
+
 //             title: "Service Report",
+
 //             sections: [],
 //           },
+
+//     // ------------------------------------------------
+//     // FORM DATA
+//     // ------------------------------------------------
 
 //     /*
 //      * Auditor's actual answers.
 //      */
 //     formData:
 //       row.form_data &&
-//       typeof row.form_data === "object" &&
+//       typeof row.form_data ===
+//         "object" &&
 //       !Array.isArray(row.form_data)
 //         ? row.form_data
 //         : {},
+
+//     // ------------------------------------------------
+//     // EVIDENCE
+//     // ------------------------------------------------
 
 //     /*
 //      * Photos/videos.
 //      */
 //     evidence:
 //       row.evidence &&
-//       typeof row.evidence === "object" &&
+//       typeof row.evidence ===
+//         "object" &&
 //       !Array.isArray(row.evidence)
 //         ? row.evidence
 //         : {},
+
+//     // ------------------------------------------------
+//     // SIGNATURES
+//     // ------------------------------------------------
 
 //     /*
 //      * Signatures.
 //      */
 //     signatures:
 //       row.signatures &&
-//       typeof row.signatures === "object" &&
+//       typeof row.signatures ===
+//         "object" &&
 //       !Array.isArray(row.signatures)
 //         ? row.signatures
 //         : {},
 
-//     status: row.status,
+//     // ------------------------------------------------
+//     // STATUS
+//     // ------------------------------------------------
 
-//     createdAt: row.created_at?.toISOString?.() || String(row.created_at),
+//     status:
+//       String(row.status).toUpperCase() as
+//         | "DRAFT"
+//         | "COMPLETED",
 
-//     updatedAt: row.updated_at?.toISOString?.() || String(row.updated_at),
+//     // ------------------------------------------------
+//     // DATES
+//     // ------------------------------------------------
+
+//     createdAt:
+//       row.created_at?.toISOString?.() ||
+//       String(row.created_at),
+
+//     updatedAt:
+//       row.updated_at?.toISOString?.() ||
+//       String(row.updated_at),
 //   }));
 // }
 
-// export async function writeServiceReports(items: ServiceReport[]) {
+// // ----------------------------------------------------
+// // WRITE SERVICE REPORTS
+// // ----------------------------------------------------
+
+// export async function writeServiceReports(
+//   items: ServiceReport[],
+// ) {
 //   const sql = getDatabase();
 
 //   /*
@@ -184,7 +313,9 @@
 //    * with the supplied array.
 //    */
 
-//   await sql`DELETE FROM service_reports`;
+//   await sql`
+//     DELETE FROM service_reports
+//   `;
 
 //   for (const report of items) {
 //     await sql`
@@ -192,6 +323,11 @@
 //         id,
 //         employee_id,
 //         employee_name,
+
+//         customer_id,
+//         customer_name,
+//         customer_address,
+
 //         template_id,
 //         template_snapshot,
 //         form_data,
@@ -201,124 +337,160 @@
 //         created_at,
 //         updated_at
 //       )
+
 //       VALUES (
 //         ${report.id},
 //         ${report.employeeId},
 //         ${report.employeeName},
+
+//         ${report.customerId},
+//         ${report.customerName},
+//         ${report.customerAddress},
+
 //         ${report.templateId},
-//         ${JSON.stringify(report.templateSnapshot)}::jsonb,
-//         ${JSON.stringify(report.formData)}::jsonb,
-//         ${JSON.stringify(report.evidence)}::jsonb,
-//         ${JSON.stringify(report.signatures)}::jsonb,
+
+//         ${JSON.stringify(
+//           report.templateSnapshot,
+//         )}::jsonb,
+
+//         ${JSON.stringify(
+//           report.formData,
+//         )}::jsonb,
+
+//         ${JSON.stringify(
+//           report.evidence,
+//         )}::jsonb,
+
+//         ${JSON.stringify(
+//           report.signatures,
+//         )}::jsonb,
+
 //         ${report.status},
+
 //         ${report.createdAt},
+
 //         ${report.updatedAt}
 //       )
 //     `;
 //   }
 // }
 
-// // export async function currentUser() {
-// //   const value = (await cookies())
-// //     .get("auditdesk_session")
-// //     ?.value;
+// // ----------------------------------------------------
+// // CURRENT USER
+// // ----------------------------------------------------
 
-// //   if (!value) {
-// //     return {
-// //       id: "EMP001",
-// //       name: "S. Roy",
-// //     };
-// //   }
-
-// //   try {
-// //     const secret = process.env.AUTH_SECRET;
-
-// //     if (!secret) {
-// //       throw new Error(
-// //         "AUTH_SECRET is not configured",
-// //       );
-// //     }
-
-// //     const secretKey =
-// //       new TextEncoder().encode(secret);
-
-// //     const { payload } = await jwtVerify(
-// //       value,
-// //       secretKey,
-// //     );
-
-// //     return {
-// //       id: String(
-// //         payload.id || "EMP001",
-// //       ),
-// //       name: String(
-// //         payload.name || "S. Roy",
-// //       ),
-// //     };
-// //   } catch (error) {
-// //     console.error(
-// //       "Invalid auditdesk session:",
-// //       error,
-// //     );
-
-// //     return {
-// //       id: "EMP001",
-// //       name: "S. Roy",
-// //     };
-// //   }
-// // }
 // export async function currentUser() {
-//   const value = (await cookies()).get("auditdesk_session")?.value;
+//   const value = (await cookies())
+//     .get("auditdesk_session")
+//     ?.value;
 
 //   if (!value) {
-//     throw new Error("Authentication required");
+//     throw new Error(
+//       "Authentication required",
+//     );
 //   }
 
 //   try {
-//     const secret = process.env.AUTH_SECRET;
+//     const secret =
+//       process.env.AUTH_SECRET;
 
 //     if (!secret) {
-//       throw new Error("AUTH_SECRET is not configured");
+//       throw new Error(
+//         "AUTH_SECRET is not configured",
+//       );
 //     }
 
-//     const secretKey = new TextEncoder().encode(secret);
+//     const secretKey =
+//       new TextEncoder().encode(
+//         secret,
+//       );
 
-//     const { payload } = await jwtVerify(value, secretKey);
+//     const { payload } =
+//       await jwtVerify(
+//         value,
+//         secretKey,
+//       );
 
-//     if (!payload.id || !payload.name || !payload.role) {
-//       throw new Error("Invalid session payload");
+//     if (
+//       !payload.id ||
+//       !payload.name ||
+//       !payload.role
+//     ) {
+//       throw new Error(
+//         "Invalid session payload",
+//       );
 //     }
 
-//     if (String(payload.role) !== "auditor") {
-//       throw new Error("Only auditors can access service reports");
+//     if (
+//       String(payload.role) !==
+//       "auditor"
+//     ) {
+//       throw new Error(
+//         "Only auditors can access service reports",
+//       );
 //     }
 
 //     return {
 //       id: String(payload.id),
-//       name: String(payload.name),
-//       role: String(payload.role),
+
+//       name: String(
+//         payload.name,
+//       ),
+
+//       role: String(
+//         payload.role,
+//       ),
 //     };
 //   } catch (error) {
-//     console.error("Invalid auditdesk session:", error);
+//     console.error(
+//       "Invalid auditdesk session:",
+//       error,
+//     );
 
-//     throw new Error("Invalid or expired session");
+//     throw new Error(
+//       "Invalid or expired session",
+//     );
 //   }
 // }
-// export function nextReportId(items: ServiceReport[]) {
-//   return `SRV-${String(items.length + 1).padStart(3, "0")}`;
+
+// // ----------------------------------------------------
+// // NEXT REPORT ID
+// // ----------------------------------------------------
+
+// export function nextReportId(
+//   items: ServiceReport[],
+// ) {
+//   return `SRV-${String(
+//     items.length + 1,
+//   ).padStart(3, "0")}`;
 // }
 
-// export function nextEvidenceId(items: Evidence[]) {
-//   return `EV-${String(items.length + 1).padStart(3, "0")}`;
+// // ----------------------------------------------------
+// // NEXT EVIDENCE ID
+// // ----------------------------------------------------
+
+// export function nextEvidenceId(
+//   items: Evidence[],
+// ) {
+//   return `EV-${String(
+//     items.length + 1,
+//   ).padStart(3, "0")}`;
 // }
+
+// // ----------------------------------------------------
+// // CLOUDINARY COMPATIBILITY
+// // ----------------------------------------------------
 
 // /*
-//  * Kept for compatibility with the existing
-//  * Cloudinary upload route.
+//  * Kept for compatibility with the
+//  * existing Cloudinary upload route.
 //  */
-// export async function ensureUploadDir(_id: string) {
+// export async function ensureUploadDir(
+//   _id: string,
+// ) {
 //   return;
 // }
+
 import { neon } from "@neondatabase/serverless";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -338,11 +510,9 @@ export type SignatureData = {
 };
 
 /*
- * This is the structure of the template that was used
- * when the service report was created.
- *
- * It is stored inside the report as a snapshot so that
- * future template changes do not affect old reports.
+ * Exact template structure used when the service report
+ * was created. Stored as a snapshot so later template
+ * edits do not change existing reports.
  */
 export type TemplateField = {
   id: string;
@@ -372,58 +542,31 @@ export type ServiceReport = {
   employeeId: string;
   employeeName: string;
 
-  // --------------------------------------------------
-  // CUSTOMER
-  // --------------------------------------------------
-
+  // Customer
   customerId: string | null;
   customerName: string | null;
   customerAddress: string | null;
 
-  // --------------------------------------------------
-  // TEMPLATE
-  // --------------------------------------------------
-
+  // Template
   templateId: string;
-
-  /*
-   * Exact template structure used for this report.
-   *
-   * IMPORTANT:
-   * This must never be replaced when the admin later
-   * edits the main template.
-   */
   templateSnapshot: TemplateSnapshot;
 
-  // --------------------------------------------------
-  // FORM DATA
-  // --------------------------------------------------
-
-  // ALL normal form answers are stored here
+  // Form answers
   formData: Record<string, unknown>;
-
-  // --------------------------------------------------
-  // EVIDENCE
-  // --------------------------------------------------
 
   // Photos/videos
   evidence: Record<string, Evidence[]>;
 
-  // --------------------------------------------------
-  // SIGNATURES
-  // --------------------------------------------------
-
   // Employee/customer signatures
   signatures: Record<string, SignatureData>;
 
-  // --------------------------------------------------
-  // STATUS
-  // --------------------------------------------------
-
+  // Status
   status: "DRAFT" | "COMPLETED";
 
+  // Timestamps
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string | null;
 };
 
 // ----------------------------------------------------
@@ -434,12 +577,30 @@ function getDatabase() {
   const url = process.env.DATABASE_URL;
 
   if (!url) {
-    throw new Error(
-      "DATABASE_URL is not configured",
-    );
+    throw new Error("DATABASE_URL is not configured");
   }
 
   return neon(url);
+}
+
+// ----------------------------------------------------
+// DATE CONVERSION
+// ----------------------------------------------------
+
+function toIsoString(value: unknown): string {
+  if (value == null) {
+    return "";
+  }
+
+  const date = value instanceof Date
+    ? value
+    : new Date(String(value));
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toISOString();
 }
 
 // ----------------------------------------------------
@@ -456,11 +617,9 @@ export async function readServiceReports(): Promise<
       id,
       employee_id,
       employee_name,
-
       customer_id,
       customer_name,
       customer_address,
-
       template_id,
       template_snapshot,
       form_data,
@@ -468,148 +627,86 @@ export async function readServiceReports(): Promise<
       signatures,
       status,
       created_at,
-      updated_at
-
+      updated_at,
+      submitted_at
     FROM service_reports
-
     ORDER BY created_at DESC
   `;
 
   return rows.map((row: any) => ({
-    // ------------------------------------------------
-    // BASIC
-    // ------------------------------------------------
-
+    // Basic
     id: String(row.id),
+    employeeId: String(row.employee_id),
+    employeeName: String(row.employee_name),
 
-    employeeId: String(
-      row.employee_id,
-    ),
-
-    employeeName: String(
-      row.employee_name,
-    ),
-
-    // ------------------------------------------------
-    // CUSTOMER
-    // ------------------------------------------------
-
+    // Customer
     customerId:
-      row.customer_id === null ||
-      row.customer_id === undefined
+      row.customer_id == null
         ? null
         : String(row.customer_id),
 
     customerName:
-      row.customer_name === null ||
-      row.customer_name === undefined
+      row.customer_name == null
         ? null
         : String(row.customer_name),
 
     customerAddress:
-      row.customer_address === null ||
-      row.customer_address === undefined
+      row.customer_address == null
         ? null
-        : String(
-            row.customer_address,
-          ),
+        : String(row.customer_address),
 
-    // ------------------------------------------------
-    // TEMPLATE
-    // ------------------------------------------------
+    // Template
+    templateId: String(row.template_id || ""),
 
-    templateId: String(
-      row.template_id || "",
-    ),
-
-    /*
-     * Exact template used by this report.
-     */
     templateSnapshot:
       row.template_snapshot &&
-      typeof row.template_snapshot ===
-        "object" &&
-      !Array.isArray(
-        row.template_snapshot,
-      )
+      typeof row.template_snapshot === "object" &&
+      !Array.isArray(row.template_snapshot)
         ? row.template_snapshot
         : {
-            id:
-              row.template_id ||
-              "service-report",
-
+            id: row.template_id || "service-report",
             type: "SERVICE_REPORT",
-
             title: "Service Report",
-
             sections: [],
           },
 
-    // ------------------------------------------------
-    // FORM DATA
-    // ------------------------------------------------
-
-    /*
-     * Auditor's actual answers.
-     */
+    // Form data
     formData:
       row.form_data &&
-      typeof row.form_data ===
-        "object" &&
+      typeof row.form_data === "object" &&
       !Array.isArray(row.form_data)
         ? row.form_data
         : {},
 
-    // ------------------------------------------------
-    // EVIDENCE
-    // ------------------------------------------------
-
-    /*
-     * Photos/videos.
-     */
+    // Evidence
     evidence:
       row.evidence &&
-      typeof row.evidence ===
-        "object" &&
+      typeof row.evidence === "object" &&
       !Array.isArray(row.evidence)
         ? row.evidence
         : {},
 
-    // ------------------------------------------------
-    // SIGNATURES
-    // ------------------------------------------------
-
-    /*
-     * Signatures.
-     */
+    // Signatures
     signatures:
       row.signatures &&
-      typeof row.signatures ===
-        "object" &&
+      typeof row.signatures === "object" &&
       !Array.isArray(row.signatures)
         ? row.signatures
         : {},
 
-    // ------------------------------------------------
-    // STATUS
-    // ------------------------------------------------
+    // Status
+    status: String(row.status).toUpperCase() as
+      | "DRAFT"
+      | "COMPLETED",
 
-    status:
-      String(row.status).toUpperCase() as
-        | "DRAFT"
-        | "COMPLETED",
+    // Dates
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
 
-    // ------------------------------------------------
-    // DATES
-    // ------------------------------------------------
-
-    createdAt:
-      row.created_at?.toISOString?.() ||
-      String(row.created_at),
-
-    updatedAt:
-      row.updated_at?.toISOString?.() ||
-      String(row.updated_at),
+    submittedAt:
+      row.submitted_at == null
+        ? null
+        : toIsoString(row.submitted_at),
   }));
 }
 
@@ -619,23 +716,14 @@ export async function readServiceReports(): Promise<
 
 export async function writeServiceReports(
   items: ServiceReport[],
-) {
+): Promise<void> {
   const sql = getDatabase();
 
   /*
-   * Keeps your existing API structure working:
-   *
-   * const reports = await readServiceReports();
-   * reports.push(report);
-   * await writeServiceReports(reports);
-   *
-   * For this demo, the database is synchronized
-   * with the supplied array.
+   * Upsert by report ID instead of deleting the entire
+   * table. Existing submission timestamps are preserved
+   * when the incoming report does not contain one.
    */
-
-  await sql`
-    DELETE FROM service_reports
-  `;
 
   for (const report of items) {
     await sql`
@@ -643,11 +731,9 @@ export async function writeServiceReports(
         id,
         employee_id,
         employee_name,
-
         customer_id,
         customer_name,
         customer_address,
-
         template_id,
         template_snapshot,
         form_data,
@@ -655,42 +741,56 @@ export async function writeServiceReports(
         signatures,
         status,
         created_at,
-        updated_at
+        updated_at,
+        submitted_at
       )
-
       VALUES (
         ${report.id},
         ${report.employeeId},
         ${report.employeeName},
-
         ${report.customerId},
         ${report.customerName},
         ${report.customerAddress},
-
         ${report.templateId},
-
-        ${JSON.stringify(
-          report.templateSnapshot,
-        )}::jsonb,
-
-        ${JSON.stringify(
-          report.formData,
-        )}::jsonb,
-
-        ${JSON.stringify(
-          report.evidence,
-        )}::jsonb,
-
-        ${JSON.stringify(
-          report.signatures,
-        )}::jsonb,
-
+        ${JSON.stringify(report.templateSnapshot)}::jsonb,
+        ${JSON.stringify(report.formData)}::jsonb,
+        ${JSON.stringify(report.evidence)}::jsonb,
+        ${JSON.stringify(report.signatures)}::jsonb,
         ${report.status},
-
         ${report.createdAt},
-
-        ${report.updatedAt}
+        ${report.updatedAt},
+        COALESCE(
+          ${report.submittedAt ?? null}::timestamptz,
+          CASE
+            WHEN ${report.status} = 'COMPLETED'
+              THEN NOW()
+            ELSE NULL
+          END
+        )
       )
+      ON CONFLICT (id)
+      DO UPDATE SET
+        employee_id = EXCLUDED.employee_id,
+        employee_name = EXCLUDED.employee_name,
+        customer_id = EXCLUDED.customer_id,
+        customer_name = EXCLUDED.customer_name,
+        customer_address = EXCLUDED.customer_address,
+        template_id = EXCLUDED.template_id,
+        template_snapshot = EXCLUDED.template_snapshot,
+        form_data = EXCLUDED.form_data,
+        evidence = EXCLUDED.evidence,
+        signatures = EXCLUDED.signatures,
+        status = EXCLUDED.status,
+        updated_at = EXCLUDED.updated_at,
+        submitted_at = COALESCE(
+          EXCLUDED.submitted_at,
+          service_reports.submitted_at,
+          CASE
+            WHEN EXCLUDED.status = 'COMPLETED'
+              THEN NOW()
+            ELSE NULL
+          END
+        )
     `;
   }
 }
@@ -705,46 +805,25 @@ export async function currentUser() {
     ?.value;
 
   if (!value) {
-    throw new Error(
-      "Authentication required",
-    );
+    throw new Error("Authentication required");
   }
 
   try {
-    const secret =
-      process.env.AUTH_SECRET;
+    const secret = process.env.AUTH_SECRET;
 
     if (!secret) {
-      throw new Error(
-        "AUTH_SECRET is not configured",
-      );
+      throw new Error("AUTH_SECRET is not configured");
     }
 
-    const secretKey =
-      new TextEncoder().encode(
-        secret,
-      );
+    const secretKey = new TextEncoder().encode(secret);
 
-    const { payload } =
-      await jwtVerify(
-        value,
-        secretKey,
-      );
+    const { payload } = await jwtVerify(value, secretKey);
 
-    if (
-      !payload.id ||
-      !payload.name ||
-      !payload.role
-    ) {
-      throw new Error(
-        "Invalid session payload",
-      );
+    if (!payload.id || !payload.name || !payload.role) {
+      throw new Error("Invalid session payload");
     }
 
-    if (
-      String(payload.role) !==
-      "auditor"
-    ) {
+    if (String(payload.role) !== "auditor") {
       throw new Error(
         "Only auditors can access service reports",
       );
@@ -752,24 +831,13 @@ export async function currentUser() {
 
     return {
       id: String(payload.id),
-
-      name: String(
-        payload.name,
-      ),
-
-      role: String(
-        payload.role,
-      ),
+      name: String(payload.name),
+      role: String(payload.role),
     };
   } catch (error) {
-    console.error(
-      "Invalid auditdesk session:",
-      error,
-    );
+    console.error("Invalid auditdesk session:", error);
 
-    throw new Error(
-      "Invalid or expired session",
-    );
+    throw new Error("Invalid or expired session");
   }
 }
 
@@ -777,24 +845,16 @@ export async function currentUser() {
 // NEXT REPORT ID
 // ----------------------------------------------------
 
-export function nextReportId(
-  items: ServiceReport[],
-) {
-  return `SRV-${String(
-    items.length + 1,
-  ).padStart(3, "0")}`;
+export function nextReportId(items: ServiceReport[]) {
+  return `SRV-${String(items.length + 1).padStart(3, "0")}`;
 }
 
 // ----------------------------------------------------
 // NEXT EVIDENCE ID
 // ----------------------------------------------------
 
-export function nextEvidenceId(
-  items: Evidence[],
-) {
-  return `EV-${String(
-    items.length + 1,
-  ).padStart(3, "0")}`;
+export function nextEvidenceId(items: Evidence[]) {
+  return `EV-${String(items.length + 1).padStart(3, "0")}`;
 }
 
 // ----------------------------------------------------
@@ -802,11 +862,8 @@ export function nextEvidenceId(
 // ----------------------------------------------------
 
 /*
- * Kept for compatibility with the
- * existing Cloudinary upload route.
+ * Kept for compatibility with the existing upload route.
  */
-export async function ensureUploadDir(
-  _id: string,
-) {
+export async function ensureUploadDir(_id: string) {
   return;
 }

@@ -582,59 +582,81 @@ function getCustomerName(report: any): string {
   );
 }
 
+// function getAuditDate(audit: any): unknown {
+//   return (
+//     audit.auditDate ??
+//     audit.audit_date ??
+//     audit.date ??
+//     audit.createdAt ??
+//     audit.created_at ??
+//     audit.submittedAt ??
+//     audit.submitted_at
+//   );
+// }
 function getAuditDate(audit: any): unknown {
-  return (
-    audit.auditDate ??
-    audit.audit_date ??
-    audit.date ??
-    audit.createdAt ??
-    audit.created_at ??
-    audit.submittedAt ??
-    audit.submitted_at
-  );
+  return audit.submittedAt ?? audit.submitted_at;
 }
+// function getServiceDate(report: any): unknown {
+//   const formData = getFormData(report);
 
+//   return (
+//     formData["service-call-date"] ??
+//     report.serviceCallDate ??
+//     report.service_call_date ??
+//     report.date ??
+//     report.createdAt ??
+//     report.created_at ??
+//     report.submittedAt ??
+//     report.submitted_at
+//   );
+// }
 function getServiceDate(report: any): unknown {
-  const formData = getFormData(report);
-
-  return (
-    formData["service-call-date"] ??
-    report.serviceCallDate ??
-    report.service_call_date ??
-    report.date ??
-    report.createdAt ??
-    report.created_at ??
-    report.submittedAt ??
-    report.submitted_at
-  );
+  return report.submittedAt ?? report.submitted_at;
 }
+// function formatDate(value: unknown): string {
+//   if (!value) return "—";
+
+//   if (typeof value === "string") {
+//     const raw = value.trim();
+
+//     // Preserve date-only ISO values without timezone conversion.
+//     const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+//     if (isoMatch) {
+//       return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+//     }
+
+//     // Interpret slash-separated dates as DD/MM/YYYY.
+//     const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+//     if (slashMatch) {
+//       return `${slashMatch[1].padStart(2, "0")}/${slashMatch[2].padStart(2, "0")}/${slashMatch[3]}`;
+//     }
+//   }
+
+//   const date = value instanceof Date ? value : new Date(value as string | number);
+
+//   if (Number.isNaN(date.getTime())) return "—";
+
+//   return date.toLocaleDateString("en-GB");
+// }
 
 function formatDate(value: unknown): string {
   if (!value) return "—";
 
-  if (typeof value === "string") {
-    const raw = value.trim();
-
-    // Preserve date-only ISO values without timezone conversion.
-    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-
-    if (isoMatch) {
-      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-    }
-
-    // Interpret slash-separated dates as DD/MM/YYYY.
-    const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-
-    if (slashMatch) {
-      return `${slashMatch[1].padStart(2, "0")}/${slashMatch[2].padStart(2, "0")}/${slashMatch[3]}`;
-    }
-  }
-
-  const date = value instanceof Date ? value : new Date(value as string | number);
+  const date = new Date(value as string | number);
 
   if (Number.isNaN(date.getTime())) return "—";
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export default function Admin() {
@@ -695,6 +717,8 @@ export default function Admin() {
           auditResponse.json(),
           serviceResponse.json(),
         ]);
+        //console.log("Audit API response:", auditData);
+//console.log("Service API response:", serviceData);
 
         if (!cancelled) {
           setAudits(Array.isArray(auditData) ? auditData : []);

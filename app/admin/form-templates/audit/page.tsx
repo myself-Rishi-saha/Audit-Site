@@ -1,4 +1,3 @@
-
 // "use client";
 
 // import { useEffect, useState } from "react";
@@ -1733,7 +1732,6 @@
 //   );
 // }
 
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -1751,18 +1749,11 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-
-
 
 // type FieldType =
 //   | "text"
@@ -1810,8 +1801,7 @@ type AuditTemplate = {
   sections: Section[];
 };
 
-const clone = <T,>(value: T): T =>
-  JSON.parse(JSON.stringify(value));
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const FIELD_TYPES: {
   value: FieldType;
@@ -1843,8 +1833,7 @@ function createFieldId(label: string) {
 export default function AuditTemplatePage() {
   const router = useRouter();
 
-  const [template, setTemplate] =
-    useState<AuditTemplate | null>(null);
+  const [template, setTemplate] = useState<AuditTemplate | null>(null);
 
   const [dialog, setDialog] = useState<{
     mode: "field" | "section";
@@ -1861,17 +1850,17 @@ export default function AuditTemplatePage() {
   });
 
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
-    fetch("/api/templates/audit")
-      .then((r) => {
-        if (!r.ok) {
+    const loadTemplate = async () => {
+      try {
+        const response = await fetch("/api/templates/audit");
+
+        if (!response.ok) {
           throw new Error("Failed to load audit template");
         }
 
-        return r.json();
-      })
-      .then((data) => {
+        const data = await response.json();
+
         console.log("AUDIT TEMPLATE:", data);
 
         setTemplate({
@@ -1879,31 +1868,71 @@ export default function AuditTemplatePage() {
           sections: Array.isArray(data.sections)
             ? data.sections.map((section: any) => ({
                 ...section,
-
-                // Support the new structure.
-                // Also prevents errors if an older template
-                // temporarily contains questions.
+                name: section.name || section.title || "UNTITLED SECTION",
                 fields: Array.isArray(section.fields)
                   ? section.fields
-                  : [],
+                  : Array.isArray(section.questions)
+                    ? section.questions.map((question: any) => ({
+                        id: question.id,
+                        label: question.label || question.text || "",
+                        type: question.type || "single-choice",
+                        required: question.required ?? false,
+                        ...(question.options
+                          ? { options: question.options }
+                          : {}),
+                      }))
+                    : [],
               }))
             : [],
         });
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to load audit template:",
-          error,
-        );
-      });
+      } catch (error) {
+        console.error("Failed to load audit template:", error);
+        alert("Failed to load audit template.");
+      }
+    };
+
+    loadTemplate();
   }, []);
+  // useEffect(() => {
+  //   fetch("/api/templates/audit")
+  //     .then((r) => {
+  //       if (!r.ok) {
+  //         throw new Error("Failed to load audit template");
+  //       }
+
+  //       return r.json();
+  //     })
+  //     .then((data) => {
+  //       console.log("AUDIT TEMPLATE:", data);
+
+  //       setTemplate({
+  //         ...data,
+  //         sections: Array.isArray(data.sections)
+  //           ? data.sections.map((section: any) => ({
+  //               ...section,
+
+  //               // Support the new structure.
+  //               // Also prevents errors if an older template
+  //               // temporarily contains questions.
+  //               fields: Array.isArray(section.fields)
+  //                 ? section.fields
+  //                 : [],
+  //             }))
+  //           : [],
+  //       });
+  //     })
+  //     .catch((error) => {
+  //       console.error(
+  //         "Failed to load audit template:",
+  //         error,
+  //       );
+  //     });
+  // }, []);
 
   if (!template) {
     return (
       <AppShell user="A. Sen · Admin">
-        <main className="p-8 text-muted-foreground">
-          Loading template…
-        </main>
+        <main className="p-8 text-muted-foreground">Loading template…</main>
       </AppShell>
     );
   }
@@ -1912,10 +1941,7 @@ export default function AuditTemplatePage() {
   // FIELD
   // -----------------------------
 
-  const openField = (
-    sectionIndex: number,
-    fieldIndex?: number,
-  ) => {
+  const openField = (sectionIndex: number, fieldIndex?: number) => {
     if (fieldIndex === undefined) {
       setDraft({
         label: "",
@@ -1925,8 +1951,7 @@ export default function AuditTemplatePage() {
         title: "",
       });
     } else {
-      const field =
-        template.sections[sectionIndex].fields[fieldIndex];
+      const field = template.sections[sectionIndex].fields[fieldIndex];
 
       setDraft({
         label: field.label,
@@ -2004,8 +2029,7 @@ export default function AuditTemplatePage() {
       }
 
       const needsOptions =
-        draft.type === "single-choice" ||
-        draft.type === "multiple-choice";
+        draft.type === "single-choice" || draft.type === "multiple-choice";
 
       const options = draft.options
         .split("\n")
@@ -2020,14 +2044,10 @@ export default function AuditTemplatePage() {
       const existingField =
         dialog.field === undefined
           ? undefined
-          : next.sections[dialog.section].fields[
-              dialog.field
-            ];
+          : next.sections[dialog.section].fields[dialog.field];
 
       const field: Field = {
-        id:
-          existingField?.id ||
-          createFieldId(label),
+        id: existingField?.id || createFieldId(label),
 
         label,
 
@@ -2041,9 +2061,7 @@ export default function AuditTemplatePage() {
       if (dialog.field === undefined) {
         next.sections[dialog.section].fields.push(field);
       } else {
-        next.sections[dialog.section].fields[
-          dialog.field
-        ] = field;
+        next.sections[dialog.section].fields[dialog.field] = field;
       }
     }
 
@@ -2078,13 +2096,11 @@ export default function AuditTemplatePage() {
 
       // EDIT SECTION
       else {
-        next.sections[dialog.section].name =
-          title.toUpperCase();
+        next.sections[dialog.section].name = title.toUpperCase();
 
         // Keep title synchronized if it exists
         if ("title" in next.sections[dialog.section]) {
-          next.sections[dialog.section].title =
-            title.toUpperCase();
+          next.sections[dialog.section].title = title.toUpperCase();
         }
       }
     }
@@ -2097,12 +2113,8 @@ export default function AuditTemplatePage() {
   // DELETE FIELD
   // -----------------------------
 
-  const removeField = (
-    sectionIndex: number,
-    fieldIndex: number,
-  ) => {
-    const field =
-      template.sections[sectionIndex].fields[fieldIndex];
+  const removeField = (sectionIndex: number, fieldIndex: number) => {
+    const field = template.sections[sectionIndex].fields[fieldIndex];
 
     if (
       !confirm(
@@ -2114,10 +2126,7 @@ export default function AuditTemplatePage() {
 
     const next = clone(template);
 
-    next.sections[sectionIndex].fields.splice(
-      fieldIndex,
-      1,
-    );
+    next.sections[sectionIndex].fields.splice(fieldIndex, 1);
 
     setTemplate(next);
   };
@@ -2148,25 +2157,16 @@ export default function AuditTemplatePage() {
   // MOVE SECTION
   // -----------------------------
 
-  const moveSection = (
-    sectionIndex: number,
-    direction: number,
-  ) => {
+  const moveSection = (sectionIndex: number, direction: number) => {
     const targetIndex = sectionIndex + direction;
 
-    if (
-      targetIndex < 0 ||
-      targetIndex >= template.sections.length
-    ) {
+    if (targetIndex < 0 || targetIndex >= template.sections.length) {
       return;
     }
 
     const next = clone(template);
 
-    [
-      next.sections[sectionIndex],
-      next.sections[targetIndex],
-    ] = [
+    [next.sections[sectionIndex], next.sections[targetIndex]] = [
       next.sections[targetIndex],
       next.sections[sectionIndex],
     ];
@@ -2212,9 +2212,7 @@ export default function AuditTemplatePage() {
           <div>
             <Button
               variant="ghost"
-              onClick={() =>
-                router.push("/admin/form-templates")
-              }
+              onClick={() => router.push("/admin/form-templates")}
             >
               <ArrowLeft data-icon="inline-start" />
               Form Templates
@@ -2224,9 +2222,7 @@ export default function AuditTemplatePage() {
               Audit Template
             </p>
 
-            <h1 className="mt-1 text-3xl font-bold">
-              {template.title}
-            </h1>
+            <h1 className="mt-1 text-3xl font-bold">{template.title}</h1>
 
             <p className="mt-2 text-muted-foreground">
               Configure audit sections and checklist fields.
@@ -2243,223 +2239,166 @@ export default function AuditTemplatePage() {
         {/* SECTIONS */}
 
         <div className="mt-8 flex flex-col gap-5">
-          {template.sections.map(
-            (section, sectionIndex) => {
-              const sectionName =
-                section.name || section.title || "SECTION";
+          {template.sections.map((section, sectionIndex) => {
+            const sectionName = section.name || section.title || "SECTION";
 
-              return (
-                <Card
-                  key={
-                    section.id ||
-                    `section-${sectionIndex}`
-                  }
-                  className="overflow-hidden border-teal-100"
-                >
-                  {/* SECTION HEADER */}
+            return (
+              <Card
+                key={section.id || `section-${sectionIndex}`}
+                className="overflow-hidden border-teal-100"
+              >
+                {/* SECTION HEADER */}
 
-                  <CardHeader className="flex flex-row items-center justify-between bg-teal-50/70">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-base tracking-wide">
-                        {sectionName}
-                      </CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between bg-teal-50/70">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-base tracking-wide">
+                      {sectionName}
+                    </CardTitle>
 
-                      <Badge variant="secondary">
-                        {section.fields.length}{" "}
-                        {section.fields.length === 1
-                          ? "Field"
-                          : "Fields"}
-                      </Badge>
-                    </div>
+                    <Badge variant="secondary">
+                      {section.fields.length}{" "}
+                      {section.fields.length === 1 ? "Field" : "Fields"}
+                    </Badge>
+                  </div>
 
-                    <div className="flex gap-1">
-                      {/* MOVE UP */}
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          moveSection(
-                            sectionIndex,
-                            -1,
-                          )
-                        }
-                        disabled={sectionIndex === 0}
-                        aria-label="Move section up"
-                      >
-                        <ArrowUp />
-                      </Button>
-
-                      {/* MOVE DOWN */}
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          moveSection(
-                            sectionIndex,
-                            1,
-                          )
-                        }
-                        disabled={
-                          sectionIndex ===
-                          template.sections.length - 1
-                        }
-                        aria-label="Move section down"
-                      >
-                        <ArrowDown />
-                      </Button>
-
-                      {/* EDIT SECTION */}
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          openSection(sectionIndex)
-                        }
-                        aria-label="Edit section"
-                      >
-                        <Pencil />
-                      </Button>
-
-                      {/* DELETE SECTION */}
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          removeSection(sectionIndex)
-                        }
-                        aria-label="Delete section"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </CardHeader>
-
-                  {/* FIELDS */}
-
-                  <CardContent className="flex flex-col gap-3 p-5">
-                    {section.fields.length === 0 && (
-                      <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        No fields in this section yet.
-                      </div>
-                    )}
-
-                    {section.fields.map(
-                      (field, fieldIndex) => (
-                        <div
-                          key={field.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start gap-3">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-700">
-                                {fieldIndex + 1}
-                              </span>
-
-                              <div>
-                                <p className="font-medium">
-                                  {field.label}
-                                </p>
-
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <Badge variant="secondary">
-                                    {FIELD_TYPES.find(
-                                      (item) =>
-                                        item.value ===
-                                        field.type,
-                                    )?.label ||
-                                      field.type}
-                                  </Badge>
-
-                                  <Badge
-                                    variant={
-                                      field.required
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                  >
-                                    {field.required
-                                      ? "Required"
-                                      : "Optional"}
-                                  </Badge>
-
-                                  {(field.type ===
-                                    "single-choice" ||
-                                    field.type ===
-                                      "multiple-choice") &&
-                                    field.options &&
-                                    field.options.length >
-                                      0 && (
-                                      <Badge variant="outline">
-                                        {
-                                          field.options
-                                            .length
-                                        }{" "}
-                                        options
-                                      </Badge>
-                                    )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            {/* EDIT FIELD */}
-
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                openField(
-                                  sectionIndex,
-                                  fieldIndex,
-                                )
-                              }
-                            >
-                              <Pencil data-icon="inline-start" />
-                              Edit
-                            </Button>
-
-                            {/* DELETE FIELD */}
-
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                removeField(
-                                  sectionIndex,
-                                  fieldIndex,
-                                )
-                              }
-                            >
-                              <Trash2 data-icon="inline-start" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      ),
-                    )}
-
-                    {/* ADD FIELD */}
+                  <div className="flex gap-1">
+                    {/* MOVE UP */}
 
                     <Button
-                      variant="outline"
-                      className="self-start"
-                      onClick={() =>
-                        openField(sectionIndex)
-                      }
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveSection(sectionIndex, -1)}
+                      disabled={sectionIndex === 0}
+                      aria-label="Move section up"
                     >
-                      <Plus data-icon="inline-start" />
-                      Add Field
+                      <ArrowUp />
                     </Button>
-                  </CardContent>
-                </Card>
-              );
-            },
-          )}
+
+                    {/* MOVE DOWN */}
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveSection(sectionIndex, 1)}
+                      disabled={sectionIndex === template.sections.length - 1}
+                      aria-label="Move section down"
+                    >
+                      <ArrowDown />
+                    </Button>
+
+                    {/* EDIT SECTION */}
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openSection(sectionIndex)}
+                      aria-label="Edit section"
+                    >
+                      <Pencil />
+                    </Button>
+
+                    {/* DELETE SECTION */}
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeSection(sectionIndex)}
+                      aria-label="Delete section"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </CardHeader>
+
+                {/* FIELDS */}
+
+                <CardContent className="flex flex-col gap-3 p-5">
+                  {section.fields.length === 0 && (
+                    <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                      No fields in this section yet.
+                    </div>
+                  )}
+
+                  {section.fields.map((field, fieldIndex) => (
+                    <div
+                      key={field.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-700">
+                            {fieldIndex + 1}
+                          </span>
+
+                          <div>
+                            <p className="font-medium">{field.label}</p>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Badge variant="secondary">
+                                {FIELD_TYPES.find(
+                                  (item) => item.value === field.type,
+                                )?.label || field.type}
+                              </Badge>
+
+                              <Badge
+                                variant={field.required ? "default" : "outline"}
+                              >
+                                {field.required ? "Required" : "Optional"}
+                              </Badge>
+
+                              {(field.type === "single-choice" ||
+                                field.type === "multiple-choice") &&
+                                field.options &&
+                                field.options.length > 0 && (
+                                  <Badge variant="outline">
+                                    {field.options.length} options
+                                  </Badge>
+                                )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {/* EDIT FIELD */}
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openField(sectionIndex, fieldIndex)}
+                        >
+                          <Pencil data-icon="inline-start" />
+                          Edit
+                        </Button>
+
+                        {/* DELETE FIELD */}
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeField(sectionIndex, fieldIndex)}
+                        >
+                          <Trash2 data-icon="inline-start" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* ADD FIELD */}
+
+                  <Button
+                    variant="outline"
+                    className="self-start"
+                    onClick={() => openField(sectionIndex)}
+                  >
+                    <Plus data-icon="inline-start" />
+                    Add Field
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* ADD SECTION */}
 
@@ -2477,22 +2416,15 @@ export default function AuditTemplatePage() {
           <div className="flex justify-end gap-2 border-t pt-5">
             <Button
               variant="outline"
-              onClick={() =>
-                router.push("/admin/form-templates")
-              }
+              onClick={() => router.push("/admin/form-templates")}
             >
               Cancel
             </Button>
 
-            <Button
-              onClick={save}
-              disabled={saving}
-            >
+            <Button onClick={save} disabled={saving}>
               <Check data-icon="inline-start" />
 
-              {saving
-                ? "Saving…"
-                : "Save Template"}
+              {saving ? "Saving…" : "Save Template"}
             </Button>
           </div>
         </div>
@@ -2521,7 +2453,6 @@ export default function AuditTemplatePage() {
                   <>
                     <label className="text-sm font-medium">
                       Field Label
-
                       <Input
                         className="mt-2"
                         placeholder="Example: FIRE PUMP WORKING STATUS?"
@@ -2538,51 +2469,39 @@ export default function AuditTemplatePage() {
 
                     <label className="text-sm font-medium">
                       Field Type
-
                       <select
                         className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={draft.type}
                         onChange={(e) =>
                           setDraft({
                             ...draft,
-                            type: e.target
-                              .value as FieldType,
+                            type: e.target.value as FieldType,
                           })
                         }
                       >
                         {FIELD_TYPES.map((item) => (
-                          <option
-                            key={item.value}
-                            value={item.value}
-                          >
+                          <option key={item.value} value={item.value}>
                             {item.label}
                           </option>
                         ))}
                       </select>
                     </label>
 
-                    {(draft.type ===
-                      "single-choice" ||
-                      draft.type ===
-                        "multiple-choice") && (
+                    {(draft.type === "single-choice" ||
+                      draft.type === "multiple-choice") && (
                       <label className="text-sm font-medium">
                         Options
-
                         <Textarea
                           className="mt-2 min-h-28"
-                          placeholder={
-                            "PASS\nFAIL\nN/A"
-                          }
+                          placeholder={"PASS\nFAIL\nN/A"}
                           value={draft.options}
                           onChange={(e) =>
                             setDraft({
                               ...draft,
-                              options:
-                                e.target.value,
+                              options: e.target.value,
                             })
                           }
                         />
-
                         <span className="mt-1 block text-xs text-muted-foreground">
                           Enter one option per line.
                         </span>
@@ -2596,12 +2515,10 @@ export default function AuditTemplatePage() {
                         onChange={(e) =>
                           setDraft({
                             ...draft,
-                            required:
-                              e.target.checked,
+                            required: e.target.checked,
                           })
                         }
                       />
-
                       Required field
                     </label>
                   </>
@@ -2612,7 +2529,6 @@ export default function AuditTemplatePage() {
                 {dialog.mode === "section" && (
                   <label className="text-sm font-medium">
                     Section name
-
                     <Input
                       className="mt-2"
                       placeholder="Example: CHECKLIST FINDINGS"
@@ -2631,20 +2547,14 @@ export default function AuditTemplatePage() {
                 {/* ACTIONS */}
 
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setDialog(null)
-                    }
-                  >
+                  <Button variant="outline" onClick={() => setDialog(null)}>
                     Cancel
                   </Button>
 
                   <Button onClick={saveDialog}>
                     <Check data-icon="inline-start" />
 
-                    {dialog.mode === "field" &&
-                    dialog.field !== undefined
+                    {dialog.mode === "field" && dialog.field !== undefined
                       ? "Save Changes"
                       : "Save"}
                   </Button>
@@ -2657,4 +2567,3 @@ export default function AuditTemplatePage() {
     </AppShell>
   );
 }
-

@@ -13,7 +13,7 @@ export default async function AdminAudit({
   });
   if (!response.ok) return notFound();
   return (
-    <AppShell user="A. Sen · Admin">
+    <AppShell >
       <AdminAuditEditor audit={await response.json()} />
     </AppShell>
   );

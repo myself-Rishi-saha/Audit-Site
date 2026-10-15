@@ -1,7 +1,8 @@
-
-
 // import { NextResponse } from "next/server";
-// import { readAudits, writeAudits } from "@/lib/audit";
+// import {
+//   readAudits,
+//   writeAudits,
+// } from "@/lib/audit";
 
 // export async function POST(
 //   request: Request,
@@ -12,7 +13,9 @@
 
 //     const audits = await readAudits();
 
-//     const index = audits.findIndex((audit) => audit.id === id);
+//     const index = audits.findIndex(
+//       (audit) => audit.id === id,
+//     );
 
 //     if (index === -1) {
 //       return NextResponse.json(
@@ -21,24 +24,36 @@
 //       );
 //     }
 
-//     const existingAudit = audits[index];
+//     const existingAudit =
+//       audits[index];
 
 //     const updatedAudit = {
 //       ...existingAudit,
-//       status: "COMPLETED",
-//       submittedAt: new Date().toISOString(),
+
+//       status: "COMPLETED" as const,
+
+//       updatedAt:
+//         new Date().toISOString(),
 //     };
 
 //     audits[index] = updatedAudit;
 
 //     await writeAudits(audits);
 
-//     return NextResponse.json(updatedAudit);
+//     return NextResponse.json(
+//       updatedAudit,
+//     );
 //   } catch (error) {
-//     console.error("Submit audit error:", error);
+//     console.error(
+//       "Submit audit error:",
+//       error,
+//     );
 
 //     return NextResponse.json(
-//       { error: "Failed to submit audit." },
+//       {
+//         error:
+//           "Failed to submit audit.",
+//       },
 //       { status: 500 },
 //     );
 //   }
@@ -47,7 +62,7 @@
 import { NextResponse } from "next/server";
 import {
   readAudits,
-  writeAudits,
+  submitAuditInDatabase,
 } from "@/lib/audit";
 
 export async function POST(
@@ -56,50 +71,44 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-
     const audits = await readAudits();
 
-    const index = audits.findIndex(
+    const existingAudit = audits.find(
       (audit) => audit.id === id,
     );
 
-    if (index === -1) {
+    if (!existingAudit) {
       return NextResponse.json(
         { error: "Audit not found" },
         { status: 404 },
       );
     }
 
-    const existingAudit =
-      audits[index];
+    // Do not overwrite the original submission timestamp.
+    if (existingAudit.status === "COMPLETED") {
+      return NextResponse.json(existingAudit);
+    }
 
-    const updatedAudit = {
+    const timestamps = await submitAuditInDatabase(id);
+
+    if (!timestamps) {
+      return NextResponse.json(
+        { error: "Audit not found" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
       ...existingAudit,
-
-      status: "COMPLETED" as const,
-
-      updatedAt:
-        new Date().toISOString(),
-    };
-
-    audits[index] = updatedAudit;
-
-    await writeAudits(audits);
-
-    return NextResponse.json(
-      updatedAudit,
-    );
+      status: "COMPLETED",
+      submittedAt: timestamps.submittedAt,
+      updatedAt: timestamps.updatedAt,
+    });
   } catch (error) {
-    console.error(
-      "Submit audit error:",
-      error,
-    );
+    console.error("Submit audit error:", error);
 
     return NextResponse.json(
-      {
-        error:
-          "Failed to submit audit.",
-      },
+      { error: "Failed to submit audit." },
       { status: 500 },
     );
   }
