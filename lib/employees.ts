@@ -1,3 +1,4 @@
+
 // import { neon } from "@neondatabase/serverless";
 // import bcrypt from "bcryptjs";
 
@@ -8,6 +9,8 @@
 //   username: string;
 //   isActive: boolean;
 //   role: "auditor";
+//   canAccessAudit: boolean;
+//   canAccessServiceReport: boolean;
 //   createdAt: string;
 //   updatedAt: string;
 // };
@@ -18,6 +21,8 @@
 //   username: string;
 //   password: string;
 //   isActive?: boolean;
+//   canAccessAudit: boolean;
+//   canAccessServiceReport: boolean;
 // };
 
 // function getDatabase() {
@@ -38,19 +43,22 @@
 //     username: String(row.username),
 //     isActive: Boolean(row.is_active),
 //     role: "auditor",
+//     canAccessAudit: Boolean(row.can_access_audit),
+//     canAccessServiceReport: Boolean(
+//       row.can_access_service_report,
+//     ),
 //     createdAt:
-//       row.created_at?.toISOString?.() ||
+//       row.created_at?.toISOString?.() ??
 //       String(row.created_at),
 //     updatedAt:
-//       row.updated_at?.toISOString?.() ||
+//       row.updated_at?.toISOString?.() ??
 //       String(row.updated_at),
 //   };
 // }
 
 // /**
-//  * Get all employees.
-//  *
-//  * password_hash is intentionally never selected.
+//  * Get all employees, including report permissions.
+//  * Password hashes are never selected or returned.
 //  */
 // export async function readEmployees(): Promise<Employee[]> {
 //   const sql = getDatabase();
@@ -63,6 +71,8 @@
 //       username,
 //       is_active,
 //       role,
+//       can_access_audit,
+//       can_access_service_report,
 //       created_at,
 //       updated_at
 //     FROM employees
@@ -75,10 +85,7 @@
 // /**
 //  * Generate the next employee ID.
 //  *
-//  * Example:
-//  * EMP001
-//  * EMP002
-//  * EMP003
+//  * Example: EMP001, EMP002, EMP003
 //  */
 // export async function generateEmployeeId(): Promise<string> {
 //   const sql = getDatabase();
@@ -97,22 +104,24 @@
 //     WHERE id ~ '^EMP[0-9]+$'
 //   `;
 
-//   const nextNumber = Number(
-//     rows[0]?.next_number || 1,
-//   );
+//   const nextNumber = Number(rows[0]?.next_number || 1);
 
 //   return `EMP${String(nextNumber).padStart(3, "0")}`;
 // }
 
 // /**
-//  * Create a new employee.
-//  *
-//  * The plain password is never stored.
-//  * Only the bcrypt hash is saved.
+//  * Create an employee with selected report permissions.
+//  * Only the bcrypt password hash is stored.
 //  */
 // export async function createEmployee(
 //   input: CreateEmployeeInput,
 // ): Promise<Employee> {
+//   if (!input.canAccessAudit && !input.canAccessServiceReport) {
+//     throw new Error(
+//       "At least one report permission is required",
+//     );
+//   }
+
 //   const sql = getDatabase();
 
 //   const passwordHash = await bcrypt.hash(
@@ -121,11 +130,8 @@
 //   );
 
 //   const id = await generateEmployeeId();
-
 //   const now = new Date().toISOString();
-
-//   const isActive =
-//     input.isActive ?? true;
+//   const isActive = input.isActive ?? true;
 
 //   const rows = await sql`
 //     INSERT INTO employees (
@@ -136,6 +142,8 @@
 //       password_hash,
 //       is_active,
 //       role,
+//       can_access_audit,
+//       can_access_service_report,
 //       created_at,
 //       updated_at
 //     )
@@ -147,6 +155,8 @@
 //       ${passwordHash},
 //       ${isActive},
 //       'auditor',
+//       ${input.canAccessAudit},
+//       ${input.canAccessServiceReport},
 //       ${now},
 //       ${now}
 //     )
@@ -157,18 +167,17 @@
 //       username,
 //       is_active,
 //       role,
+//       can_access_audit,
+//       can_access_service_report,
 //       created_at,
 //       updated_at
 //   `;
 
-//   const row = rows[0];
-
-//   return mapEmployee(row);
+//   return mapEmployee(rows[0]);
 // }
 
 // /**
-//  * Check whether username or email
-//  * already belongs to an employee.
+//  * Check whether a username or email already exists.
 //  */
 // export async function findEmployeeByUsernameOrEmail(
 //   username: string,
@@ -189,7 +198,6 @@
 
 //   return rows[0] || null;
 // }
-
 import { neon } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
 
@@ -202,6 +210,7 @@ export type Employee = {
   role: "auditor";
   canAccessAudit: boolean;
   canAccessServiceReport: boolean;
+  canAccessDailyAccentReport: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -214,6 +223,7 @@ export type CreateEmployeeInput = {
   isActive?: boolean;
   canAccessAudit: boolean;
   canAccessServiceReport: boolean;
+  canAccessDailyAccentReport: boolean;
 };
 
 function getDatabase() {
@@ -237,6 +247,9 @@ function mapEmployee(row: any): Employee {
     canAccessAudit: Boolean(row.can_access_audit),
     canAccessServiceReport: Boolean(
       row.can_access_service_report,
+    ),
+    canAccessDailyAccentReport: Boolean(
+      row.can_access_daily_accent_report,
     ),
     createdAt:
       row.created_at?.toISOString?.() ??
@@ -264,6 +277,7 @@ export async function readEmployees(): Promise<Employee[]> {
       role,
       can_access_audit,
       can_access_service_report,
+      can_access_daily_accent_report,
       created_at,
       updated_at
     FROM employees
@@ -307,7 +321,11 @@ export async function generateEmployeeId(): Promise<string> {
 export async function createEmployee(
   input: CreateEmployeeInput,
 ): Promise<Employee> {
-  if (!input.canAccessAudit && !input.canAccessServiceReport) {
+  if (
+    !input.canAccessAudit &&
+    !input.canAccessServiceReport &&
+    !input.canAccessDailyAccentReport
+  ) {
     throw new Error(
       "At least one report permission is required",
     );
@@ -335,6 +353,7 @@ export async function createEmployee(
       role,
       can_access_audit,
       can_access_service_report,
+      can_access_daily_accent_report,
       created_at,
       updated_at
     )
@@ -348,6 +367,7 @@ export async function createEmployee(
       'auditor',
       ${input.canAccessAudit},
       ${input.canAccessServiceReport},
+      ${input.canAccessDailyAccentReport},
       ${now},
       ${now}
     )
@@ -360,6 +380,7 @@ export async function createEmployee(
       role,
       can_access_audit,
       can_access_service_report,
+      can_access_daily_accent_report,
       created_at,
       updated_at
   `;

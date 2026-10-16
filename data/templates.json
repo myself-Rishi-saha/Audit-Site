@@ -314,5 +314,152 @@
         ]
       }
     ]
-  }
+  },
+  {
+  "id": "daily-accent-report",
+  "type": "DAILY_ACCENT_REPORT",
+  "name": "Daily Accent Report",
+  "title": "Daily Accent Report",
+  "sections": [
+    {
+      "id": "job-information",
+      "name": "JOB INFORMATION",
+      "fields": [
+        {
+          "id": "customer-name",
+          "label": "Customer Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "customer-address",
+          "label": "Customer Address",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "engineer-name",
+          "label": "Engineer Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "service-call-date",
+          "label": "Date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "id": "service-call-time",
+          "label": "Time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "equipment",
+          "label": "Equipment",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "serial-number",
+          "label": "Serial Number",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "service-type",
+      "name": "SERVICE TYPE",
+      "fields": [
+        {
+          "id": "service-type",
+          "label": "Service Type",
+          "type": "select",
+          "required": true,
+          "options": [
+            "BDC",
+            "PMW",
+            "Comprehensive AMC"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "installed-system-checked",
+      "name": "INSTALLED SYSTEM CHECKED",
+      "fields": [
+        {
+          "id": "installed-systems",
+          "label": "Installed Systems",
+          "type": "select",
+          "required": true,
+          "multiple": true,
+          "options": [
+            "Fire Detection and Alarm",
+            "Fire Fighting",
+            "Pump",
+            "CCTV",
+            "PA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fault-diagnosis-action-log",
+      "name": "FAULT DIAGNOSIS & ACTION LOG",
+      "fields": [
+        {
+          "id": "reported-fault",
+          "label": "Reported Fault",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "id": "actions",
+          "label": "Actions Taken",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "id": "customer-remarks",
+          "label": "Customer Remarks",
+          "type": "textarea",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "customer-evidence",
+      "name": "CUSTOMER EVIDENCE",
+      "fields": [
+        {
+          "id": "customer-signature",
+          "label": "Customer Signature",
+          "type": "signature",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "evidence",
+      "name": "EVIDENCE",
+      "fields": [
+        {
+          "id": "report-photos",
+          "label": "Photos",
+          "type": "camera-photo",
+          "required": false
+        },
+        {
+          "id": "report-videos",
+          "label": "Videos",
+          "type": "camera-video",
+          "required": false
+        }
+      ]
+    }
+  ]
+}
 ]

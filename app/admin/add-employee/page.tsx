@@ -1,3 +1,4 @@
+
 // "use client";
 
 // import { FormEvent, useEffect, useState } from "react";
@@ -12,23 +13,13 @@
 //   ShieldCheck,
 //   UserPlus,
 //   Users,
+//   X,
 // } from "lucide-react";
 
 // import { AppShell } from "@/components/app-shell";
 // import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
 
-// // type Employee = {
-// //   id: string;
-// //   name: string;
-// //   email: string;
-// //   username: string;
-// //   isActive: boolean;
-// //   mustChangePassword: boolean;
-// //   role: "auditor";
-// //   createdAt: string;
-// //   updatedAt: string;
-// // };
 // type Employee = {
 //   id: string;
 //   name: string;
@@ -42,36 +33,49 @@
 //   createdAt: string;
 //   updatedAt: string;
 // };
+
 // export default function AddEmployeePage() {
 //   const router = useRouter();
-//   const [canAccessAudit, setCanAccessAudit] = useState(false);
-//   const [canAccessServiceReport, setCanAccessServiceReport] = useState(false);
+
+//   // New employee form
 //   const [name, setName] = useState("");
 //   const [email, setEmail] = useState("");
 //   const [username, setUsername] = useState("");
 //   const [password, setPassword] = useState("");
 
-//   const [employees, setEmployees] = useState<Employee[]>([]);
+//   // New employee permissions
+//   const [canAccessAudit, setCanAccessAudit] = useState(false);
+//   const [canAccessServiceReport, setCanAccessServiceReport] =
+//     useState(false);
 
+//   // Employee list
+//   const [employees, setEmployees] = useState<Employee[]>([]);
 //   const [loadingEmployees, setLoadingEmployees] = useState(true);
 
+//   // Loading states
 //   const [generatingUsername, setGeneratingUsername] = useState(false);
-
 //   const [generatingPassword, setGeneratingPassword] = useState(false);
-
 //   const [saving, setSaving] = useState(false);
-
 //   const [resettingId, setResettingId] = useState<string | null>(null);
 
+//   // Password reset result
 //   const [resetPassword, setResetPassword] = useState("");
 
-//   const [copied, setCopied] = useState("");
+//   // Edit existing employee permissions
+//   const [editingEmployee, setEditingEmployee] =
+//     useState<Employee | null>(null);
+//   const [editCanAccessAudit, setEditCanAccessAudit] = useState(false);
+//   const [editCanAccessServiceReport, setEditCanAccessServiceReport] =
+//     useState(false);
+//   const [savingAccess, setSavingAccess] = useState(false);
 
+//   // Messages and clipboard
+//   const [copied, setCopied] = useState("");
 //   const [error, setError] = useState("");
 //   const [success, setSuccess] = useState("");
 
 //   useEffect(() => {
-//     loadEmployees();
+//     void loadEmployees();
 //   }, []);
 
 //   async function loadEmployees() {
@@ -91,8 +95,11 @@
 //       setEmployees(data.employees || []);
 //     } catch (error) {
 //       console.error("Load employees error:", error);
-
-//       setError("Failed to load employees");
+//       setError(
+//         error instanceof Error
+//           ? error.message
+//           : "Failed to load employees",
+//       );
 //     } finally {
 //       setLoadingEmployees(false);
 //     }
@@ -109,64 +116,75 @@
 //     setGeneratingUsername(true);
 
 //     try {
-//       const response = await fetch("/api/admin/employee/generate-username", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
+//       const response = await fetch(
+//         "/api/admin/employee/generate-username",
+//         {
+//           method: "POST",
+//           headers: {
+//             "Content-Type": "application/json",
+//           },
+//           body: JSON.stringify({ name: name.trim() }),
 //         },
-//         body: JSON.stringify({
-//           name,
-//         }),
-//       });
+//       );
 
 //       const data = await response.json();
 
 //       if (!response.ok) {
-//         setError(data?.error || "Failed to generate username");
-//         return;
+//         throw new Error(data?.error || "Failed to generate username");
 //       }
 
 //       setUsername(data.username);
 //     } catch (error) {
 //       console.error("Generate username error:", error);
-
-//       setError("Unable to generate username.");
+//       setError(
+//         error instanceof Error
+//           ? error.message
+//           : "Unable to generate username.",
+//       );
 //     } finally {
 //       setGeneratingUsername(false);
 //     }
 //   }
 
 //   function generatePassword() {
-//     setGeneratingPassword(true);
 //     setError("");
 //     setSuccess("");
+//     setGeneratingPassword(true);
 
-//     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+//     try {
+//       const chars =
+//         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+//       const special = "!@#$%";
 
-//     const special = "!@#$%";
+//       // Use the browser cryptographic random number generator.
+//       const randomIndex = (max: number) => {
+//         const values = new Uint32Array(1);
+//         crypto.getRandomValues(values);
+//         return values[0] % max;
+//       };
 
-//     let newPassword = "";
+//       let newPassword = "";
 
-//     for (let i = 0; i < 8; i++) {
-//       newPassword += chars[Math.floor(Math.random() * chars.length)];
+//       for (let i = 0; i < 8; i++) {
+//         newPassword += chars[randomIndex(chars.length)];
+//       }
+
+//       newPassword += special[randomIndex(special.length)];
+//       newPassword += String(randomIndex(10));
+
+//       setPassword(newPassword);
+//     } finally {
+//       setGeneratingPassword(false);
 //     }
-
-//     newPassword += special[Math.floor(Math.random() * special.length)];
-
-//     newPassword += Math.floor(Math.random() * 10);
-
-//     setPassword(newPassword);
-//     setGeneratingPassword(false);
 //   }
 
 //   async function copyText(value: string, type: string) {
 //     try {
 //       await navigator.clipboard.writeText(value);
-
 //       setCopied(type);
 
-//       setTimeout(() => {
-//         setCopied("");
+//       window.setTimeout(() => {
+//         setCopied((current) => (current === type ? "" : current));
 //       }, 1500);
 //     } catch {
 //       setError("Unable to copy to clipboard.");
@@ -198,6 +216,7 @@
 //       setError("Generate a password before saving.");
 //       return;
 //     }
+
 //     if (!canAccessAudit && !canAccessServiceReport) {
 //       setError("Select at least one report permission.");
 //       return;
@@ -217,32 +236,36 @@
 //           username: username.trim(),
 //           password,
 //           isActive: true,
+//           canAccessAudit,
+//           canAccessServiceReport,
 //         }),
 //       });
 
 //       const data = await response.json();
 
 //       if (!response.ok) {
-//         setError(data?.error || "Failed to create employee");
-//         return;
+//         throw new Error(data?.error || "Failed to create employee");
 //       }
 
 //       setSuccess("Employee created successfully.");
 
-//       // Refresh employee list.
-//       await loadEmployees();
-
-//       // Clear form.
 //       setName("");
 //       setEmail("");
 //       setUsername("");
 //       setPassword("");
+//       setCanAccessAudit(false);
+//       setCanAccessServiceReport(false);
 
+//       await loadEmployees();
 //       router.refresh();
 //     } catch (error) {
 //       console.error("Create employee error:", error);
 
-//       setError("Unable to connect to the server. Please try again.");
+//       setError(
+//         error instanceof Error
+//           ? error.message
+//           : "Unable to connect to the server. Please try again.",
+//       );
 //     } finally {
 //       setSaving(false);
 //     }
@@ -253,9 +276,7 @@
 //       `Generate a new password for ${employee.name}?`,
 //     );
 
-//     if (!confirmed) {
-//       return;
-//     }
+//     if (!confirmed) return;
 
 //     setError("");
 //     setSuccess("");
@@ -265,29 +286,103 @@
 //     try {
 //       const response = await fetch(
 //         `/api/admin/employee/${employee.id}/reset-password`,
-//         {
-//           method: "POST",
-//         },
+//         { method: "POST" },
 //       );
 
 //       const data = await response.json();
 
 //       if (!response.ok) {
-//         setError(data?.error || "Failed to reset password");
-//         return;
+//         throw new Error(data?.error || "Failed to reset password");
 //       }
 
 //       setResetPassword(data.password);
-
 //       setSuccess(`New password generated for ${employee.name}.`);
 
 //       await loadEmployees();
 //     } catch (error) {
 //       console.error("Reset password error:", error);
 
-//       setError("Unable to reset the password.");
+//       setError(
+//         error instanceof Error
+//           ? error.message
+//           : "Unable to reset the password.",
+//       );
 //     } finally {
 //       setResettingId(null);
+//     }
+//   }
+
+//   // Open the permissions editor for an existing employee.
+//   function openEditAccess(employee: Employee) {
+//     setEditingEmployee(employee);
+//     setEditCanAccessAudit(employee.canAccessAudit);
+//     setEditCanAccessServiceReport(employee.canAccessServiceReport);
+//     setError("");
+//     setSuccess("");
+//   }
+
+//   // Save permission changes without changing the employee's password or details.
+//   async function saveEmployeeAccess() {
+//     if (!editingEmployee) return;
+
+//     if (!editCanAccessAudit && !editCanAccessServiceReport) {
+//       setError("Select at least one report permission.");
+//       return;
+//     }
+
+//     setSavingAccess(true);
+//     setError("");
+//     setSuccess("");
+
+//     try {
+//       const response = await fetch(
+//         `/api/admin/employee/${editingEmployee.id}`,
+//         {
+//           method: "PATCH",
+//           headers: {
+//             "Content-Type": "application/json",
+//           },
+//           body: JSON.stringify({
+//             canAccessAudit: editCanAccessAudit,
+//             canAccessServiceReport: editCanAccessServiceReport,
+//           }),
+//         },
+//       );
+
+//       const data = await response.json();
+
+//       if (!response.ok) {
+//         throw new Error(data?.error || "Failed to update permissions");
+//       }
+
+//       // Update the local list immediately using the saved values.
+//       setEmployees((currentEmployees) =>
+//         currentEmployees.map((employee) =>
+//           employee.id === editingEmployee.id
+//             ? {
+//                 ...employee,
+//                 canAccessAudit: editCanAccessAudit,
+//                 canAccessServiceReport: editCanAccessServiceReport,
+//               }
+//             : employee,
+//         ),
+//       );
+
+//       setSuccess(`Report access updated for ${editingEmployee.name}.`);
+//       setEditingEmployee(null);
+
+//       // Refresh from the database.
+//       await loadEmployees();
+//     } catch (error) {
+//       console.error("Update employee access error:", error);
+
+//       setError(
+//         error instanceof Error
+//           ? error.message
+//           : "Unable to update permissions.",
+//       );
+//     } finally {
+//       setSavingAccess(false);
 //     }
 //   }
 
@@ -296,21 +391,18 @@
 //       <main className="min-h-screen bg-slate-50 px-4 py-8">
 //         <div className="mx-auto max-w-6xl space-y-8">
 //           {/* Header */}
-//           <div>
-//             <div className="flex items-center gap-3">
-//               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-//                 <Users className="h-6 w-6" />
-//               </div>
+//           <div className="flex items-center gap-3">
+//             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+//               <Users className="h-6 w-6" />
+//             </div>
 
-//               <div>
-//                 <h1 className="text-2xl font-bold text-slate-900">
-//                   Employee Management
-//                 </h1>
-
-//                 <p className="text-sm text-slate-500">
-//                   Create and manage auditor accounts.
-//                 </p>
-//               </div>
+//             <div>
+//               <h1 className="text-2xl font-bold text-slate-900">
+//                 Employee Management
+//               </h1>
+//               <p className="text-sm text-slate-500">
+//                 Create accounts and manage report access.
+//               </p>
 //             </div>
 //           </div>
 
@@ -324,16 +416,15 @@
 //                   <h2 className="font-semibold text-slate-900">
 //                     Add New Employee
 //                   </h2>
-
 //                   <p className="text-sm text-slate-500">
-//                     Create an auditor login account.
+//                     Create an employee login and choose permitted modules.
 //                   </p>
 //                 </div>
 //               </div>
 //             </div>
 
 //             <form onSubmit={handleSubmit} className="space-y-6 p-6">
-//               {/* Name + email */}
+//               {/* Name and email */}
 //               <div className="grid gap-5 md:grid-cols-2">
 //                 <div className="space-y-2">
 //                   <label
@@ -382,13 +473,13 @@
 //                   Username
 //                 </label>
 
-//                 <div className="flex gap-2">
+//                 <div className="flex flex-wrap gap-2">
 //                   <Input
 //                     id="username"
 //                     value={username}
 //                     readOnly
 //                     placeholder="Click Generate Username"
-//                     className="font-mono"
+//                     className="min-w-0 flex-1 font-mono"
 //                   />
 
 //                   <Button
@@ -402,7 +493,6 @@
 //                     ) : (
 //                       <RefreshCw className="h-4 w-4" />
 //                     )}
-
 //                     <span className="ml-2">Generate</span>
 //                   </Button>
 
@@ -411,6 +501,7 @@
 //                     variant="outline"
 //                     onClick={() => copyText(username, "username")}
 //                     disabled={!username}
+//                     aria-label="Copy username"
 //                   >
 //                     {copied === "username" ? (
 //                       <Check className="h-4 w-4" />
@@ -421,7 +512,7 @@
 //                 </div>
 
 //                 <p className="text-xs text-slate-500">
-//                   Username is generated uniquely from the employee name.
+//                   Generate a unique username from the employee name.
 //                 </p>
 //               </div>
 
@@ -434,28 +525,27 @@
 //                   Temporary Password
 //                 </label>
 
-//                 <div className="flex gap-2">
+//                 <div className="flex flex-wrap gap-2">
 //                   <Input
 //                     id="password"
 //                     type="text"
 //                     value={password}
 //                     readOnly
 //                     placeholder="Click Generate Password"
-//                     className="font-mono"
+//                     className="min-w-0 flex-1 font-mono"
 //                   />
 
 //                   <Button
 //                     type="button"
 //                     variant="outline"
 //                     onClick={generatePassword}
-//                     disabled={saving}
+//                     disabled={saving || generatingPassword}
 //                   >
 //                     {generatingPassword ? (
 //                       <Loader2 className="h-4 w-4 animate-spin" />
 //                     ) : (
 //                       <KeyRound className="h-4 w-4" />
 //                     )}
-
 //                     <span className="ml-2">Generate</span>
 //                   </Button>
 
@@ -464,6 +554,7 @@
 //                     variant="outline"
 //                     onClick={() => copyText(password, "password")}
 //                     disabled={!password}
+//                     aria-label="Copy password"
 //                   >
 //                     {copied === "password" ? (
 //                       <Check className="h-4 w-4" />
@@ -474,28 +565,13 @@
 //                 </div>
 
 //                 <p className="text-xs text-slate-500">
-//                   The password is stored securely as a hash. The employee should
-//                   change this temporary password after their first login.
+//                   The password must be stored as a hash by the backend. Share
+//                   the generated password securely with the employee.
 //                 </p>
 //               </div>
 
-//               {/* Role */}
-//               {/* <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-//                 <ShieldCheck className="mt-0.5 h-5 w-5 text-slate-600" />
-
-//                 <div>
-//                   <p className="text-sm font-semibold text-slate-800">
-//                     Role: Auditor
-//                   </p>
-
-//                   <p className="mt-1 text-xs text-slate-500">
-//                     Employees created here can create audits and service
-//                     reports.
-//                   </p>
-//                 </div>
-//               </div> */}
-//               {/* Module Access Permissions */}
-//               <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
+//               {/* New employee permissions */}
+//               <div className="space-y-4 rounded-xl border border-slate-200 p-5">
 //                 <div className="flex items-start gap-3">
 //                   <ShieldCheck className="mt-0.5 h-5 w-5 text-slate-700" />
 
@@ -503,14 +579,13 @@
 //                     <h3 className="font-semibold text-slate-900">
 //                       Module Access Permissions
 //                     </h3>
-
 //                     <p className="mt-1 text-sm text-slate-500">
-//                       Select which reports this employee is allowed to access.
+//                       Select which report modules this employee can access.
 //                     </p>
 //                   </div>
 //                 </div>
 
-//                 <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50">
+//                 <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
 //                   <input
 //                     type="checkbox"
 //                     checked={canAccessAudit}
@@ -518,16 +593,15 @@
 //                     disabled={saving}
 //                     className="mt-1 h-4 w-4 accent-slate-900"
 //                   />
-
 //                   <div>
 //                     <p className="font-medium text-slate-900">Audit Report</p>
 //                     <p className="mt-1 text-sm text-slate-500">
-//                       Create, view, and submit audit reports.
+//                       Create and submit audit reports.
 //                     </p>
 //                   </div>
 //                 </label>
 
-//                 <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50">
+//                 <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
 //                   <input
 //                     type="checkbox"
 //                     checked={canAccessServiceReport}
@@ -537,11 +611,12 @@
 //                     disabled={saving}
 //                     className="mt-1 h-4 w-4 accent-slate-900"
 //                   />
-
 //                   <div>
-//                     <p className="font-medium text-slate-900">Service Report</p>
+//                     <p className="font-medium text-slate-900">
+//                       Service Report
+//                     </p>
 //                     <p className="mt-1 text-sm text-slate-500">
-//                       Create, view, and submit service reports.
+//                       Create and submit service reports.
 //                     </p>
 //                   </div>
 //                 </label>
@@ -551,30 +626,39 @@
 //                     Select at least one report permission.
 //                   </p>
 //                 )}
-
-//                 <p className="text-xs text-slate-500">
-//                   Access permissions can be changed later by the admin.
-//                 </p>
 //               </div>
 
 //               {/* Messages */}
 //               {error && (
-//                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+//                 <div
+//                   role="alert"
+//                   className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+//                 >
 //                   {error}
 //                 </div>
 //               )}
 
 //               {success && (
-//                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+//                 <div
+//                   role="status"
+//                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+//                 >
 //                   {success}
 //                 </div>
 //               )}
 
-//               {/* Save */}
+//               {/* Save employee */}
 //               <div className="flex justify-end border-t border-slate-200 pt-6">
 //                 <Button
 //                   type="submit"
-//                   disabled={saving || !name || !email || !username || !password}
+//                   disabled={
+//                     saving ||
+//                     !name.trim() ||
+//                     !email.trim() ||
+//                     !username.trim() ||
+//                     !password ||
+//                     (!canAccessAudit && !canAccessServiceReport)
+//                   }
 //                 >
 //                   {saving ? (
 //                     <>
@@ -592,6 +676,144 @@
 //             </form>
 //           </div>
 
+//           {/* Edit existing employee access dialog */}
+//           {editingEmployee && (
+//             <div
+//               className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+//               onMouseDown={(e) => {
+//                 if (
+//                   e.target === e.currentTarget &&
+//                   !savingAccess
+//                 ) {
+//                   setEditingEmployee(null);
+//                 }
+//               }}
+//             >
+//               <div
+//                 role="dialog"
+//                 aria-modal="true"
+//                 aria-labelledby="edit-access-title"
+//                 className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+//               >
+//                 <div className="flex items-start justify-between gap-4">
+//                   <div className="flex items-start gap-3">
+//                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+//                       <ShieldCheck className="h-5 w-5 text-slate-700" />
+//                     </div>
+
+//                     <div>
+//                       <h2
+//                         id="edit-access-title"
+//                         className="text-xl font-bold text-slate-900"
+//                       >
+//                         Edit Report Access
+//                       </h2>
+//                       <p className="mt-1 text-sm text-slate-500">
+//                         {editingEmployee.name}
+//                       </p>
+//                     </div>
+//                   </div>
+
+//                   <button
+//                     type="button"
+//                     onClick={() => setEditingEmployee(null)}
+//                     disabled={savingAccess}
+//                     className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+//                     aria-label="Close dialog"
+//                   >
+//                     <X className="h-5 w-5" />
+//                   </button>
+//                 </div>
+
+//                 <p className="mt-5 text-sm text-slate-600">
+//                   Choose which report modules this employee is allowed to
+//                   access. This will not change their username or password.
+//                 </p>
+
+//                 <div className="mt-5 space-y-3">
+//                   <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
+//                     <input
+//                       type="checkbox"
+//                       checked={editCanAccessAudit}
+//                       onChange={(e) =>
+//                         setEditCanAccessAudit(e.target.checked)
+//                       }
+//                       disabled={savingAccess}
+//                       className="mt-1 h-4 w-4 accent-slate-900"
+//                     />
+//                     <div>
+//                       <p className="font-medium text-slate-900">
+//                         Audit Report
+//                       </p>
+//                       <p className="mt-1 text-sm text-slate-500">
+//                         Allow access to audit reports.
+//                       </p>
+//                     </div>
+//                   </label>
+
+//                   <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
+//                     <input
+//                       type="checkbox"
+//                       checked={editCanAccessServiceReport}
+//                       onChange={(e) =>
+//                         setEditCanAccessServiceReport(e.target.checked)
+//                       }
+//                       disabled={savingAccess}
+//                       className="mt-1 h-4 w-4 accent-slate-900"
+//                     />
+//                     <div>
+//                       <p className="font-medium text-slate-900">
+//                         Service Report
+//                       </p>
+//                       <p className="mt-1 text-sm text-slate-500">
+//                         Allow access to service reports.
+//                       </p>
+//                     </div>
+//                   </label>
+//                 </div>
+
+//                 {!editCanAccessAudit && !editCanAccessServiceReport && (
+//                   <p className="mt-3 text-sm text-red-600">
+//                     Select at least one permission.
+//                   </p>
+//                 )}
+
+//                 <div className="mt-6 flex justify-end gap-3">
+//                   <Button
+//                     type="button"
+//                     variant="outline"
+//                     onClick={() => setEditingEmployee(null)}
+//                     disabled={savingAccess}
+//                   >
+//                     Cancel
+//                   </Button>
+
+//                   <Button
+//                     type="button"
+//                     onClick={saveEmployeeAccess}
+//                     disabled={
+//                       savingAccess ||
+//                       (!editCanAccessAudit &&
+//                         !editCanAccessServiceReport)
+//                     }
+//                   >
+//                     {savingAccess ? (
+//                       <>
+//                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                         Saving...
+//                       </>
+//                     ) : (
+//                       <>
+//                         <Check className="mr-2 h-4 w-4" />
+//                         Save Access
+//                       </>
+//                     )}
+//                   </Button>
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+
 //           {/* Reset password result */}
 //           {resetPassword && (
 //             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
@@ -606,8 +828,8 @@
 //                   </h3>
 
 //                   <p className="mt-1 text-sm text-amber-800">
-//                     Give this password to the employee. It will not be displayed
-//                     again after leaving this page.
+//                     Give this password to the employee. It will not be
+//                     displayed again after leaving this page.
 //                   </p>
 
 //                   <div className="mt-3 flex gap-2">
@@ -620,14 +842,15 @@
 //                     <Button
 //                       type="button"
 //                       variant="outline"
-//                       onClick={() => copyText(resetPassword, "reset-password")}
+//                       onClick={() =>
+//                         copyText(resetPassword, "reset-password")
+//                       }
 //                     >
 //                       {copied === "reset-password" ? (
 //                         <Check className="h-4 w-4" />
 //                       ) : (
 //                         <Copy className="h-4 w-4" />
 //                       )}
-
 //                       <span className="ml-2">Copy</span>
 //                     </Button>
 //                   </div>
@@ -636,14 +859,13 @@
 //             </div>
 //           )}
 
-//           {/* Employee list */}
+//           {/* Existing employees */}
 //           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-//             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+//             <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
 //               <div>
 //                 <h2 className="font-semibold text-slate-900">
 //                   Existing Employees
 //                 </h2>
-
 //                 <p className="text-sm text-slate-500">
 //                   {employees.length} employee
 //                   {employees.length !== 1 ? "s" : ""} registered
@@ -654,7 +876,7 @@
 //                 type="button"
 //                 variant="outline"
 //                 size="sm"
-//                 onClick={loadEmployees}
+//                 onClick={() => void loadEmployees()}
 //                 disabled={loadingEmployees}
 //               >
 //                 <RefreshCw
@@ -673,32 +895,24 @@
 //             ) : employees.length === 0 ? (
 //               <div className="py-12 text-center">
 //                 <Users className="mx-auto h-10 w-10 text-slate-300" />
-
 //                 <p className="mt-3 font-medium text-slate-700">
 //                   No employees yet
 //                 </p>
-
 //                 <p className="mt-1 text-sm text-slate-500">
-//                   Create your first auditor above.
+//                   Create your first employee above.
 //                 </p>
 //               </div>
 //             ) : (
 //               <div className="overflow-x-auto">
-//                 <table className="w-full min-w-[1000px]">
+//                 <table className="w-full min-w-[1100px]">
 //                   <thead>
 //                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
 //                       <th className="px-6 py-4">Employee</th>
-
 //                       <th className="px-6 py-4">Email</th>
-
 //                       <th className="px-6 py-4">Username</th>
-
 //                       <th className="px-6 py-4">Role</th>
-
 //                       <th className="px-6 py-4">Report Access</th>
-
 //                       <th className="px-6 py-4">Status</th>
-
 //                       <th className="px-6 py-4 text-right">Actions</th>
 //                     </tr>
 //                   </thead>
@@ -710,15 +924,12 @@
 //                         className="transition hover:bg-slate-50"
 //                       >
 //                         <td className="px-6 py-4">
-//                           <div>
-//                             <p className="font-medium text-slate-900">
-//                               {employee.name}
-//                             </p>
-
-//                             <p className="mt-0.5 text-xs text-slate-400">
-//                               {employee.id}
-//                             </p>
-//                           </div>
+//                           <p className="font-medium text-slate-900">
+//                             {employee.name}
+//                           </p>
+//                           <p className="mt-0.5 text-xs text-slate-400">
+//                             {employee.id}
+//                           </p>
 //                         </td>
 
 //                         <td className="px-6 py-4 text-sm text-slate-600">
@@ -734,13 +945,14 @@
 //                             <button
 //                               type="button"
 //                               onClick={() =>
-//                                 copyText(
+//                                 void copyText(
 //                                   employee.username,
 //                                   `employee-${employee.id}`,
 //                                 )
 //                               }
 //                               className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
 //                               title="Copy username"
+//                               aria-label={`Copy username for ${employee.name}`}
 //                             >
 //                               {copied === `employee-${employee.id}` ? (
 //                                 <Check className="h-4 w-4" />
@@ -756,6 +968,7 @@
 //                             Auditor
 //                           </span>
 //                         </td>
+
 //                         <td className="px-6 py-4">
 //                           <div className="flex flex-wrap gap-1.5">
 //                             {employee.canAccessAudit && (
@@ -792,26 +1005,40 @@
 //                           )}
 //                         </td>
 
-//                         <td className="px-6 py-4 text-right">
-//                           <Button
-//                             type="button"
-//                             variant="outline"
-//                             size="sm"
-//                             onClick={() => resetEmployeePassword(employee)}
-//                             disabled={resettingId === employee.id}
-//                           >
-//                             {resettingId === employee.id ? (
-//                               <>
-//                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-//                                 Generating...
-//                               </>
-//                             ) : (
-//                               <>
-//                                 <KeyRound className="mr-2 h-4 w-4" />
-//                                 New Password
-//                               </>
-//                             )}
-//                           </Button>
+//                         <td className="px-6 py-4">
+//                           <div className="flex justify-end gap-2">
+//                             <Button
+//                               type="button"
+//                               variant="outline"
+//                               size="sm"
+//                               onClick={() => openEditAccess(employee)}
+//                             >
+//                               <ShieldCheck className="mr-2 h-4 w-4" />
+//                               Edit Access
+//                             </Button>
+
+//                             <Button
+//                               type="button"
+//                               variant="outline"
+//                               size="sm"
+//                               onClick={() =>
+//                                 void resetEmployeePassword(employee)
+//                               }
+//                               disabled={resettingId === employee.id}
+//                             >
+//                               {resettingId === employee.id ? (
+//                                 <>
+//                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                                   Generating...
+//                                 </>
+//                               ) : (
+//                                 <>
+//                                   <KeyRound className="mr-2 h-4 w-4" />
+//                                   New Password
+//                                 </>
+//                               )}
+//                             </Button>
+//                           </div>
 //                         </td>
 //                       </tr>
 //                     ))}
@@ -856,6 +1083,7 @@ type Employee = {
   role: "auditor";
   canAccessAudit: boolean;
   canAccessServiceReport: boolean;
+  canAccessDailyAccentReport: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -873,6 +1101,10 @@ export default function AddEmployeePage() {
   const [canAccessAudit, setCanAccessAudit] = useState(false);
   const [canAccessServiceReport, setCanAccessServiceReport] =
     useState(false);
+  const [
+    canAccessDailyAccentReport,
+    setCanAccessDailyAccentReport,
+  ] = useState(false);
 
   // Employee list
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -893,6 +1125,10 @@ export default function AddEmployeePage() {
   const [editCanAccessAudit, setEditCanAccessAudit] = useState(false);
   const [editCanAccessServiceReport, setEditCanAccessServiceReport] =
     useState(false);
+  const [
+    editCanAccessDailyAccentReport,
+    setEditCanAccessDailyAccentReport,
+  ] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
 
   // Messages and clipboard
@@ -919,6 +1155,7 @@ export default function AddEmployeePage() {
       }
 
       setEmployees(data.employees || []);
+     // console.log("Loaded employees:", data.employees);
     } catch (error) {
       console.error("Load employees error:", error);
       setError(
@@ -982,7 +1219,7 @@ export default function AddEmployeePage() {
         "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
       const special = "!@#$%";
 
-      // Use the browser cryptographic random number generator.
+      // Cryptographically secure random values.
       const randomIndex = (max: number) => {
         const values = new Uint32Array(1);
         crypto.getRandomValues(values);
@@ -1005,6 +1242,8 @@ export default function AddEmployeePage() {
   }
 
   async function copyText(value: string, type: string) {
+    if (!value) return;
+
     try {
       await navigator.clipboard.writeText(value);
       setCopied(type);
@@ -1043,7 +1282,11 @@ export default function AddEmployeePage() {
       return;
     }
 
-    if (!canAccessAudit && !canAccessServiceReport) {
+    if (
+      !canAccessAudit &&
+      !canAccessServiceReport &&
+      !canAccessDailyAccentReport
+    ) {
       setError("Select at least one report permission.");
       return;
     }
@@ -1064,6 +1307,7 @@ export default function AddEmployeePage() {
           isActive: true,
           canAccessAudit,
           canAccessServiceReport,
+          canAccessDailyAccentReport,
         }),
       });
 
@@ -1081,6 +1325,7 @@ export default function AddEmployeePage() {
       setPassword("");
       setCanAccessAudit(false);
       setCanAccessServiceReport(false);
+      setCanAccessDailyAccentReport(false);
 
       await loadEmployees();
       router.refresh();
@@ -1111,7 +1356,7 @@ export default function AddEmployeePage() {
 
     try {
       const response = await fetch(
-        `/api/admin/employee/${employee.id}/reset-password`,
+        `/api/admin/employee/${encodeURIComponent(employee.id)}/reset-password`,
         { method: "POST" },
       );
 
@@ -1138,20 +1383,27 @@ export default function AddEmployeePage() {
     }
   }
 
-  // Open the permissions editor for an existing employee.
   function openEditAccess(employee: Employee) {
     setEditingEmployee(employee);
-    setEditCanAccessAudit(employee.canAccessAudit);
-    setEditCanAccessServiceReport(employee.canAccessServiceReport);
+    setEditCanAccessAudit(employee.canAccessAudit ?? false);
+    setEditCanAccessServiceReport(
+      employee.canAccessServiceReport ?? false,
+    );
+    setEditCanAccessDailyAccentReport(
+      employee.canAccessDailyAccentReport ?? false,
+    );
     setError("");
     setSuccess("");
   }
 
-  // Save permission changes without changing the employee's password or details.
   async function saveEmployeeAccess() {
     if (!editingEmployee) return;
 
-    if (!editCanAccessAudit && !editCanAccessServiceReport) {
+    if (
+      !editCanAccessAudit &&
+      !editCanAccessServiceReport &&
+      !editCanAccessDailyAccentReport
+    ) {
       setError("Select at least one report permission.");
       return;
     }
@@ -1162,7 +1414,7 @@ export default function AddEmployeePage() {
 
     try {
       const response = await fetch(
-        `/api/admin/employee/${editingEmployee.id}`,
+        `/api/admin/employee/${encodeURIComponent(editingEmployee.id)}`,
         {
           method: "PATCH",
           headers: {
@@ -1171,6 +1423,8 @@ export default function AddEmployeePage() {
           body: JSON.stringify({
             canAccessAudit: editCanAccessAudit,
             canAccessServiceReport: editCanAccessServiceReport,
+            canAccessDailyAccentReport:
+              editCanAccessDailyAccentReport,
           }),
         },
       );
@@ -1181,7 +1435,6 @@ export default function AddEmployeePage() {
         throw new Error(data?.error || "Failed to update permissions");
       }
 
-      // Update the local list immediately using the saved values.
       setEmployees((currentEmployees) =>
         currentEmployees.map((employee) =>
           employee.id === editingEmployee.id
@@ -1189,6 +1442,8 @@ export default function AddEmployeePage() {
                 ...employee,
                 canAccessAudit: editCanAccessAudit,
                 canAccessServiceReport: editCanAccessServiceReport,
+                canAccessDailyAccentReport:
+                  editCanAccessDailyAccentReport,
               }
             : employee,
         ),
@@ -1197,7 +1452,6 @@ export default function AddEmployeePage() {
       setSuccess(`Report access updated for ${editingEmployee.name}.`);
       setEditingEmployee(null);
 
-      // Refresh from the database.
       await loadEmployees();
     } catch (error) {
       console.error("Update employee access error:", error);
@@ -1237,7 +1491,6 @@ export default function AddEmployeePage() {
             <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-5">
               <div className="flex items-center gap-3">
                 <UserPlus className="h-5 w-5 text-slate-700" />
-
                 <div>
                   <h2 className="font-semibold text-slate-900">
                     Add New Employee
@@ -1259,7 +1512,6 @@ export default function AddEmployeePage() {
                   >
                     Employee Name
                   </label>
-
                   <Input
                     id="name"
                     value={name}
@@ -1277,7 +1529,6 @@ export default function AddEmployeePage() {
                   >
                     Email ID
                   </label>
-
                   <Input
                     id="email"
                     type="email"
@@ -1312,7 +1563,9 @@ export default function AddEmployeePage() {
                     type="button"
                     variant="outline"
                     onClick={generateUsername}
-                    disabled={generatingUsername || saving || !name.trim()}
+                    disabled={
+                      generatingUsername || saving || !name.trim()
+                    }
                   >
                     {generatingUsername ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1325,7 +1578,7 @@ export default function AddEmployeePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => copyText(username, "username")}
+                    onClick={() => void copyText(username, "username")}
                     disabled={!username}
                     aria-label="Copy username"
                   >
@@ -1378,7 +1631,7 @@ export default function AddEmployeePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => copyText(password, "password")}
+                    onClick={() => void copyText(password, "password")}
                     disabled={!password}
                     aria-label="Copy password"
                   >
@@ -1391,8 +1644,8 @@ export default function AddEmployeePage() {
                 </div>
 
                 <p className="text-xs text-slate-500">
-                  The password must be stored as a hash by the backend. Share
-                  the generated password securely with the employee.
+                  Store passwords as hashes on the server. Share the
+                  generated password securely with the employee.
                 </p>
               </div>
 
@@ -1400,7 +1653,6 @@ export default function AddEmployeePage() {
               <div className="space-y-4 rounded-xl border border-slate-200 p-5">
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-slate-700" />
-
                   <div>
                     <h3 className="font-semibold text-slate-900">
                       Module Access Permissions
@@ -1420,7 +1672,9 @@ export default function AddEmployeePage() {
                     className="mt-1 h-4 w-4 accent-slate-900"
                   />
                   <div>
-                    <p className="font-medium text-slate-900">Audit Report</p>
+                    <p className="font-medium text-slate-900">
+                      Audit Report
+                    </p>
                     <p className="mt-1 text-sm text-slate-500">
                       Create and submit audit reports.
                     </p>
@@ -1447,11 +1701,33 @@ export default function AddEmployeePage() {
                   </div>
                 </label>
 
-                {!canAccessAudit && !canAccessServiceReport && (
-                  <p className="text-sm text-red-600">
-                    Select at least one report permission.
-                  </p>
-                )}
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={canAccessDailyAccentReport}
+                    onChange={(e) =>
+                      setCanAccessDailyAccentReport(e.target.checked)
+                    }
+                    disabled={saving}
+                    className="mt-1 h-4 w-4 accent-slate-900"
+                  />
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      Daily Accent Report
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Create and submit Daily Accent Reports.
+                    </p>
+                  </div>
+                </label>
+
+                {!canAccessAudit &&
+                  !canAccessServiceReport &&
+                  !canAccessDailyAccentReport && (
+                    <p className="text-sm text-red-600">
+                      Select at least one report permission.
+                    </p>
+                  )}
               </div>
 
               {/* Messages */}
@@ -1483,7 +1759,9 @@ export default function AddEmployeePage() {
                     !email.trim() ||
                     !username.trim() ||
                     !password ||
-                    (!canAccessAudit && !canAccessServiceReport)
+                    (!canAccessAudit &&
+                      !canAccessServiceReport &&
+                      !canAccessDailyAccentReport)
                   }
                 >
                   {saving ? (
@@ -1502,7 +1780,7 @@ export default function AddEmployeePage() {
             </form>
           </div>
 
-          {/* Edit existing employee access dialog */}
+          {/* Edit existing employee permissions dialog */}
           {editingEmployee && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -1526,7 +1804,6 @@ export default function AddEmployeePage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
                       <ShieldCheck className="h-5 w-5 text-slate-700" />
                     </div>
-
                     <div>
                       <h2
                         id="edit-access-title"
@@ -1596,13 +1873,37 @@ export default function AddEmployeePage() {
                       </p>
                     </div>
                   </label>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      checked={editCanAccessDailyAccentReport}
+                      onChange={(e) =>
+                        setEditCanAccessDailyAccentReport(
+                          e.target.checked,
+                        )
+                      }
+                      disabled={savingAccess}
+                      className="mt-1 h-4 w-4 accent-slate-900"
+                    />
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        Daily Accent Report
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Allow access to Daily Accent Reports.
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
-                {!editCanAccessAudit && !editCanAccessServiceReport && (
-                  <p className="mt-3 text-sm text-red-600">
-                    Select at least one permission.
-                  </p>
-                )}
+                {!editCanAccessAudit &&
+                  !editCanAccessServiceReport &&
+                  !editCanAccessDailyAccentReport && (
+                    <p className="mt-3 text-sm text-red-600">
+                      Select at least one permission.
+                    </p>
+                  )}
 
                 <div className="mt-6 flex justify-end gap-3">
                   <Button
@@ -1620,7 +1921,8 @@ export default function AddEmployeePage() {
                     disabled={
                       savingAccess ||
                       (!editCanAccessAudit &&
-                        !editCanAccessServiceReport)
+                        !editCanAccessServiceReport &&
+                        !editCanAccessDailyAccentReport)
                     }
                   >
                     {savingAccess ? (
@@ -1652,7 +1954,6 @@ export default function AddEmployeePage() {
                   <h3 className="font-semibold text-amber-900">
                     New Temporary Password
                   </h3>
-
                   <p className="mt-1 text-sm text-amber-800">
                     Give this password to the employee. It will not be
                     displayed again after leaving this page.
@@ -1664,12 +1965,11 @@ export default function AddEmployeePage() {
                       readOnly
                       className="bg-white font-mono"
                     />
-
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() =>
-                        copyText(resetPassword, "reset-password")
+                        void copyText(resetPassword, "reset-password")
                       }
                     >
                       {copied === "reset-password" ? (
@@ -1730,7 +2030,7 @@ export default function AddEmployeePage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px]">
+                <table className="w-full min-w-[1200px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                       <th className="px-6 py-4">Employee</th>
@@ -1809,8 +2109,15 @@ export default function AddEmployeePage() {
                               </span>
                             )}
 
+                            {employee.canAccessDailyAccentReport && (
+                              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                Daily Accent
+                              </span>
+                            )}
+
                             {!employee.canAccessAudit &&
-                              !employee.canAccessServiceReport && (
+                              !employee.canAccessServiceReport &&
+                              !employee.canAccessDailyAccentReport && (
                                 <span className="text-xs text-red-600">
                                   No access
                                 </span>

@@ -1,3 +1,4 @@
+
 // import { NextRequest, NextResponse } from "next/server";
 // import { jwtVerify } from "jose";
 
@@ -19,9 +20,6 @@
 //   return new TextEncoder().encode(secret);
 // }
 
-// /**
-//  * Make sure the request comes from an authenticated admin.
-//  */
 // async function verifyAdmin(request: NextRequest) {
 //   const token = request.cookies.get(ADMIN_COOKIE)?.value;
 
@@ -36,70 +34,47 @@
 //     );
 
 //     return payload.role === "admin";
-//   } catch (error) {
-//     console.error("Invalid admin session:", error);
+//   } catch {
 //     return false;
 //   }
 // }
 
 // /**
-//  * GET /api/admin/employees
-//  *
-//  * Returns all employees.
-//  *
-//  * password_hash is never returned by lib/employees.ts.
+//  * GET /api/admin/employee
+//  * Returns all employees and their report permissions.
 //  */
 // export async function GET(request: NextRequest) {
 //   try {
-//     const isAdmin = await verifyAdmin(request);
-
-//     if (!isAdmin) {
+//     if (!(await verifyAdmin(request))) {
 //       return NextResponse.json(
-//         {
-//           error: "Unauthorized",
-//         },
-//         {
-//           status: 401,
-//         },
+//         { error: "Unauthorized" },
+//         { status: 401 },
 //       );
 //     }
 
 //     const employees = await readEmployees();
 
-//     return NextResponse.json({
-//       employees,
-//     });
+//     return NextResponse.json({ employees });
 //   } catch (error) {
 //     console.error("Get employees error:", error);
 
 //     return NextResponse.json(
-//       {
-//         error: "Failed to load employees",
-//       },
-//       {
-//         status: 500,
-//       },
+//       { error: "Failed to load employees" },
+//       { status: 500 },
 //     );
 //   }
 // }
 
 // /**
-//  * POST /api/admin/employees
-//  *
-//  * Creates a new employee.
+//  * POST /api/admin/employee
+//  * Creates an employee with selected report permissions.
 //  */
 // export async function POST(request: NextRequest) {
 //   try {
-//     const isAdmin = await verifyAdmin(request);
-
-//     if (!isAdmin) {
+//     if (!(await verifyAdmin(request))) {
 //       return NextResponse.json(
-//         {
-//           error: "Unauthorized",
-//         },
-//         {
-//           status: 401,
-//         },
+//         { error: "Unauthorized" },
+//         { status: 401 },
 //       );
 //     }
 
@@ -130,85 +105,63 @@
 //         ? body.isActive
 //         : true;
 
-//     // -----------------------------
-//     // Validation
-//     // -----------------------------
+//     const canAccessAudit = body.canAccessAudit;
+//     const canAccessServiceReport =
+//       body.canAccessServiceReport;
 
-//     if (!name) {
+//     // Validate required fields.
+//     if (!name || !email || !username || !password) {
 //       return NextResponse.json(
 //         {
-//           error: "Employee name is required",
+//           error:
+//             "Name, email, username, and password are required",
 //         },
-//         {
-//           status: 400,
-//         },
-//       );
-//     }
-
-//     if (!email) {
-//       return NextResponse.json(
-//         {
-//           error: "Email is required",
-//         },
-//         {
-//           status: 400,
-//         },
-//       );
-//     }
-
-//     if (!username) {
-//       return NextResponse.json(
-//         {
-//           error: "Username is required",
-//         },
-//         {
-//           status: 400,
-//         },
-//       );
-//     }
-
-//     if (!password) {
-//       return NextResponse.json(
-//         {
-//           error: "Password is required",
-//         },
-//         {
-//           status: 400,
-//         },
+//         { status: 400 },
 //       );
 //     }
 
 //     if (password.length < 6) {
 //       return NextResponse.json(
 //         {
-//           error:
-//             "Password must be at least 6 characters long",
+//           error: "Password must be at least 6 characters long",
 //         },
-//         {
-//           status: 400,
-//         },
+//         { status: 400 },
 //       );
 //     }
 
-//     // Basic email validation
-//     const emailRegex =
-//       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 //     if (!emailRegex.test(email)) {
 //       return NextResponse.json(
-//         {
-//           error: "Please enter a valid email address",
-//         },
-//         {
-//           status: 400,
-//         },
+//         { error: "Please enter a valid email address" },
+//         { status: 400 },
 //       );
 //     }
 
-//     // -----------------------------
-//     // Duplicate check
-//     // -----------------------------
+//     // Require explicit permission selections.
+//     if (
+//       typeof canAccessAudit !== "boolean" ||
+//       typeof canAccessServiceReport !== "boolean"
+//     ) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "Select Audit Report access, Service Report access, or both",
+//         },
+//         { status: 400 },
+//       );
+//     }
 
+//     if (!canAccessAudit && !canAccessServiceReport) {
+//       return NextResponse.json(
+//         {
+//           error: "At least one report permission is required",
+//         },
+//         { status: 400 },
+//       );
+//     }
+
+//     // Check for duplicate username or email.
 //     const existingEmployee =
 //       await findEmployeeByUsernameOrEmail(
 //         username,
@@ -216,43 +169,29 @@
 //       );
 
 //     if (existingEmployee) {
-//       const existingUsername =
+//       const usernameExists =
 //         String(existingEmployee.username).toLowerCase() ===
 //         username.toLowerCase();
 
-//       if (existingUsername) {
-//         return NextResponse.json(
-//           {
-//             error:
-//               "An employee with this username already exists",
-//           },
-//           {
-//             status: 409,
-//           },
-//         );
-//       }
-
 //       return NextResponse.json(
 //         {
-//           error:
-//             "An employee with this email already exists",
+//           error: usernameExists
+//             ? "An employee with this username already exists"
+//             : "An employee with this email already exists",
 //         },
-//         {
-//           status: 409,
-//         },
+//         { status: 409 },
 //       );
 //     }
 
-//     // -----------------------------
-//     // Create employee
-//     // -----------------------------
-
+//     // Create employee with the selected permissions.
 //     const employee = await createEmployee({
 //       name,
 //       email,
 //       username,
 //       password,
 //       isActive,
+//       canAccessAudit,
+//       canAccessServiceReport,
 //     });
 
 //     return NextResponse.json(
@@ -260,35 +199,26 @@
 //         message: "Employee created successfully",
 //         employee,
 //       },
-//       {
-//         status: 201,
-//       },
+//       { status: 201 },
 //     );
-//   } catch (error: any) {
+//   } catch (error: unknown) {
 //     console.error("Create employee error:", error);
 
-//     // PostgreSQL unique constraint fallback.
-//     // This also protects against two simultaneous
-//     // requests creating the same username/email.
-//     if (error?.code === "23505") {
+//     const dbError = error as { code?: string };
+
+//     if (dbError.code === "23505") {
 //       return NextResponse.json(
 //         {
 //           error:
 //             "An employee with this username or email already exists",
 //         },
-//         {
-//           status: 409,
-//         },
+//         { status: 409 },
 //       );
 //     }
 
 //     return NextResponse.json(
-//       {
-//         error: "Failed to create employee",
-//       },
-//       {
-//         status: 500,
-//       },
+//       { error: "Failed to create employee" },
+//       { status: 500 },
 //     );
 //   }
 // }
@@ -321,11 +251,7 @@ async function verifyAdmin(request: NextRequest) {
   }
 
   try {
-    const { payload } = await jwtVerify(
-      token,
-      getAuthSecret(),
-    );
-
+    const { payload } = await jwtVerify(token, getAuthSecret());
     return payload.role === "admin";
   } catch {
     return false;
@@ -374,9 +300,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const name =
-      typeof body.name === "string"
-        ? body.name.trim()
-        : "";
+      typeof body.name === "string" ? body.name.trim() : "";
 
     const email =
       typeof body.email === "string"
@@ -389,25 +313,21 @@ export async function POST(request: NextRequest) {
         : "";
 
     const password =
-      typeof body.password === "string"
-        ? body.password
-        : "";
+      typeof body.password === "string" ? body.password : "";
 
     const isActive =
-      typeof body.isActive === "boolean"
-        ? body.isActive
-        : true;
+      typeof body.isActive === "boolean" ? body.isActive : true;
 
     const canAccessAudit = body.canAccessAudit;
-    const canAccessServiceReport =
-      body.canAccessServiceReport;
+    const canAccessServiceReport = body.canAccessServiceReport;
+    const canAccessDailyAccentReport =
+      body.canAccessDailyAccentReport;
 
     // Validate required fields.
     if (!name || !email || !username || !password) {
       return NextResponse.json(
         {
-          error:
-            "Name, email, username, and password are required",
+          error: "Name, email, username, and password are required",
         },
         { status: 400 },
       );
@@ -415,9 +335,7 @@ export async function POST(request: NextRequest) {
 
     if (password.length < 6) {
       return NextResponse.json(
-        {
-          error: "Password must be at least 6 characters long",
-        },
+        { error: "Password must be at least 6 characters long" },
         { status: 400 },
       );
     }
@@ -431,24 +349,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Require explicit permission selections.
+    // Validate all three permission values.
     if (
       typeof canAccessAudit !== "boolean" ||
-      typeof canAccessServiceReport !== "boolean"
+      typeof canAccessServiceReport !== "boolean" ||
+      typeof canAccessDailyAccentReport !== "boolean"
     ) {
       return NextResponse.json(
         {
           error:
-            "Select Audit Report access, Service Report access, or both",
+            "canAccessAudit, canAccessServiceReport, and canAccessDailyAccentReport must be boolean values",
         },
         { status: 400 },
       );
     }
 
-    if (!canAccessAudit && !canAccessServiceReport) {
+    // Require at least one report permission.
+    if (
+      !canAccessAudit &&
+      !canAccessServiceReport &&
+      !canAccessDailyAccentReport
+    ) {
       return NextResponse.json(
         {
-          error: "At least one report permission is required",
+          error:
+            "At least one report permission is required: Audit Report, Service Report, or Daily Accent Report",
         },
         { status: 400 },
       );
@@ -456,10 +381,7 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate username or email.
     const existingEmployee =
-      await findEmployeeByUsernameOrEmail(
-        username,
-        email,
-      );
+      await findEmployeeByUsernameOrEmail(username, email);
 
     if (existingEmployee) {
       const usernameExists =
@@ -476,7 +398,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create employee with the selected permissions.
+    // Create employee with all selected permissions.
     const employee = await createEmployee({
       name,
       email,
@@ -485,6 +407,7 @@ export async function POST(request: NextRequest) {
       isActive,
       canAccessAudit,
       canAccessServiceReport,
+      canAccessDailyAccentReport
     });
 
     return NextResponse.json(
