@@ -336,7 +336,6 @@ export async function GET(
         evidence,
         signatures,
         status,
-        score,
         created_at,
         updated_at,
         submitted_at
@@ -414,7 +413,6 @@ export async function PUT(
         evidence,
         signatures,
         status,
-        score,
         created_at,
         updated_at,
         submitted_at
@@ -495,7 +493,6 @@ export async function PUT(
         evidence,
         signatures,
         status,
-        score,
         created_at,
         updated_at,
         submitted_at

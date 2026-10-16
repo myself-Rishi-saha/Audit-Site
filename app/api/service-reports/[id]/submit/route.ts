@@ -320,7 +320,6 @@ export async function POST(
         evidence,
         signatures,
         status,
-        score,
         created_at,
         updated_at,
         submitted_at
@@ -393,7 +392,6 @@ export async function POST(
         evidence,
         signatures,
         status,
-        score,
         created_at,
         updated_at,
         submitted_at
