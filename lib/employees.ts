@@ -30,12 +30,27 @@
 //   return neon(url);
 // }
 
+// function mapEmployee(row: any): Employee {
+//   return {
+//     id: String(row.id),
+//     name: String(row.name),
+//     email: String(row.email),
+//     username: String(row.username),
+//     isActive: Boolean(row.is_active),
+//     role: "auditor",
+//     createdAt:
+//       row.created_at?.toISOString?.() ||
+//       String(row.created_at),
+//     updatedAt:
+//       row.updated_at?.toISOString?.() ||
+//       String(row.updated_at),
+//   };
+// }
+
 // /**
 //  * Get all employees.
 //  *
-//  * IMPORTANT:
-//  * password_hash is never selected, so the password
-//  * can never accidentally be returned to the admin UI.
+//  * password_hash is intentionally never selected.
 //  */
 // export async function readEmployees(): Promise<Employee[]> {
 //   const sql = getDatabase();
@@ -54,20 +69,7 @@
 //     ORDER BY created_at DESC
 //   `;
 
-//   return rows.map((row: any) => ({
-//     id: String(row.id),
-//     name: String(row.name),
-//     email: String(row.email),
-//     username: String(row.username),
-//     isActive: Boolean(row.is_active),
-//     role: "auditor",
-//     createdAt:
-//       row.created_at?.toISOString?.() ||
-//       String(row.created_at),
-//     updatedAt:
-//       row.updated_at?.toISOString?.() ||
-//       String(row.updated_at),
-//   }));
+//   return rows.map(mapEmployee);
 // }
 
 // /**
@@ -86,27 +88,27 @@
 //       COALESCE(
 //         MAX(
 //           CAST(
-//             NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER
+//             NULLIF(SUBSTRING(id FROM 4), '') AS INTEGER
 //           )
 //         ),
 //         0
 //       ) + 1 AS next_number
 //     FROM employees
-//     WHERE id ~ '^EMP-[0-9]+$'
+//     WHERE id ~ '^EMP[0-9]+$'
 //   `;
 
 //   const nextNumber = Number(
 //     rows[0]?.next_number || 1,
 //   );
 
-//   return `EMP-${String(nextNumber).padStart(3, "0")}`;
+//   return `EMP${String(nextNumber).padStart(3, "0")}`;
 // }
 
 // /**
 //  * Create a new employee.
 //  *
-//  * The supplied password is immediately converted
-//  * to a bcrypt hash. Plaintext password is never stored.
+//  * The plain password is never stored.
+//  * Only the bcrypt hash is saved.
 //  */
 // export async function createEmployee(
 //   input: CreateEmployeeInput,
@@ -122,7 +124,8 @@
 
 //   const now = new Date().toISOString();
 
-//   const isActive = input.isActive ?? true;
+//   const isActive =
+//     input.isActive ?? true;
 
 //   const rows = await sql`
 //     INSERT INTO employees (
@@ -143,7 +146,6 @@
 //       ${input.username},
 //       ${passwordHash},
 //       ${isActive},
-//       ${true},
 //       'auditor',
 //       ${now},
 //       ${now}
@@ -159,30 +161,14 @@
 //       updated_at
 //   `;
 
-//   const row: any = rows[0];
+//   const row = rows[0];
 
-//   return {
-//     id: String(row.id),
-//     name: String(row.name),
-//     email: String(row.email),
-//     username: String(row.username),
-//     isActive: Boolean(row.is_active),
-//     mustChangePassword: Boolean(
-//       row.must_change_password,
-//     ),
-//     role: "auditor",
-//     createdAt:
-//       row.created_at?.toISOString?.() ||
-//       String(row.created_at),
-//     updatedAt:
-//       row.updated_at?.toISOString?.() ||
-//       String(row.updated_at),
-//   };
+//   return mapEmployee(row);
 // }
 
 // /**
-//  * Check whether an employee already exists
-//  * with the supplied username or email.
+//  * Check whether username or email
+//  * already belongs to an employee.
 //  */
 // export async function findEmployeeByUsernameOrEmail(
 //   username: string,
@@ -203,6 +189,7 @@
 
 //   return rows[0] || null;
 // }
+
 import { neon } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
 
@@ -213,6 +200,8 @@ export type Employee = {
   username: string;
   isActive: boolean;
   role: "auditor";
+  canAccessAudit: boolean;
+  canAccessServiceReport: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -223,6 +212,8 @@ export type CreateEmployeeInput = {
   username: string;
   password: string;
   isActive?: boolean;
+  canAccessAudit: boolean;
+  canAccessServiceReport: boolean;
 };
 
 function getDatabase() {
@@ -243,19 +234,22 @@ function mapEmployee(row: any): Employee {
     username: String(row.username),
     isActive: Boolean(row.is_active),
     role: "auditor",
+    canAccessAudit: Boolean(row.can_access_audit),
+    canAccessServiceReport: Boolean(
+      row.can_access_service_report,
+    ),
     createdAt:
-      row.created_at?.toISOString?.() ||
+      row.created_at?.toISOString?.() ??
       String(row.created_at),
     updatedAt:
-      row.updated_at?.toISOString?.() ||
+      row.updated_at?.toISOString?.() ??
       String(row.updated_at),
   };
 }
 
 /**
- * Get all employees.
- *
- * password_hash is intentionally never selected.
+ * Get all employees, including report permissions.
+ * Password hashes are never selected or returned.
  */
 export async function readEmployees(): Promise<Employee[]> {
   const sql = getDatabase();
@@ -268,6 +262,8 @@ export async function readEmployees(): Promise<Employee[]> {
       username,
       is_active,
       role,
+      can_access_audit,
+      can_access_service_report,
       created_at,
       updated_at
     FROM employees
@@ -280,10 +276,7 @@ export async function readEmployees(): Promise<Employee[]> {
 /**
  * Generate the next employee ID.
  *
- * Example:
- * EMP001
- * EMP002
- * EMP003
+ * Example: EMP001, EMP002, EMP003
  */
 export async function generateEmployeeId(): Promise<string> {
   const sql = getDatabase();
@@ -302,22 +295,24 @@ export async function generateEmployeeId(): Promise<string> {
     WHERE id ~ '^EMP[0-9]+$'
   `;
 
-  const nextNumber = Number(
-    rows[0]?.next_number || 1,
-  );
+  const nextNumber = Number(rows[0]?.next_number || 1);
 
   return `EMP${String(nextNumber).padStart(3, "0")}`;
 }
 
 /**
- * Create a new employee.
- *
- * The plain password is never stored.
- * Only the bcrypt hash is saved.
+ * Create an employee with selected report permissions.
+ * Only the bcrypt password hash is stored.
  */
 export async function createEmployee(
   input: CreateEmployeeInput,
 ): Promise<Employee> {
+  if (!input.canAccessAudit && !input.canAccessServiceReport) {
+    throw new Error(
+      "At least one report permission is required",
+    );
+  }
+
   const sql = getDatabase();
 
   const passwordHash = await bcrypt.hash(
@@ -326,11 +321,8 @@ export async function createEmployee(
   );
 
   const id = await generateEmployeeId();
-
   const now = new Date().toISOString();
-
-  const isActive =
-    input.isActive ?? true;
+  const isActive = input.isActive ?? true;
 
   const rows = await sql`
     INSERT INTO employees (
@@ -341,6 +333,8 @@ export async function createEmployee(
       password_hash,
       is_active,
       role,
+      can_access_audit,
+      can_access_service_report,
       created_at,
       updated_at
     )
@@ -352,6 +346,8 @@ export async function createEmployee(
       ${passwordHash},
       ${isActive},
       'auditor',
+      ${input.canAccessAudit},
+      ${input.canAccessServiceReport},
       ${now},
       ${now}
     )
@@ -362,18 +358,17 @@ export async function createEmployee(
       username,
       is_active,
       role,
+      can_access_audit,
+      can_access_service_report,
       created_at,
       updated_at
   `;
 
-  const row = rows[0];
-
-  return mapEmployee(row);
+  return mapEmployee(rows[0]);
 }
 
 /**
- * Check whether username or email
- * already belongs to an employee.
+ * Check whether a username or email already exists.
  */
 export async function findEmployeeByUsernameOrEmail(
   username: string,

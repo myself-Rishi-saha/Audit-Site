@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+import { neon } from "@neondatabase/serverless";
 
 const EMPLOYEE_COOKIE = "auditdesk_session";
 const ADMIN_COOKIE = "auditdesk_admin_session";
+
+const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET() {
   try {
@@ -25,10 +28,7 @@ export async function GET() {
     // -----------------------------------
     if (adminToken) {
       try {
-        const { payload } = await jwtVerify(
-          adminToken,
-          secretKey,
-        );
+        const { payload } = await jwtVerify(adminToken, secretKey);
 
         if (
           !payload.id ||
@@ -67,7 +67,6 @@ export async function GET() {
 
         if (
           !payload.id ||
-          !payload.name ||
           payload.role !== "auditor"
         ) {
           return NextResponse.json(
@@ -76,13 +75,46 @@ export async function GET() {
           );
         }
 
+        // Fetch current employee details and permissions.
+        const rows = await sql`
+          SELECT
+            id,
+            name,
+            username,
+            role,
+            is_active,
+            can_access_audit,
+            can_access_service_report
+          FROM employees
+          WHERE id = ${String(payload.id)}
+          LIMIT 1
+        `;
+
+        const employee = rows[0];
+
+        if (
+          !employee ||
+          employee.is_active !== true ||
+          employee.role !== "auditor"
+        ) {
+          return NextResponse.json(
+            { error: "Employee account is inactive or unauthorized." },
+            { status: 401 },
+          );
+        }
+
         return NextResponse.json({
-          id: String(payload.id),
-          name: String(payload.name),
-          username: String(payload.username || ""),
+          id: String(employee.id),
+          name: String(employee.name),
+          username: String(employee.username),
           role: "auditor",
+          canAccessAudit: employee.can_access_audit === true,
+          canAccessServiceReport:
+            employee.can_access_service_report === true,
         });
-      } catch {
+      } catch (error) {
+        console.error("Get employee session error:", error);
+
         return NextResponse.json(
           { error: "Invalid or expired employee session." },
           { status: 401 },
@@ -98,29 +130,24 @@ export async function GET() {
     console.error("Get current user error:", error);
 
     return NextResponse.json(
-      { error: "Invalid or expired session." },
-      { status: 401 },
+      { error: "Unable to verify session." },
+      { status: 500 },
     );
   }
 }
-// app/api/auth/me/route.ts
-
 // import { NextResponse } from "next/server";
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
 
+// const EMPLOYEE_COOKIE = "auditdesk_session";
+// const ADMIN_COOKIE = "auditdesk_admin_session";
+
 // export async function GET() {
 //   try {
-//     const token = (await cookies())
-//       .get("auditdesk_session")
-//       ?.value;
+//     const cookieStore = await cookies();
 
-//     if (!token) {
-//       return NextResponse.json(
-//         { error: "Unauthorized" },
-//         { status: 401 },
-//       );
-//     }
+//     const adminToken = cookieStore.get(ADMIN_COOKIE)?.value;
+//     const employeeToken = cookieStore.get(EMPLOYEE_COOKIE)?.value;
 
 //     const secret = process.env.AUTH_SECRET;
 
@@ -128,28 +155,82 @@ export async function GET() {
 //       throw new Error("AUTH_SECRET is not configured");
 //     }
 
-//     const { payload } = await jwtVerify(
-//       token,
-//       new TextEncoder().encode(secret),
-//     );
+//     const secretKey = new TextEncoder().encode(secret);
 
-//     if (
-//       !payload.id ||
-//       !payload.name ||
-//       payload.role !== "auditor"
-//     ) {
-//       return NextResponse.json(
-//         { error: "Unauthorized" },
-//         { status: 401 },
-//       );
+//     // -----------------------------------
+//     // ADMIN SESSION
+//     // -----------------------------------
+//     if (adminToken) {
+//       try {
+//         const { payload } = await jwtVerify(
+//           adminToken,
+//           secretKey,
+//         );
+
+//         if (
+//           !payload.id ||
+//           !payload.name ||
+//           payload.role !== "admin"
+//         ) {
+//           return NextResponse.json(
+//             { error: "Unauthorized" },
+//             { status: 401 },
+//           );
+//         }
+
+//         return NextResponse.json({
+//           id: String(payload.id),
+//           name: String(payload.name),
+//           username: String(payload.username || ""),
+//           role: "admin",
+//         });
+//       } catch {
+//         return NextResponse.json(
+//           { error: "Invalid or expired admin session." },
+//           { status: 401 },
+//         );
+//       }
 //     }
 
-//     return NextResponse.json({
-//       id: String(payload.id),
-//       name: String(payload.name),
-//       username: String(payload.username || ""),
-//       role: "auditor",
-//     });
+//     // -----------------------------------
+//     // EMPLOYEE SESSION
+//     // -----------------------------------
+//     if (employeeToken) {
+//       try {
+//         const { payload } = await jwtVerify(
+//           employeeToken,
+//           secretKey,
+//         );
+
+//         if (
+//           !payload.id ||
+//           !payload.name ||
+//           payload.role !== "auditor"
+//         ) {
+//           return NextResponse.json(
+//             { error: "Unauthorized" },
+//             { status: 401 },
+//           );
+//         }
+
+//         return NextResponse.json({
+//           id: String(payload.id),
+//           name: String(payload.name),
+//           username: String(payload.username || ""),
+//           role: "auditor",
+//         });
+//       } catch {
+//         return NextResponse.json(
+//           { error: "Invalid or expired employee session." },
+//           { status: 401 },
+//         );
+//       }
+//     }
+
+//     return NextResponse.json(
+//       { error: "Unauthorized" },
+//       { status: 401 },
+//     );
 //   } catch (error) {
 //     console.error("Get current user error:", error);
 
@@ -159,3 +240,4 @@ export async function GET() {
 //     );
 //   }
 // }
+// app/api/auth/me/route.ts

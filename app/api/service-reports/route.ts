@@ -8,6 +8,10 @@
 // const EMPLOYEE_COOKIE = "auditdesk_session";
 // const ADMIN_COOKIE = "auditdesk_admin_session";
 
+// // ----------------------------------------------------
+// // DATABASE
+// // ----------------------------------------------------
+
 // function getDatabase() {
 //   const url = process.env.DATABASE_URL;
 
@@ -17,6 +21,10 @@
 
 //   return neon(url);
 // }
+
+// // ----------------------------------------------------
+// // AUTHENTICATION
+// // ----------------------------------------------------
 
 // function getAuthSecret() {
 //   const secret = process.env.AUTH_SECRET;
@@ -28,18 +36,65 @@
 //   return new TextEncoder().encode(secret);
 // }
 
+// // ----------------------------------------------------
+// // DATE HELPERS
+// // ----------------------------------------------------
+
 // function getTodayDate() {
-//   return new Intl.DateTimeFormat("en-CA", {
+//   const parts = new Intl.DateTimeFormat("en-GB", {
 //     timeZone: "Asia/Kolkata",
 //     year: "numeric",
 //     month: "2-digit",
 //     day: "2-digit",
-//   }).format(new Date());
+//   }).formatToParts(new Date());
+
+//   const part = (type: string) =>
+//     parts.find((item) => item.type === type)?.value ?? "";
+
+//   return `${part("year")}-${part("month")}-${part("day")}`;
 // }
+
+// function isValidDate(value: string) {
+//   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+//   if (!match) {
+//     return false;
+//   }
+
+//   const year = Number(match[1]);
+//   const month = Number(match[2]);
+//   const day = Number(match[3]);
+
+//   const parsed = new Date(Date.UTC(year, month - 1, day));
+
+//   return (
+//     parsed.getUTCFullYear() === year &&
+//     parsed.getUTCMonth() === month - 1 &&
+//     parsed.getUTCDate() === day
+//   );
+// }
+
+// function toIsoString(value: unknown): string {
+//   if (value == null) {
+//     return "";
+//   }
+
+//   const date =
+//     value instanceof Date ? value : new Date(String(value));
+
+//   return Number.isNaN(date.getTime())
+//     ? String(value)
+//     : date.toISOString();
+// }
+
+// // ----------------------------------------------------
+// // MAP DATABASE ROW
+// // ----------------------------------------------------
 
 // function mapServiceReport(row: any) {
 //   return {
 //     id: String(row.id),
+
 //     employeeId: String(row.employee_id),
 //     employeeName: String(row.employee_name),
 
@@ -95,13 +150,13 @@
 
 //     status: String(row.status ?? "").toUpperCase(),
 
-//     createdAt:
-//       row.created_at?.toISOString?.() ??
-//       String(row.created_at),
+//     createdAt: toIsoString(row.created_at),
+//     updatedAt: toIsoString(row.updated_at),
 
-//     updatedAt:
-//       row.updated_at?.toISOString?.() ??
-//       String(row.updated_at),
+//     submittedAt:
+//       row.submitted_at == null
+//         ? null
+//         : toIsoString(row.submitted_at),
 //   };
 // }
 
@@ -109,24 +164,21 @@
 //    GET
 
 //    Auditor:
-//    - Own DRAFT + COMPLETED reports
+//    - Own DRAFT and COMPLETED reports.
 
 //    Admin:
-//    - Only COMPLETED reports
-//    - Filter by date
-//    - Search employee name or customer name
-//    - Default date: today (Asia/Kolkata)
+//    - Only COMPLETED reports with a submission timestamp.
+//    - Filter by submission date in Asia/Kolkata.
+//    - Search employee name or customer name.
+//    - Default date: today in Asia/Kolkata.
 // ===================================================== */
 
 // export async function GET(req: Request) {
 //   try {
 //     const cookieStore = await cookies();
 
-//     const adminToken =
-//       cookieStore.get(ADMIN_COOKIE)?.value;
-
-//     const employeeToken =
-//       cookieStore.get(EMPLOYEE_COOKIE)?.value;
+//     const adminToken = cookieStore.get(ADMIN_COOKIE)?.value;
+//     const employeeToken = cookieStore.get(EMPLOYEE_COOKIE)?.value;
 
 //     const sql = getDatabase();
 
@@ -161,22 +213,11 @@
 //       const { searchParams } = new URL(req.url);
 
 //       const requestedDate =
-//         searchParams.get("date") || getTodayDate();
+//         searchParams.get("date")?.trim() || getTodayDate();
 
-//       const search =
-//         (searchParams.get("search") || "").trim();
+//       const search = (searchParams.get("search") || "").trim();
 
-//       // Validate YYYY-MM-DD and reject impossible dates.
-//       const validDate =
-//         /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
-//         !Number.isNaN(
-//           Date.parse(`${requestedDate}T00:00:00Z`),
-//         ) &&
-//         new Date(`${requestedDate}T00:00:00Z`)
-//           .toISOString()
-//           .startsWith(requestedDate);
-
-//       if (!validDate) {
+//       if (!isValidDate(requestedDate)) {
 //         return NextResponse.json(
 //           { error: "Invalid date. Use YYYY-MM-DD." },
 //           { status: 400 },
@@ -200,21 +241,28 @@
 //           signatures,
 //           status,
 //           created_at,
-//           updated_at
+//           updated_at,
+//           submitted_at
 //         FROM service_reports
 //         WHERE UPPER(status) = 'COMPLETED'
-//           AND created_at::date = ${requestedDate}::date
+//           AND submitted_at IS NOT NULL
+//           AND submitted_at >= (
+//             ${requestedDate}::date::timestamp
+//             AT TIME ZONE 'Asia/Kolkata'
+//           )
+//           AND submitted_at < (
+//             ((${requestedDate}::date + 1)::timestamp)
+//             AT TIME ZONE 'Asia/Kolkata'
+//           )
 //           AND (
 //             ${search} = ''
 //             OR employee_name ILIKE ${searchPattern}
 //             OR COALESCE(customer_name, '') ILIKE ${searchPattern}
 //           )
-//         ORDER BY created_at DESC
+//         ORDER BY submitted_at DESC
 //       `;
 
-//       return NextResponse.json(
-//         rows.map(mapServiceReport),
-//       );
+//       return NextResponse.json(rows.map(mapServiceReport));
 //     }
 
 //     // =================================================
@@ -269,15 +317,14 @@
 //           signatures,
 //           status,
 //           created_at,
-//           updated_at
+//           updated_at,
+//           submitted_at
 //         FROM service_reports
 //         WHERE employee_id = ${employeeId}
 //         ORDER BY created_at DESC
 //       `;
 
-//       return NextResponse.json(
-//         rows.map(mapServiceReport),
-//       );
+//       return NextResponse.json(rows.map(mapServiceReport));
 //     }
 
 //     // =================================================
@@ -415,11 +462,11 @@
 //       WHERE id ~ '^SRV-[0-9]+$'
 //     `;
 
-//     const nextNumber = Number(
-//       idRows[0]?.next_number || 1,
-//     );
+//     const nextNumber = Number(idRows[0]?.next_number || 1);
 
-//     const reportId = `SRV-${String(nextNumber).padStart(3, "0")}`;
+//     const reportId =
+//       `SRV-${String(nextNumber).padStart(3, "0")}`;
+
 //     const now = new Date().toISOString();
 
 //     // =================================================
@@ -441,7 +488,8 @@
 //         signatures,
 //         status,
 //         created_at,
-//         updated_at
+//         updated_at,
+//         submitted_at
 //       )
 //       VALUES (
 //         ${reportId},
@@ -464,7 +512,8 @@
 //         ${JSON.stringify(body.signatures ?? {})}::jsonb,
 //         'DRAFT',
 //         ${now},
-//         ${now}
+//         ${now},
+//         NULL
 //       )
 //       RETURNING
 //         id,
@@ -480,7 +529,8 @@
 //         signatures,
 //         status,
 //         created_at,
-//         updated_at
+//         updated_at,
+//         submitted_at
 //     `;
 
 //     return NextResponse.json(
@@ -496,8 +546,6 @@
 //     );
 //   }
 // }
-
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -507,7 +555,7 @@ const EMPLOYEE_COOKIE = "auditdesk_session";
 const ADMIN_COOKIE = "auditdesk_admin_session";
 
 // ----------------------------------------------------
-// DATABASE
+// DATABASE AND AUTHENTICATION
 // ----------------------------------------------------
 
 function getDatabase() {
@@ -519,10 +567,6 @@ function getDatabase() {
 
   return neon(url);
 }
-
-// ----------------------------------------------------
-// AUTHENTICATION
-// ----------------------------------------------------
 
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
@@ -555,9 +599,7 @@ function getTodayDate() {
 function isValidDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
-  if (!match) {
-    return false;
-  }
+  if (!match) return false;
 
   const year = Number(match[1]);
   const month = Number(match[2]);
@@ -573,9 +615,7 @@ function isValidDate(value: string) {
 }
 
 function toIsoString(value: unknown): string {
-  if (value == null) {
-    return "";
-  }
+  if (value == null) return "";
 
   const date =
     value instanceof Date ? value : new Date(String(value));
@@ -590,21 +630,28 @@ function toIsoString(value: unknown): string {
 // ----------------------------------------------------
 
 function mapServiceReport(row: any) {
+  const templateSnapshot =
+    row.template_snapshot &&
+    typeof row.template_snapshot === "object" &&
+    !Array.isArray(row.template_snapshot)
+      ? row.template_snapshot
+      : {
+          id: row.template_id || "service-report",
+          type: "SERVICE_REPORT",
+          title: "Service Report",
+          sections: [],
+        };
+
   return {
     id: String(row.id),
-
     employeeId: String(row.employee_id),
     employeeName: String(row.employee_name),
 
     customerId:
-      row.customer_id == null
-        ? null
-        : String(row.customer_id),
+      row.customer_id == null ? null : String(row.customer_id),
 
     customerName:
-      row.customer_name == null
-        ? null
-        : String(row.customer_name),
+      row.customer_name == null ? null : String(row.customer_name),
 
     customerAddress:
       row.customer_address == null
@@ -612,18 +659,10 @@ function mapServiceReport(row: any) {
         : String(row.customer_address),
 
     templateId: String(row.template_id || ""),
+    templateSnapshot,
 
-    templateSnapshot:
-      row.template_snapshot &&
-      typeof row.template_snapshot === "object" &&
-      !Array.isArray(row.template_snapshot)
-        ? row.template_snapshot
-        : {
-            id: row.template_id || "service-report",
-            type: "SERVICE_REPORT",
-            title: "Service Report",
-            sections: [],
-          },
+    // Compatibility with pages that expect `template`.
+    template: templateSnapshot,
 
     formData:
       row.form_data &&
@@ -647,7 +686,6 @@ function mapServiceReport(row: any) {
         : {},
 
     status: String(row.status ?? "").toUpperCase(),
-
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
 
@@ -658,18 +696,15 @@ function mapServiceReport(row: any) {
   };
 }
 
-/* =====================================================
-   GET
-
-   Auditor:
-   - Own DRAFT and COMPLETED reports.
-
-   Admin:
-   - Only COMPLETED reports with a submission timestamp.
-   - Filter by submission date in Asia/Kolkata.
-   - Search employee name or customer name.
-   - Default date: today in Asia/Kolkata.
-===================================================== */
+// ----------------------------------------------------
+// GET /api/service-reports
+//
+// Admin:
+//   Completed reports, filtered by submission date/search.
+//
+// Employee:
+//   Only their own reports, if service-report access is enabled.
+// ----------------------------------------------------
 
 export async function GET(req: Request) {
   try {
@@ -680,30 +715,26 @@ export async function GET(req: Request) {
 
     const sql = getDatabase();
 
-    // =================================================
+    // -----------------------------------------
     // ADMIN
-    // =================================================
+    // -----------------------------------------
 
     if (adminToken) {
-      let payload;
-
       try {
-        const result = await jwtVerify(
+        const { payload } = await jwtVerify(
           adminToken,
           getAuthSecret(),
         );
 
-        payload = result.payload;
+        if (!payload.id || payload.role !== "admin") {
+          return NextResponse.json(
+            { error: "Unauthorized." },
+            { status: 401 },
+          );
+        }
       } catch {
         return NextResponse.json(
           { error: "Invalid or expired admin session." },
-          { status: 401 },
-        );
-      }
-
-      if (payload.role !== "admin") {
-        return NextResponse.json(
-          { error: "Unauthorized." },
           { status: 401 },
         );
       }
@@ -749,7 +780,7 @@ export async function GET(req: Request) {
             AT TIME ZONE 'Asia/Kolkata'
           )
           AND submitted_at < (
-            ((${requestedDate}::date + 1)::timestamp)
+            (${requestedDate}::date + 1)::timestamp
             AT TIME ZONE 'Asia/Kolkata'
           )
           AND (
@@ -763,76 +794,100 @@ export async function GET(req: Request) {
       return NextResponse.json(rows.map(mapServiceReport));
     }
 
-    // =================================================
-    // AUDITOR
-    // =================================================
+    // -----------------------------------------
+    // EMPLOYEE
+    // -----------------------------------------
 
-    if (employeeToken) {
-      let payload;
-
-      try {
-        const result = await jwtVerify(
-          employeeToken,
-          getAuthSecret(),
-        );
-
-        payload = result.payload;
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid or expired employee session." },
-          { status: 401 },
-        );
-      }
-
-      if (payload.role !== "auditor") {
-        return NextResponse.json(
-          { error: "Unauthorized." },
-          { status: 401 },
-        );
-      }
-
-      if (!payload.id) {
-        return NextResponse.json(
-          { error: "Invalid employee session." },
-          { status: 401 },
-        );
-      }
-
-      const employeeId = String(payload.id);
-
-      const rows = await sql`
-        SELECT
-          id,
-          employee_id,
-          employee_name,
-          customer_id,
-          customer_name,
-          customer_address,
-          template_id,
-          template_snapshot,
-          form_data,
-          evidence,
-          signatures,
-          status,
-          created_at,
-          updated_at,
-          submitted_at
-        FROM service_reports
-        WHERE employee_id = ${employeeId}
-        ORDER BY created_at DESC
-      `;
-
-      return NextResponse.json(rows.map(mapServiceReport));
+    if (!employeeToken) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 },
+      );
     }
 
-    // =================================================
-    // NO LOGIN
-    // =================================================
+    let payload;
 
-    return NextResponse.json(
-      { error: "Authentication required." },
-      { status: 401 },
-    );
+    try {
+      const result = await jwtVerify(
+        employeeToken,
+        getAuthSecret(),
+      );
+
+      payload = result.payload;
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid or expired employee session." },
+        { status: 401 },
+      );
+    }
+
+    if (!payload.id || payload.role !== "auditor") {
+      return NextResponse.json(
+        { error: "Unauthorized." },
+        { status: 401 },
+      );
+    }
+
+    const employeeId = String(payload.id);
+
+    // Read current permissions from the database.
+    const employeeRows = await sql`
+      SELECT
+        id,
+        role,
+        is_active,
+        can_access_service_report
+      FROM employees
+      WHERE id = ${employeeId}
+      LIMIT 1
+    `;
+
+    const employee = employeeRows[0];
+
+    if (
+      !employee ||
+      employee.is_active !== true ||
+      employee.role !== "auditor"
+    ) {
+      return NextResponse.json(
+        { error: "Your employee account is inactive or unauthorized." },
+        { status: 403 },
+      );
+    }
+
+    if (employee.can_access_service_report !== true) {
+      return NextResponse.json(
+        {
+          error:
+            "You do not have permission to access service reports.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const rows = await sql`
+      SELECT
+        id,
+        employee_id,
+        employee_name,
+        customer_id,
+        customer_name,
+        customer_address,
+        template_id,
+        template_snapshot,
+        form_data,
+        evidence,
+        signatures,
+        status,
+        created_at,
+        updated_at,
+        submitted_at
+      FROM service_reports
+      WHERE employee_id = ${employeeId}
+      ORDER BY created_at DESC
+    `;
+
+    return NextResponse.json(rows.map(mapServiceReport));
   } catch (error) {
     console.error("Read service reports error:", error);
 
@@ -843,12 +898,12 @@ export async function GET(req: Request) {
   }
 }
 
-/* =====================================================
-   POST
-
-   Only authenticated auditors can create service reports.
-   New reports remain DRAFT until explicitly submitted.
-===================================================== */
+// ----------------------------------------------------
+// POST /api/service-reports
+//
+// Only active auditors with service-report permission
+// can create a draft.
+// ----------------------------------------------------
 
 export async function POST(req: Request) {
   try {
@@ -880,7 +935,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (payload.role !== "auditor") {
+    if (!payload.id || payload.role !== "auditor") {
       return NextResponse.json(
         {
           error:
@@ -890,69 +945,72 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!payload.id || !payload.name) {
-      return NextResponse.json(
-        { error: "Invalid employee session." },
-        { status: 401 },
-      );
-    }
-
-    const body = await req.json();
     const sql = getDatabase();
+    const employeeId = String(payload.id);
 
-    // =================================================
-    // VERIFY EMPLOYEE
-    // =================================================
-
+    // Verify account status and current service-report permission.
     const employeeRows = await sql`
-      SELECT id, name, is_active, role
+      SELECT
+        id,
+        name,
+        role,
+        is_active,
+        can_access_service_report
       FROM employees
-      WHERE id = ${String(payload.id)}
+      WHERE id = ${employeeId}
       LIMIT 1
     `;
 
-    if (employeeRows.length === 0) {
+    const employee = employeeRows[0];
+
+    if (!employee) {
       return NextResponse.json(
         { error: "Employee not found." },
         { status: 404 },
       );
     }
 
-    const employee = employeeRows[0];
-
-    if (!employee.is_active) {
+    if (
+      employee.is_active !== true ||
+      employee.role !== "auditor"
+    ) {
       return NextResponse.json(
-        { error: "Your employee account is inactive." },
+        { error: "Your employee account is inactive or unauthorized." },
         { status: 403 },
       );
     }
 
-    if (String(employee.role) !== "auditor") {
+    if (employee.can_access_service_report !== true) {
       return NextResponse.json(
-        { error: "Only auditors can create service reports." },
+        {
+          error:
+            "You do not have permission to create service reports.",
+        },
         { status: 403 },
       );
     }
 
-    // =================================================
-    // CUSTOMER
-    // =================================================
+    const body = await req.json();
 
     const customerId = body.customerId ?? null;
     const customerName = body.customerName ?? null;
     const customerAddress = body.customerAddress ?? null;
 
-    // =================================================
-    // GENERATE NEXT SRV ID
-    // =================================================
+    const templateId = body.templateId ?? "service-report";
 
+    const templateSnapshot = body.templateSnapshot ?? {
+      id: templateId,
+      type: "SERVICE_REPORT",
+      name: "Equipment Service & Maintenance Report",
+      sections: [],
+    };
+
+    // Generate the next SRV ID.
     const idRows = await sql`
       SELECT
         COALESCE(
           MAX(
-            CAST(
-              NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER
-            )
+            CAST(NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER)
           ),
           0
         ) + 1 AS next_number
@@ -961,15 +1019,7 @@ export async function POST(req: Request) {
     `;
 
     const nextNumber = Number(idRows[0]?.next_number || 1);
-
-    const reportId =
-      `SRV-${String(nextNumber).padStart(3, "0")}`;
-
-    const now = new Date().toISOString();
-
-    // =================================================
-    // INSERT DRAFT
-    // =================================================
+    const reportId = `SRV-${String(nextNumber).padStart(3, "0")}`;
 
     const rows = await sql`
       INSERT INTO service_reports (
@@ -991,26 +1041,19 @@ export async function POST(req: Request) {
       )
       VALUES (
         ${reportId},
-        ${String(employee.id)},
+        ${employeeId},
         ${String(employee.name)},
         ${customerId},
         ${customerName},
         ${customerAddress},
-        ${body.templateId ?? "service-report"},
-        ${JSON.stringify(
-          body.templateSnapshot ?? {
-            id: body.templateId ?? "service-report",
-            type: "SERVICE_REPORT",
-            name: "Equipment Service & Maintenance Report",
-            sections: [],
-          },
-        )}::jsonb,
+        ${templateId},
+        ${JSON.stringify(templateSnapshot)}::jsonb,
         ${JSON.stringify(body.formData ?? {})}::jsonb,
         ${JSON.stringify(body.evidence ?? {})}::jsonb,
         ${JSON.stringify(body.signatures ?? {})}::jsonb,
         'DRAFT',
-        ${now},
-        ${now},
+        NOW(),
+        NOW(),
         NULL
       )
       RETURNING

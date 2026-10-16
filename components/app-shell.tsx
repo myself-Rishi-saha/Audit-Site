@@ -246,11 +246,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+// type CurrentUser = {
+//   id: string;
+//   name: string;
+//   username: string;
+//   role: "admin" | "auditor";
+// };
+
 type CurrentUser = {
   id: string;
   name: string;
   username: string;
   role: "admin" | "auditor";
+  canAccessAudit?: boolean;
+  canAccessServiceReport?: boolean;
 };
 
 const links = [
@@ -331,20 +340,42 @@ export function AppShell({
 
   const displayName = currentUser?.name || currentUser?.username || "User";
 
-  const visibleLinks = isAdmin
-    ? links.filter(
-        (link) =>
-          link.label === "Dashboard" ||
-          link.label === "Form Templates" ||
-          link.label === "Add Employee" ||
-          link.label === "Add Customer",
-      )
-    : links.filter(
-        (link) =>
-          link.label === "Dashboard" ||
-          link.label === "Audits" ||
-          link.label === "Service Reports",
-      );
+  // const visibleLinks = isAdmin
+  //   ? links.filter(
+  //       (link) =>
+  //         link.label === "Dashboard" ||
+  //         link.label === "Form Templates" ||
+  //         link.label === "Add Employee" ||
+  //         link.label === "Add Customer",
+  //     )
+  //   : links.filter(
+  //       (link) =>
+  //         link.label === "Dashboard" ||
+  //         link.label === "Audits" ||
+  //         link.label === "Service Reports",
+  //     );
+
+const visibleLinks = isAdmin
+  ? links.filter(
+      (link) =>
+        link.label === "Dashboard" ||
+        link.label === "Form Templates" ||
+        link.label === "Add Employee" ||
+        link.label === "Add Customer",
+    )
+  : links.filter((link) => {
+      if (link.label === "Dashboard") return true;
+
+      if (link.label === "Audits") {
+        return currentUser?.canAccessAudit === true;
+      }
+
+      if (link.label === "Service Reports") {
+        return currentUser?.canAccessServiceReport === true;
+      }
+
+      return false;
+    });
 
   // async function signOut() {
 

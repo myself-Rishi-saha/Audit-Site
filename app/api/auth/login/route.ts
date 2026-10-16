@@ -1,6 +1,5 @@
 // import { NextResponse } from "next/server";
-// import fs from "node:fs/promises";
-// import path from "node:path";
+// import { neon } from "@neondatabase/serverless";
 // import bcrypt from "bcryptjs";
 // import { SignJWT } from "jose";
 
@@ -12,76 +11,136 @@
 
 // const secretKey = new TextEncoder().encode(secret);
 
+// function getDatabase() {
+//   const url = process.env.DATABASE_URL;
+
+//   if (!url) {
+//     throw new Error("DATABASE_URL is not configured");
+//   }
+
+//   return neon(url);
+// }
+
 // export async function POST(req: Request) {
 //   try {
-//     const { id, password } = await req.json();
-//     if (!id || !password) {
+//     const { username, password } = await req.json();
+
+//     if (!username || !password) {
 //       return NextResponse.json(
-//         { error: "Employee ID and password are required" },
-//         { status: 400 },
+//         {
+//           error: "Username and password are required",
+//         },
+//         {
+//           status: 400,
+//         },
 //       );
 //     }
 
-//     // This file stays on the server.
-//     // DO NOT put users.json inside /public.
-//     const filePath = path.join(process.cwd(), "data", "users.json");
+//     const sql = getDatabase();
 
-//     const users = JSON.parse(await fs.readFile(filePath, "utf8"));
+//     const rows = await sql`
+//       SELECT
+//         id,
+//         name,
+//         username,
+//         password_hash,
+//         is_active,
+//         role
+//       FROM employees
+//       WHERE LOWER(username) = LOWER(${String(username).trim()})
+//       LIMIT 1
+//     `;
 
-//     const user = users.find((u: { id: string }) => u.id === id);
-
-//     if (!user) {
+//     if (rows.length === 0) {
 //       return NextResponse.json(
-//         { error: "Invalid employee ID or password" },
-//         { status: 401 },
+//         {
+//           error: "Invalid username or password",
+//         },
+//         {
+//           status: 401,
+//         },
 //       );
 //     }
 
-//     // Compare entered password with stored bcrypt hash
-//     // const passwordValid = await bcrypt.compare(password, user.passwordHash);
-//     const passwordValid = password === user.passwordHash; // For demo purposes, using plain text comparison. In production, use bcrypt.
+//     const user = rows[0];
+
+//     // Do not allow inactive employees to log in.
+//     if (!user.is_active) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "Your account is inactive. Please contact the administrator.",
+//         },
+//         {
+//           status: 403,
+//         },
+//       );
+//     }
+
+//     // Compare entered password with the bcrypt hash.
+//     const passwordValid = await bcrypt.compare(
+//       password,
+//       String(user.password_hash),
+//     );
 
 //     if (!passwordValid) {
 //       return NextResponse.json(
-//         { error: "Invalid employee ID or password" },
-//         { status: 401 },
+//         {
+//           error: "Invalid username or password",
+//         },
+//         {
+//           status: 401,
+//         },
 //       );
 //     }
 
-//     // Create a signed session token
+//     // Create employee session.
 //     const token = await new SignJWT({
-//       id: user.id,
-//       name: user.name,
-//       role: user.role,
+//       id: String(user.id),
+//       name: String(user.name),
+//       username: String(user.username),
+//       role: String(user.role),
 //     })
-//       .setProtectedHeader({ alg: "HS256" })
+//       .setProtectedHeader({
+//         alg: "HS256",
+//       })
 //       .setIssuedAt()
 //       .setExpirationTime("8h")
 //       .sign(secretKey);
 
 //     const response = NextResponse.json({
 //       user: {
-//         id: user.id,
-//         name: user.name,
-//         role: user.role,
+//         id: String(user.id),
+//         name: String(user.name),
+//         username: String(user.username),
+//         role: String(user.role),
 //       },
 //     });
 
-//     response.cookies.set("auditdesk_session", token, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//       path: "/",
-//       maxAge: 60 * 60 * 8,
-//     });
+//     response.cookies.set(
+//       "auditdesk_session",
+//       token,
+//       {
+//         httpOnly: true,
+//         secure:
+//           process.env.NODE_ENV === "production",
+//         sameSite: "lax",
+//         path: "/",
+//         maxAge: 60 * 60 * 8,
+//       },
+//     );
 
 //     return response;
 //   } catch (error) {
-//     console.error("Login error:", error);
+//     console.error("Employee login error:", error);
 
 //     return NextResponse.json(
-//       { error: "Something went wrong during login" },
-//       { status: 500 },
+//       {
+//         error: "Something went wrong during login",
+//       },
+//       {
+//         status: 500,
+//       },
 //     );
 //   }
 // }
@@ -90,13 +149,7 @@ import { neon } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 
-const secret = process.env.AUTH_SECRET;
-
-if (!secret) {
-  throw new Error("AUTH_SECRET is not configured");
-}
-
-const secretKey = new TextEncoder().encode(secret);
+const EMPLOYEE_COOKIE = "auditdesk_session";
 
 function getDatabase() {
   const url = process.env.DATABASE_URL;
@@ -112,17 +165,30 @@ export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
 
-    if (!username || !password) {
+    if (
+      typeof username !== "string" ||
+      typeof password !== "string" ||
+      !username.trim() ||
+      !password
+    ) {
       return NextResponse.json(
-        {
-          error: "Username and password are required",
-        },
-        {
-          status: 400,
-        },
+        { error: "Username and password are required" },
+        { status: 400 },
       );
     }
 
+    const secret = process.env.AUTH_SECRET;
+
+    if (!secret) {
+      console.error("AUTH_SECRET is not configured");
+
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 },
+      );
+    }
+
+    const secretKey = new TextEncoder().encode(secret);
     const sql = getDatabase();
 
     const rows = await sql`
@@ -132,39 +198,41 @@ export async function POST(req: Request) {
         username,
         password_hash,
         is_active,
-        role
+        role,
+        can_access_audit,
+        can_access_service_report
       FROM employees
-      WHERE LOWER(username) = LOWER(${String(username).trim()})
+      WHERE LOWER(username) = LOWER(${username.trim()})
       LIMIT 1
     `;
 
     if (rows.length === 0) {
       return NextResponse.json(
-        {
-          error: "Invalid username or password",
-        },
-        {
-          status: 401,
-        },
+        { error: "Invalid username or password" },
+        { status: 401 },
       );
     }
 
     const user = rows[0];
 
-    // Do not allow inactive employees to log in.
-    if (!user.is_active) {
+    // Only active auditor accounts can use employee login.
+    if (user.role !== "auditor") {
+      return NextResponse.json(
+        { error: "This account cannot use employee login." },
+        { status: 403 },
+      );
+    }
+
+    if (user.is_active !== true) {
       return NextResponse.json(
         {
           error:
             "Your account is inactive. Please contact the administrator.",
         },
-        {
-          status: 403,
-        },
+        { status: 403 },
       );
     }
 
-    // Compare entered password with the bcrypt hash.
     const passwordValid = await bcrypt.compare(
       password,
       String(user.password_hash),
@@ -172,25 +240,35 @@ export async function POST(req: Request) {
 
     if (!passwordValid) {
       return NextResponse.json(
-        {
-          error: "Invalid username or password",
-        },
-        {
-          status: 401,
-        },
+        { error: "Invalid username or password" },
+        { status: 401 },
       );
     }
 
-    // Create employee session.
+    const canAccessAudit =
+      user.can_access_audit === true;
+
+    const canAccessServiceReport =
+      user.can_access_service_report === true;
+
+    // Reject accounts that have no assigned employee features.
+    if (!canAccessAudit && !canAccessServiceReport) {
+      return NextResponse.json(
+        {
+          error:
+            "Your account has no assigned permissions. Please contact the administrator.",
+        },
+        { status: 403 },
+      );
+    }
+
     const token = await new SignJWT({
       id: String(user.id),
       name: String(user.name),
       username: String(user.username),
-      role: String(user.role),
+      role: "auditor",
     })
-      .setProtectedHeader({
-        alg: "HS256",
-      })
+      .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("8h")
       .sign(secretKey);
@@ -200,34 +278,27 @@ export async function POST(req: Request) {
         id: String(user.id),
         name: String(user.name),
         username: String(user.username),
-        role: String(user.role),
+        role: "auditor",
+        canAccessAudit,
+        canAccessServiceReport,
       },
     });
 
-    response.cookies.set(
-      "auditdesk_session",
-      token,
-      {
-        httpOnly: true,
-        secure:
-          process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 8,
-      },
-    );
+    response.cookies.set(EMPLOYEE_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 8,
+    });
 
     return response;
   } catch (error) {
     console.error("Employee login error:", error);
 
     return NextResponse.json(
-      {
-        error: "Something went wrong during login",
-      },
-      {
-        status: 500,
-      },
+      { error: "Something went wrong during login" },
+      { status: 500 },
     );
   }
 }
