@@ -90,7 +90,7 @@ export default async function Report({
   }
 
   const report = await r.json();
-
+  console.log("Service Report Data:", report);
   return (
     <AppShell >
       {report.status === "DRAFT" ? (
