@@ -785,6 +785,7 @@ export async function GET(req: Request) {
           )
           AND (
             ${search} = ''
+            OR id ILIKE ${searchPattern}
             OR employee_name ILIKE ${searchPattern}
             OR COALESCE(customer_name, '') ILIKE ${searchPattern}
           )

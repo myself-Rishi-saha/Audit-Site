@@ -1,506 +1,3 @@
-
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { useRouter } from "next/navigation";
-// import {
-//   ArrowUpRight,
-//   ClipboardCheck,
-//   FileText,
-//   LayoutTemplate,
-//   Plus,
-//   UserRound,
-//   Wrench,
-// } from "lucide-react";
-
-// import { AppShell } from "@/components/app-shell";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import {
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card";
-
-// export default function Admin() {
-//   const [audits, setAudits] = useState<any[]>([]);
-//   const [services, setServices] = useState<any[]>([]);
-//   const router = useRouter();
-
-//   useEffect(() => {
-//     async function loadData() {
-//       try {
-//         const [auditResponse, serviceResponse] =
-//           await Promise.all([
-//             fetch("/api/audits", {
-//               cache: "no-store",
-//             }),
-//             fetch("/api/service-reports", {
-//               cache: "no-store",
-//             }),
-//           ]);
-
-//         if (auditResponse.ok) {
-//           const auditData = await auditResponse.json();
-
-//           setAudits(
-//             Array.isArray(auditData)
-//               ? auditData
-//               : [],
-//           );
-//         }
-
-//         if (serviceResponse.ok) {
-//           const serviceData =
-//             await serviceResponse.json();
-
-//           setServices(
-//             Array.isArray(serviceData)
-//               ? serviceData
-//               : [],
-//           );
-//         }
-//       } catch (error) {
-//         console.error(
-//           "Failed to load admin dashboard data:",
-//           error,
-//         );
-//       }
-//     }
-
-//     loadData();
-//   }, []);
-
-//   // ---------------------------------------
-//   // COMPLETED AUDITS
-//   // ---------------------------------------
-
-//   const completed = audits.filter(
-//     (audit) =>
-//       String(audit.status || "").toUpperCase() ===
-//       "COMPLETED",
-//   );
-
-//   // ---------------------------------------
-//   // COMPLETED SERVICE REPORTS
-//   // ---------------------------------------
-
-//   const completedServices = services.filter(
-//     (report) =>
-//       String(report.status || "").toUpperCase() ===
-//       "COMPLETED",
-//   );
-
-//   // ---------------------------------------
-//   // AVERAGE AUDIT SCORE
-//   // ---------------------------------------
-
-//   const average = completed.length
-//     ? Math.round(
-//         completed.reduce(
-//           (sum, audit) =>
-//             sum + Number(audit.score || 0),
-//           0,
-//         ) / completed.length,
-//       )
-//     : 0;
-
-//   // ---------------------------------------
-//   // STATISTICS
-//   // ---------------------------------------
-
-//   const stats = [
-//     {
-//       label: "Total audits",
-//       value: audits.length,
-//       icon: ClipboardCheck,
-//       tone: "bg-teal-50 text-teal-700",
-//     },
-//     {
-//       label: "Completed",
-//       value: completed.length,
-//       icon: FileText,
-//       tone: "bg-emerald-50 text-emerald-700",
-//     },
-//     {
-//       label: "Drafts",
-//       value: audits.filter(
-//         (audit) =>
-//           String(audit.status || "").toUpperCase() ===
-//           "DRAFT",
-//       ).length,
-//       icon: Wrench,
-//       tone: "bg-amber-50 text-amber-700",
-//     },
-//     {
-//       label: "Avg. compliance",
-//       value: `${average}%`,
-//       icon: ArrowUpRight,
-//       tone: "bg-sky-50 text-sky-700",
-//     },
-//   ];
-
-//   return (
-//     <AppShell>
-//       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-//         {/* ---------------------------------- */}
-//         {/* HEADER */}
-//         {/* ---------------------------------- */}
-
-//         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-//           <div>
-//             <p className="text-sm font-semibold text-primary">
-//               Administration
-//             </p>
-
-//             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-//               Good morning, Admin
-//             </h1>
-
-//             <p className="mt-2 text-muted-foreground">
-//               Overview of inspections and service
-//               activity.
-//             </p>
-//           </div>
-
-//           {/* ADMIN QUICK ACTIONS */}
-//           <div className="flex flex-wrap gap-3">
-//             <Button
-//               variant="outline"
-//               className="h-11"
-//               onClick={() =>
-//                 router.push("/admin/add-employee")
-//               }
-//             >
-//               <UserRound data-icon="inline-start" />
-//               Add Employee
-//             </Button>
-
-//             <Button
-//               variant="outline"
-//               className="h-11"
-//               onClick={() =>
-//                 router.push("/admin/add-customer")
-//               }
-//             >
-//               <Plus data-icon="inline-start" />
-//               Add Customer
-//             </Button>
-
-//             <Button
-//               variant="outline"
-//               className="h-11"
-//               onClick={() =>
-//                 router.push("/admin/form-templates")
-//               }
-//             >
-//               <LayoutTemplate data-icon="inline-start" />
-//               Manage Templates
-//             </Button>
-//           </div>
-//         </div>
-
-//         {/* ---------------------------------- */}
-//         {/* STATISTICS */}
-//         {/* ---------------------------------- */}
-
-//         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-//           {stats.map(
-//             ({
-//               label,
-//               value,
-//               icon: Icon,
-//               tone,
-//             }) => (
-//               <Card
-//                 key={label}
-//                 className="shadow-sm"
-//               >
-//                 <CardContent className="p-5">
-//                   <span
-//                     className={`flex size-9 items-center justify-center rounded-lg ${tone}`}
-//                   >
-//                     <Icon />
-//                   </span>
-
-//                   <p className="mt-4 text-sm text-muted-foreground">
-//                     {label}
-//                   </p>
-
-//                   <p className="mt-1 text-2xl font-bold">
-//                     {value}
-//                   </p>
-//                 </CardContent>
-//               </Card>
-//             ),
-//           )}
-//         </div>
-
-//         {/* ---------------------------------- */}
-//         {/* COMPLETED AUDITS */}
-//         {/* ---------------------------------- */}
-
-//         <DataCard
-//           className="mt-8"
-//           title="Completed audits"
-//           subtitle="Review completed inspection reports across the organization"
-//           headers={[
-//             "Audit ID",
-//             "Employee",
-//             "Customer",
-//             "Location",
-//             "Date",
-//             "Status",
-//             "",
-//           ]}
-//         >
-//           <>
-//             {completed.length === 0 ? (
-//               <tr>
-//                 <td
-//                   colSpan={8}
-//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
-//                 >
-//                   No completed audits yet.
-//                 </td>
-//               </tr>
-//             ) : (
-//               completed.map((audit) => {
-//                 const employee =
-//                   audit.employeeName ||
-//                   audit.employee_name ||
-//                   "—";
-
-//                 const customer =
-//                   audit.customerName || "—";
-
-//                 const location =
-//                   audit.customerAddress || "—";
-
-//                 const date = audit?.createdAt
-//                   ? new Date(
-//                       audit.createdAt,
-//                     ).toLocaleDateString("en-GB")
-//                   : "—";
-
-//                 const status = String(
-//                   audit.status || "DRAFT",
-//                 ).toUpperCase();
-
-//                 return (
-//                   <tr
-//                     key={audit.id}
-//                     className="border-b transition last:border-0 hover:bg-muted/40"
-//                   >
-//                     <td className="px-3 py-4 font-semibold text-primary">
-//                       {audit.id}
-//                     </td>
-
-//                     <td className="px-3 py-4">
-//                       {employee}
-//                     </td>
-
-//                     <td className="px-3 py-4 font-medium">
-//                       {customer}
-//                     </td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">
-//                       {location}
-//                     </td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">
-//                       {date}
-//                     </td>
-
-//                     <td className="px-3 py-4">
-//                       <Badge variant="default">
-//                         {status}
-//                       </Badge>
-//                     </td>
-
-//                     {/* <td className="px-3 py-4 font-semibold">
-//                       {audit.score != null
-//                         ? `${audit.score}%`
-//                         : "—"}
-//                     </td> */}
-
-//                     <td className="px-3 py-4 text-right">
-//                       <Button
-//                         size="sm"
-//                         variant="ghost"
-//                         onClick={() =>
-//                           router.push(
-//                             `/admin/audits/${audit.id}`,
-//                           )
-//                         }
-//                       >
-//                         View
-//                         <ArrowUpRight data-icon="inline-end" />
-//                       </Button>
-//                     </td>
-//                   </tr>
-//                 );
-//               })
-//             )}
-//           </>
-//         </DataCard>
-
-//         {/* ---------------------------------- */}
-//         {/* COMPLETED SERVICE REPORTS */}
-//         {/* ---------------------------------- */}
-
-//         <DataCard
-//           className="mt-6"
-//           title="Completed service reports"
-//           subtitle="Review completed field service records"
-//           headers={[
-//             "Report ID",
-//             "Customer",
-//             "Engineer",
-//             "Equipment",
-//             "Date",
-//             "Status",
-//             "",
-//           ]}
-//         >
-//           <>
-//             {completedServices.length === 0 ? (
-//               <tr>
-//                 <td
-//                   colSpan={7}
-//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
-//                 >
-//                   No completed service reports yet.
-//                 </td>
-//               </tr>
-//             ) : (
-//               completedServices.map((report) => {
-//                 const customer =
-//                   report.customerName || "—";
-
-//                 const engineer =
-//                   report.formData?.[
-//                     "engineer-name"
-//                   ] || "—";
-
-//                 const equipment =
-//                   report.formData?.[
-//                     "equipment"
-//                   ] || "—";
-
-//                 const date = report?.createdAt
-//                   ? new Date(
-//                       report.createdAt,
-//                     ).toLocaleDateString("en-GB")
-//                   : "—";
-
-//                 const status = String(
-//                   report.status || "DRAFT",
-//                 ).toUpperCase();
-
-//                 return (
-//                   <tr
-//                     key={report.id}
-//                     className="border-b transition last:border-0 hover:bg-muted/40"
-//                   >
-//                     <td className="px-3 py-4 font-semibold text-primary">
-//                       {report.id}
-//                     </td>
-
-//                     <td className="px-3 py-4 font-medium">
-//                       {customer}
-//                     </td>
-
-//                     <td className="px-3 py-4">
-//                       {engineer}
-//                     </td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">
-//                       {equipment}
-//                     </td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">
-//                       {date}
-//                     </td>
-
-//                     <td className="px-3 py-4">
-//                       <Badge variant="default">
-//                         {status}
-//                       </Badge>
-//                     </td>
-
-//                     <td className="px-3 py-4 text-right">
-//                       <Button
-//                         size="sm"
-//                         onClick={() =>
-//                           router.push(
-//                             `/admin/service-reports/${report.id}`,
-//                           )
-//                         }
-//                       >
-//                         View &amp; Edit
-//                       </Button>
-//                     </td>
-//                   </tr>
-//                 );
-//               })
-//             )}
-//           </>
-//         </DataCard>
-//       </main>
-//     </AppShell>
-//   );
-// }
-
-// function DataCard({
-//   title,
-//   subtitle,
-//   headers,
-//   children,
-//   className = "",
-// }: {
-//   title: string;
-//   subtitle: string;
-//   headers: string[];
-//   children: React.ReactNode;
-//   className?: string;
-// }) {
-//   return (
-//     <Card className={`shadow-sm ${className}`}>
-//       <CardHeader>
-//         <CardTitle>{title}</CardTitle>
-
-//         <p className="text-sm text-muted-foreground">
-//           {subtitle}
-//         </p>
-//       </CardHeader>
-
-//       <CardContent>
-//         <div className="overflow-x-auto">
-//           <table className="w-full min-w-[760px] text-left text-sm">
-//             <thead>
-//               <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground">
-//                 {headers.map((head, index) => (
-//                   <th
-//                     className="px-3 py-3 font-medium"
-//                     key={`${head}-${index}`}
-//                   >
-//                     {head}
-//                   </th>
-//                 ))}
-//               </tr>
-//             </thead>
-
-//             <tbody>{children}</tbody>
-//           </table>
-//         </div>
-//       </CardContent>
-//     </Card>
-//   );
-// }
-
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -521,12 +18,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function getLocalDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -718,7 +210,7 @@ export default function Admin() {
           serviceResponse.json(),
         ]);
         //console.log("Audit API response:", auditData);
-//console.log("Service API response:", serviceData);
+        //console.log("Service API response:", serviceData);
 
         if (!cancelled) {
           setAudits(Array.isArray(auditData) ? auditData : []);
@@ -757,13 +249,11 @@ export default function Admin() {
 
   // Only completed reports appear in the tables.
   const completed = audits.filter(
-    (audit) =>
-      String(audit.status || "").toUpperCase() === "COMPLETED",
+    (audit) => String(audit.status || "").toUpperCase() === "COMPLETED",
   );
 
   const completedServices = services.filter(
-    (report) =>
-      String(report.status || "").toUpperCase() === "COMPLETED",
+    (report) => String(report.status || "").toUpperCase() === "COMPLETED",
   );
 
   // These statistics reflect the currently returned audit results.
@@ -771,10 +261,8 @@ export default function Admin() {
   // separate summary endpoint or unfiltered statistics request.
   const average = completed.length
     ? Math.round(
-        completed.reduce(
-          (sum, audit) => sum + Number(audit.score || 0),
-          0,
-        ) / completed.length,
+        completed.reduce((sum, audit) => sum + Number(audit.score || 0), 0) /
+          completed.length,
       )
     : 0;
 
@@ -786,17 +274,14 @@ export default function Admin() {
       tone: "bg-teal-50 text-teal-700",
     },
     {
-      label: "Completed",
-      value: completed.length,
+      label: "Total completed",
+      value: completed.length + completedServices.length,
       icon: FileText,
       tone: "bg-emerald-50 text-emerald-700",
     },
     {
-      label: "Drafts",
-      value: audits.filter(
-        (audit) =>
-          String(audit.status || "").toUpperCase() === "DRAFT",
-      ).length,
+      label: "Total service reports",
+      value: services.length,
       icon: Wrench,
       tone: "bg-amber-50 text-amber-700",
     },
@@ -819,9 +304,7 @@ export default function Admin() {
         {/* HEADER */}
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
-            <p className="text-sm font-semibold text-primary">
-              Administration
-            </p>
+            <p className="text-sm font-semibold text-primary">Administration</p>
 
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
               Good morning, Admin
@@ -874,15 +357,62 @@ export default function Admin() {
                   <Icon />
                 </span>
 
-                <p className="mt-4 text-sm text-muted-foreground">
-                  {label}
-                </p>
+                <p className="mt-4 text-sm text-muted-foreground">{label}</p>
 
                 <p className="mt-1 text-2xl font-bold">{value}</p>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* COMMON DATE AND SEARCH FILTERS */}
+        <Card className="mt-8 shadow-sm">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                aria-label="Filter reports by date"
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              />
+            </div>
+
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+              <input
+                aria-label="Search audits and service reports"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by audit ID, service ID, employee or customer..."
+                className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10"
+              onClick={resetFilters}
+            >
+              Reset
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* COMPLETED AUDITS */}
         <DataCard
@@ -898,11 +428,11 @@ export default function Admin() {
             "Status",
             "",
           ]}
-          selectedDate={selectedDate}
-          search={search}
-          onDateChange={setSelectedDate}
-          onSearchChange={setSearch}
-          onReset={resetFilters}
+          // selectedDate={selectedDate}
+          // search={search}
+          // onDateChange={setSelectedDate}
+          // onSearchChange={setSearch}
+          // onReset={resetFilters}
         >
           <>
             {completed.length === 0 ? (
@@ -946,17 +476,13 @@ export default function Admin() {
 
                     <td className="px-3 py-4">{employee}</td>
 
-                    <td className="px-3 py-4 font-medium">
-                      {customer}
-                    </td>
+                    <td className="px-3 py-4 font-medium">{customer}</td>
 
                     <td className="px-3 py-4 text-muted-foreground">
                       {location}
                     </td>
 
-                    <td className="px-3 py-4 text-muted-foreground">
-                      {date}
-                    </td>
+                    <td className="px-3 py-4 text-muted-foreground">{date}</td>
 
                     <td className="px-3 py-4">
                       <Badge variant="default">{status}</Badge>
@@ -966,9 +492,7 @@ export default function Admin() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() =>
-                          router.push(`/admin/audits/${audit.id}`)
-                        }
+                        onClick={() => router.push(`/admin/audits/${audit.id}`)}
                       >
                         View
                         <ArrowUpRight data-icon="inline-end" />
@@ -986,15 +510,7 @@ export default function Admin() {
           className="mt-6"
           title="Completed service reports"
           subtitle="Review completed field service records"
-          headers={[
-            "Report ID",
-            "Customer",
-            "Engineer",
-            "Equipment",
-            "Date",
-            "Status",
-            "",
-          ]}
+          headers={["Report ID", "Customer", "Engineer", "Date", "Status", ""]}
           selectedDate={selectedDate}
           search={search}
           onDateChange={setSelectedDate}
@@ -1023,9 +539,7 @@ export default function Admin() {
                 const engineer = getEmployeeName(report);
 
                 const equipment =
-                  formData["equipment"] ||
-                  report.equipment ||
-                  "—";
+                  formData["equipment"] || report.equipment || "—";
 
                 const date = formatDate(getServiceDate(report));
 
@@ -1042,19 +556,15 @@ export default function Admin() {
                       {report.id}
                     </td>
 
-                    <td className="px-3 py-4 font-medium">
-                      {customer}
-                    </td>
+                    <td className="px-3 py-4 font-medium">{customer}</td>
 
                     <td className="px-3 py-4">{engineer}</td>
 
-                    <td className="px-3 py-4 text-muted-foreground">
+                    {/* <td className="px-3 py-4 text-muted-foreground">
                       {equipment}
-                    </td>
+                    </td> */}
 
-                    <td className="px-3 py-4 text-muted-foreground">
-                      {date}
-                    </td>
+                    <td className="px-3 py-4 text-muted-foreground">{date}</td>
 
                     <td className="px-3 py-4">
                       <Badge variant="default">{status}</Badge>
@@ -1111,13 +621,11 @@ function DataCard({
           <div>
             <CardTitle>{title}</CardTitle>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {subtitle}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           </div>
 
           {/* FILTERS INLINE WITH THE EXISTING CARD HEADER */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
@@ -1163,7 +671,7 @@ function DataCard({
             >
               Reset
             </Button>
-          </div>
+          </div> */}
         </div>
       </CardHeader>
 
