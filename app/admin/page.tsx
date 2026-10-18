@@ -1107,7 +1107,7 @@ export default function Admin() {
             <EmptyRow
               colSpan={7}
               loading={reportsLoading}
-              error={reportsError}
+              error={Boolean(reportsError)}
               message="No completed audits for the selected date and search."
             />
           ) : (
