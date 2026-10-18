@@ -200,7 +200,8 @@ export async function POST(req: Request) {
         is_active,
         role,
         can_access_audit,
-        can_access_service_report
+        can_access_service_report,
+        can_access_daily_accent_report
       FROM employees
       WHERE LOWER(username) = LOWER(${username.trim()})
       LIMIT 1
@@ -251,8 +252,11 @@ export async function POST(req: Request) {
     const canAccessServiceReport =
       user.can_access_service_report === true;
 
+    const canAccessDailyAccentReport =
+      user.can_access_daily_accent_report === true;
+
     // Reject accounts that have no assigned employee features.
-    if (!canAccessAudit && !canAccessServiceReport) {
+    if (!canAccessAudit && !canAccessServiceReport && !canAccessDailyAccentReport) {
       return NextResponse.json(
         {
           error:
@@ -281,6 +285,7 @@ export async function POST(req: Request) {
         role: "auditor",
         canAccessAudit,
         canAccessServiceReport,
+        canAccessDailyAccentReport,
       },
     });
 

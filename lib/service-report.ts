@@ -1,5 +1,3 @@
-
-
 import { neon } from "@neondatabase/serverless";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -101,9 +99,7 @@ function toIsoString(value: unknown): string {
     return "";
   }
 
-  const date = value instanceof Date
-    ? value
-    : new Date(String(value));
+  const date = value instanceof Date ? value : new Date(String(value));
 
   if (Number.isNaN(date.getTime())) {
     return String(value);
@@ -116,9 +112,7 @@ function toIsoString(value: unknown): string {
 // READ SERVICE REPORTS
 // ----------------------------------------------------
 
-export async function readServiceReports(): Promise<
-  ServiceReport[]
-> {
+export async function readServiceReports(): Promise<ServiceReport[]> {
   const sql = getDatabase();
 
   const rows = await sql`
@@ -149,20 +143,12 @@ export async function readServiceReports(): Promise<
     employeeName: String(row.employee_name),
 
     // Customer
-    customerId:
-      row.customer_id == null
-        ? null
-        : String(row.customer_id),
+    customerId: row.customer_id == null ? null : String(row.customer_id),
 
-    customerName:
-      row.customer_name == null
-        ? null
-        : String(row.customer_name),
+    customerName: row.customer_name == null ? null : String(row.customer_name),
 
     customerAddress:
-      row.customer_address == null
-        ? null
-        : String(row.customer_address),
+      row.customer_address == null ? null : String(row.customer_address),
 
     // Template
     templateId: String(row.template_id || ""),
@@ -204,18 +190,14 @@ export async function readServiceReports(): Promise<
         : {},
 
     // Status
-    status: String(row.status).toUpperCase() as
-      | "DRAFT"
-      | "COMPLETED",
+    status: String(row.status).toUpperCase() as "DRAFT" | "COMPLETED",
 
     // Dates
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
 
     submittedAt:
-      row.submitted_at == null
-        ? null
-        : toIsoString(row.submitted_at),
+      row.submitted_at == null ? null : toIsoString(row.submitted_at),
   }));
 }
 
@@ -309,9 +291,7 @@ export async function writeServiceReports(
 // ----------------------------------------------------
 
 export async function currentUser() {
-  const value = (await cookies())
-    .get("auditdesk_session")
-    ?.value;
+  const value = (await cookies()).get("auditdesk_session")?.value;
 
   if (!value) {
     throw new Error("Authentication required");
@@ -333,9 +313,7 @@ export async function currentUser() {
     }
 
     if (String(payload.role) !== "auditor") {
-      throw new Error(
-        "Only auditors can access service reports",
-      );
+      throw new Error("Only auditors can access service reports");
     }
 
     return {
@@ -354,10 +332,20 @@ export async function currentUser() {
 // NEXT REPORT ID
 // ----------------------------------------------------
 
-export function nextReportId(items: ServiceReport[]) {
-  return `SRV-${String(items.length + 1).padStart(3, "0")}`;
-}
+// export function nextReportId(items: ServiceReport[]) {
+//   return `SRV-${String(items.length + 1).padStart(3, "0")}`;
+// }
+export async function nextReportId(): Promise<string> {
+  const sql = getDatabase();
 
+  const rows = await sql`
+    SELECT nextval('service_report_id_seq') AS next_number
+  `;
+
+  const nextNumber = Number(rows[0].next_number);
+
+  return `SRV-${String(nextNumber).padStart(3, "0")}`;
+}
 // ----------------------------------------------------
 // NEXT EVIDENCE ID
 // ----------------------------------------------------

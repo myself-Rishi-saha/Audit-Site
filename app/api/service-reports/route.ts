@@ -351,195 +351,6 @@
 //   }
 // }
 
-// // ----------------------------------------------------
-// // POST /api/service-reports
-// //
-// // Only active auditors with service-report permission
-// // can create a draft.
-// // ----------------------------------------------------
-
-// export async function POST(req: Request) {
-//   try {
-//     const cookieStore = await cookies();
-
-//     const employeeToken =
-//       cookieStore.get(EMPLOYEE_COOKIE)?.value;
-
-//     if (!employeeToken) {
-//       return NextResponse.json(
-//         { error: "Authentication required." },
-//         { status: 401 },
-//       );
-//     }
-
-//     let payload;
-
-//     try {
-//       const result = await jwtVerify(
-//         employeeToken,
-//         getAuthSecret(),
-//       );
-
-//       payload = result.payload;
-//     } catch {
-//       return NextResponse.json(
-//         { error: "Invalid or expired employee session." },
-//         { status: 401 },
-//       );
-//     }
-
-//     if (!payload.id || payload.role !== "auditor") {
-//       return NextResponse.json(
-//         {
-//           error:
-//             "Only authenticated auditors can create service reports.",
-//         },
-//         { status: 403 },
-//       );
-//     }
-
-//     const sql = getDatabase();
-//     const employeeId = String(payload.id);
-
-//     // Verify account status and current service-report permission.
-//     const employeeRows = await sql`
-//       SELECT
-//         id,
-//         name,
-//         role,
-//         is_active,
-//         can_access_service_report
-//       FROM employees
-//       WHERE id = ${employeeId}
-//       LIMIT 1
-//     `;
-
-//     const employee = employeeRows[0];
-
-//     if (!employee) {
-//       return NextResponse.json(
-//         { error: "Employee not found." },
-//         { status: 404 },
-//       );
-//     }
-
-//     if (
-//       employee.is_active !== true ||
-//       employee.role !== "auditor"
-//     ) {
-//       return NextResponse.json(
-//         { error: "Your employee account is inactive or unauthorized." },
-//         { status: 403 },
-//       );
-//     }
-
-//     if (employee.can_access_service_report !== true) {
-//       return NextResponse.json(
-//         {
-//           error:
-//             "You do not have permission to create service reports.",
-//         },
-//         { status: 403 },
-//       );
-//     }
-
-//     const body = await req.json();
-
-//     const customerId = body.customerId ?? null;
-//     const customerName = body.customerName ?? null;
-//     const customerAddress = body.customerAddress ?? null;
-
-//     const templateId = body.templateId ?? "service-report";
-
-//     const templateSnapshot = body.templateSnapshot ?? {
-//       id: templateId,
-//       type: "SERVICE_REPORT",
-//       name: "Equipment Service & Maintenance Report",
-//       sections: [],
-//     };
-
-//     // Generate the next SRV ID.
-//     const idRows = await sql`
-//       SELECT
-//         COALESCE(
-//           MAX(
-//             CAST(NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER)
-//           ),
-//           0
-//         ) + 1 AS next_number
-//       FROM service_reports
-//       WHERE id ~ '^SRV-[0-9]+$'
-//     `;
-
-//     const nextNumber = Number(idRows[0]?.next_number || 1);
-//     const reportId = `SRV-${String(nextNumber).padStart(3, "0")}`;
-
-//     const rows = await sql`
-//       INSERT INTO service_reports (
-//         id,
-//         employee_id,
-//         employee_name,
-//         customer_id,
-//         customer_name,
-//         customer_address,
-//         template_id,
-//         template_snapshot,
-//         form_data,
-//         evidence,
-//         signatures,
-//         status,
-//         created_at,
-//         updated_at,
-//         submitted_at
-//       )
-//       VALUES (
-//         ${reportId},
-//         ${employeeId},
-//         ${String(employee.name)},
-//         ${customerId},
-//         ${customerName},
-//         ${customerAddress},
-//         ${templateId},
-//         ${JSON.stringify(templateSnapshot)}::jsonb,
-//         ${JSON.stringify(body.formData ?? {})}::jsonb,
-//         ${JSON.stringify(body.evidence ?? {})}::jsonb,
-//         ${JSON.stringify(body.signatures ?? {})}::jsonb,
-//         'DRAFT',
-//         NOW(),
-//         NOW(),
-//         NULL
-//       )
-//       RETURNING
-//         id,
-//         employee_id,
-//         employee_name,
-//         customer_id,
-//         customer_name,
-//         customer_address,
-//         template_id,
-//         template_snapshot,
-//         form_data,
-//         evidence,
-//         signatures,
-//         status,
-//         created_at,
-//         updated_at,
-//         submitted_at
-//     `;
-
-//     return NextResponse.json(
-//       mapServiceReport(rows[0]),
-//       { status: 201 },
-//     );
-//   } catch (error) {
-//     console.error("Create service report error:", error);
-
-//     return NextResponse.json(
-//       { error: "Failed to save service report draft." },
-//       { status: 500 },
-//     );
-//   }
-// }
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { jwtVerify } from "jose";
@@ -781,6 +592,186 @@ export async function GET(req: Request) {
 
     return NextResponse.json(
       { error: "Failed to fetch service reports" },
+      { status: 500 },
+    );
+  }
+}
+
+
+// ----------------------------------------------------
+// POST /api/service-reports
+//
+// Only active auditors with service-report permission
+// can create a draft.
+// ----------------------------------------------------
+
+export async function POST(req: Request) {
+  try {
+       const cookieHeader = req.headers.get("cookie") || "";
+
+    const cookies = Object.fromEntries(
+      cookieHeader.split(";").map((cookie) => {
+        const index = cookie.indexOf("=");
+
+        if (index === -1) {
+          return [cookie.trim(), ""];
+        }
+
+        return [
+          cookie.slice(0, index).trim(),
+          decodeURIComponent(cookie.slice(index + 1).trim()),
+        ];
+      }),
+    );
+
+    const employeeToken = cookies.auditdesk_session;
+    const payload = await getSession(employeeToken);
+
+    if (!payload || payload.role !== "auditor" || !payload.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const employeeId = String(payload.id);
+    //const sql = getDatabase();
+
+    // Verify account status and current service-report permission.
+    const employeeRows = await sql`
+      SELECT
+        id,
+        name,
+        role,
+        is_active,
+        can_access_service_report
+      FROM employees
+      WHERE id = ${employeeId}
+      LIMIT 1
+    `;
+
+    const employee = employeeRows[0];
+
+    if (!employee) {
+      return NextResponse.json(
+        { error: "Employee not found." },
+        { status: 404 },
+      );
+    }
+
+    if (
+      employee.is_active !== true ||
+      employee.role !== "auditor"
+    ) {
+      return NextResponse.json(
+        { error: "Your employee account is inactive or unauthorized." },
+        { status: 403 },
+      );
+    }
+
+    if (employee.can_access_service_report !== true) {
+      return NextResponse.json(
+        {
+          error:
+            "You do not have permission to create service reports.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body = await req.json();
+
+    const customerId = body.customerId ?? null;
+    const customerName = body.customerName ?? null;
+    const customerAddress = body.customerAddress ?? null;
+
+    const templateId = body.templateId ?? "service-report";
+
+    const templateSnapshot = body.templateSnapshot ?? {
+      id: templateId,
+      type: "SERVICE_REPORT",
+      name: "Equipment Service & Maintenance Report",
+      sections: [],
+    };
+
+    // Generate the next SRV ID.
+    const idRows = await sql`
+      SELECT
+        COALESCE(
+          MAX(
+            CAST(NULLIF(SUBSTRING(id FROM 5), '') AS INTEGER)
+          ),
+          0
+        ) + 1 AS next_number
+      FROM service_reports
+      WHERE id ~ '^SRV-[0-9]+$'
+    `;
+
+    const nextNumber = Number(idRows[0]?.next_number || 1);
+    const reportId = `SRV-${String(nextNumber).padStart(3, "0")}`;
+
+    const rows = await sql`
+      INSERT INTO service_reports (
+        id,
+        employee_id,
+        employee_name,
+        customer_id,
+        customer_name,
+        customer_address,
+        template_id,
+        template_snapshot,
+        form_data,
+        evidence,
+        signatures,
+        status,
+        created_at,
+        updated_at,
+        submitted_at
+      )
+      VALUES (
+        ${reportId},
+        ${employeeId},
+        ${String(employee.name)},
+        ${customerId},
+        ${customerName},
+        ${customerAddress},
+        ${templateId},
+        ${JSON.stringify(templateSnapshot)}::jsonb,
+        ${JSON.stringify(body.formData ?? {})}::jsonb,
+        ${JSON.stringify(body.evidence ?? {})}::jsonb,
+        ${JSON.stringify(body.signatures ?? {})}::jsonb,
+        'DRAFT',
+        NOW(),
+        NOW(),
+        NULL
+      )
+      RETURNING
+        id,
+        employee_id,
+        employee_name,
+        customer_id,
+        customer_name,
+        customer_address,
+        template_id,
+        template_snapshot,
+        form_data,
+        evidence,
+        signatures,
+        status,
+        created_at,
+        updated_at,
+        submitted_at
+    `;
+
+    return NextResponse.json(
+      mapServiceReport(rows[0]),
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create service report error:", error);
+
+    return NextResponse.json(
+      { error: "Failed to save service report draft." },
       { status: 500 },
     );
   }

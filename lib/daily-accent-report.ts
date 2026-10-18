@@ -353,10 +353,21 @@ export async function currentDailyAccentReportUser() {
 // NEXT DAILY ACCENT REPORT ID
 // ----------------------------------------------------
 
-export function nextDailyAccentReportId(
-  items: DailyAccentReport[],
-): string {
-  return `DAR-${String(items.length + 1).padStart(3, "0")}`;
+// export function nextDailyAccentReportId(
+//   items: DailyAccentReport[],
+// ): string {
+//   return `DAR-${String(items.length + 1).padStart(3, "0")}`;
+// }
+export async function nextDailyAccentReportId(): Promise<string> {
+  const sql = getDatabase();
+
+  const rows = await sql`
+    SELECT nextval('daily_accent_report_id_seq') AS next_number
+  `;
+
+  const nextNumber = Number(rows[0].next_number);
+
+  return `DAR-${String(nextNumber).padStart(3, "0")}`;
 }
 
 // ----------------------------------------------------

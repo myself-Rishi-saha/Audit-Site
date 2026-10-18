@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -11,6 +10,7 @@ import {
   Send,
   Trash2,
   Video,
+  LoaderCircle,
   X,
 } from "lucide-react";
 
@@ -95,14 +95,18 @@ export default function DailyAccentReportForm() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
 
   const [customersLoading, setCustomersLoading] = useState(true);
   const [customerLoadError, setCustomerLoadError] = useState(false);
   const [templateLoadError, setTemplateLoadError] = useState(false);
+  const [processingAction, setProcessingAction] = useState<
+    "save" | "submit" | null
+  >(null);
 
-  const [saving, setSaving] = useState(false);
+  const isSavingRef = useRef(false);
 
   const [data, setData] = useState<FormState>({
     templateId: "daily-accent-report",
@@ -138,19 +142,14 @@ export default function DailyAccentReportForm() {
       try {
         setTemplateLoadError(false);
 
-        const response = await fetch(
-          "/api/templates/daily-accent-report",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
+        const response = await fetch("/api/templates/daily-accent-report", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         if (!response.ok) {
-          throw new Error(
-            "Failed to load Daily Accent Report template",
-          );
+          throw new Error("Failed to load Daily Accent Report template");
         }
 
         const templateData: Template = await response.json();
@@ -194,10 +193,7 @@ export default function DailyAccentReportForm() {
           signatures: {},
         });
       } catch (error) {
-        console.error(
-          "Failed to load Daily Accent Report template:",
-          error,
-        );
+        console.error("Failed to load Daily Accent Report template:", error);
 
         if (!cancelled) {
           setTemplateLoadError(true);
@@ -266,8 +262,7 @@ export default function DailyAccentReportForm() {
   function handleCustomerChange(customerId: string) {
     setSelectedCustomerId(customerId);
 
-    const customer =
-      customers.find((item) => item.id === customerId) || null;
+    const customer = customers.find((item) => item.id === customerId) || null;
 
     setSelectedCustomer(customer);
 
@@ -333,10 +328,7 @@ export default function DailyAccentReportForm() {
           continue;
         }
 
-        if (
-          field.type === "camera-photo" ||
-          field.type === "camera-video"
-        ) {
+        if (field.type === "camera-photo" || field.type === "camera-video") {
           if (
             !data.evidence?.[field.id] ||
             data.evidence[field.id].length === 0
@@ -420,9 +412,7 @@ export default function DailyAccentReportForm() {
             <Camera data-icon="inline-start" />
           )}
 
-          {field.type === "camera-video"
-            ? "Capture Video"
-            : "Capture Photo"}
+          {field.type === "camera-video" ? "Capture Video" : "Capture Photo"}
         </Button>
 
         {evidence.length > 0 && (
@@ -454,9 +444,9 @@ export default function DailyAccentReportForm() {
                       ...current,
                       evidence: {
                         ...current.evidence,
-                        [field.id]: (
-                          current.evidence[field.id] || []
-                        ).filter((_, i) => i !== index),
+                        [field.id]: (current.evidence[field.id] || []).filter(
+                          (_, i) => i !== index,
+                        ),
                       },
                     }));
                   }}
@@ -553,9 +543,7 @@ export default function DailyAccentReportForm() {
       return (
         <Textarea
           value={
-            Array.isArray(value)
-              ? String(value[0] || "")
-              : String(value || "")
+            Array.isArray(value) ? String(value[0] || "") : String(value || "")
           }
           onChange={(event) => setValue(field, event.target.value)}
           className={
@@ -630,10 +618,7 @@ export default function DailyAccentReportForm() {
       );
     }
 
-    if (
-      field.type === "camera-photo" ||
-      field.type === "camera-video"
-    ) {
+    if (field.type === "camera-photo" || field.type === "camera-video") {
       return renderCameraField(field);
     }
 
@@ -645,9 +630,7 @@ export default function DailyAccentReportForm() {
       <Input
         type={field.type === "number" ? "number" : field.type}
         value={
-          Array.isArray(value)
-            ? String(value[0] || "")
-            : String(value || "")
+          Array.isArray(value) ? String(value[0] || "") : String(value || "")
         }
         onChange={(event) => setValue(field, event.target.value)}
         className={
@@ -722,38 +705,178 @@ export default function DailyAccentReportForm() {
   // SAVE / SUBMIT
   // --------------------------------------------------
 
+  // async function save(submit = false) {
+  //   if (saving) return;
+
+  //   if (!selectedCustomerId || !selectedCustomer) {
+  //     setErrors((current) => ({
+  //       ...current,
+  //       customer: true,
+  //     }));
+
+  //     document.getElementById("customer-selector")?.scrollIntoView({
+  //       behavior: "smooth",
+  //       block: "center",
+  //     });
+
+  //     return;
+  //   }
+
+  //   if (submit) {
+  //     if (!validateRequiredFields()) return;
+
+  //     if (
+  //       !window.confirm(
+  //         "Submit this Daily Accent Report? You will not be able to edit the completed report.",
+  //       )
+  //     ) {
+  //       return;
+  //     }
+  //   }
+
+  //   setSaving(true);
+
+  //   try {
+  //     const payload = {
+  //       templateId: "daily-accent-report",
+  //       templateSnapshot: {
+  //         ...data.templateSnapshot,
+  //         id: "daily-accent-report",
+  //         type: "DAILY_ACCENT_REPORT",
+  //       },
+  //       customerId: selectedCustomer.id,
+  //       customerName: selectedCustomer.name,
+  //       customerAddress: selectedCustomer.address,
+  //       formData: data.formData,
+  //       evidence: data.evidence,
+  //       signatures: data.signatures,
+  //       status: "DRAFT",
+  //     };
+
+  //     let id = dailyAccentReportId;
+
+  //     // CREATE DRAFT
+  //     if (!id) {
+  //       const response = await fetch("/api/daily-accent-report", {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         credentials: "include",
+  //         body: JSON.stringify(payload),
+  //       });
+
+  //       if (!response.ok) {
+  //         const message = await response.text();
+  //         console.error("Create Daily Accent Report failed:", message);
+  //         throw new Error(
+  //           message || "Failed to create Daily Accent Report",
+  //         );
+  //       }
+
+  //       const created = await response.json();
+
+  //       if (!created.id) {
+  //         throw new Error(
+  //           "The API did not return the created report ID",
+  //         );
+  //       }
+
+  //       id = String(created.id);
+  //       setDailyAccentReportId(id);
+  //     } else {
+  //       // UPDATE DRAFT
+  //       const response = await fetch(
+  //         `/api/daily-accent-report/${encodeURIComponent(id)}`,
+  //         {
+  //           method: "PUT",
+  //           headers: {
+  //             "Content-Type": "application/json",
+  //           },
+  //           credentials: "include",
+  //           body: JSON.stringify(payload),
+  //         },
+  //       );
+
+  //       if (!response.ok) {
+  //         const message = await response.text();
+  //         console.error("Update Daily Accent Report failed:", message);
+  //         throw new Error(
+  //           message || "Failed to save Daily Accent Report",
+  //         );
+  //       }
+  //     }
+
+  //     // SUBMIT REPORT
+  //     if (submit) {
+  //       const response = await fetch(
+  //         `/api/daily-accent-report/${encodeURIComponent(id)}/submit`,
+  //         {
+  //           method: "POST",
+  //           credentials: "include",
+  //         },
+  //       );
+
+  //       if (!response.ok) {
+  //         const message = await response.text();
+  //         console.error("Submit Daily Accent Report failed:", message);
+  //         throw new Error(
+  //           message || "Failed to submit Daily Accent Report",
+  //         );
+  //       }
+
+  //       router.push(`/employee/daily-accent-report/${id}`);
+  //       router.refresh();
+  //     } else {
+  //       window.alert("Daily Accent Report draft saved.");
+  //     }
+  //   } catch (error) {
+  //     console.error("SAVE DAILY ACCENT REPORT ERROR:", error);
+
+  //     window.alert(
+  //       error instanceof Error
+  //         ? error.message
+  //         : "Failed to save Daily Accent Report.",
+  //     );
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // }
+
   async function save(submit = false) {
-    if (saving) return;
+    // Prevent rapid clicks before React re-renders.
+    if (isSavingRef.current) return;
 
-    if (!selectedCustomerId || !selectedCustomer) {
-      setErrors((current) => ({
-        ...current,
-        customer: true,
-      }));
-
-      document.getElementById("customer-selector")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      return;
-    }
-
-    if (submit) {
-      if (!validateRequiredFields()) return;
-
-      if (
-        !window.confirm(
-          "Submit this Daily Accent Report? You will not be able to edit the completed report.",
-        )
-      ) {
-        return;
-      }
-    }
-
-    setSaving(true);
+    isSavingRef.current = true;
+    setProcessingAction(submit ? "submit" : "save");
 
     try {
+      if (!selectedCustomerId || !selectedCustomer) {
+        setErrors((current) => ({
+          ...current,
+          customer: true,
+        }));
+
+        document.getElementById("customer-selector")?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        return;
+      }
+
+      if (submit) {
+        if (!validateRequiredFields()) return;
+
+        if (
+          !window.confirm(
+            "Submit this Daily Accent Report? You will not be able to edit the completed report.",
+          )
+        ) {
+          return;
+        }
+      }
+
       const payload = {
         templateId: "daily-accent-report",
         templateSnapshot: {
@@ -786,17 +909,14 @@ export default function DailyAccentReportForm() {
         if (!response.ok) {
           const message = await response.text();
           console.error("Create Daily Accent Report failed:", message);
-          throw new Error(
-            message || "Failed to create Daily Accent Report",
-          );
+
+          throw new Error(message || "Failed to create Daily Accent Report.");
         }
 
         const created = await response.json();
 
         if (!created.id) {
-          throw new Error(
-            "The API did not return the created report ID",
-          );
+          throw new Error("The API did not return the created report ID.");
         }
 
         id = String(created.id);
@@ -818,9 +938,8 @@ export default function DailyAccentReportForm() {
         if (!response.ok) {
           const message = await response.text();
           console.error("Update Daily Accent Report failed:", message);
-          throw new Error(
-            message || "Failed to save Daily Accent Report",
-          );
+
+          throw new Error(message || "Failed to save Daily Accent Report.");
         }
       }
 
@@ -837,9 +956,8 @@ export default function DailyAccentReportForm() {
         if (!response.ok) {
           const message = await response.text();
           console.error("Submit Daily Accent Report failed:", message);
-          throw new Error(
-            message || "Failed to submit Daily Accent Report",
-          );
+
+          throw new Error(message || "Failed to submit Daily Accent Report.");
         }
 
         router.push(`/employee/daily-accent-report/${id}`);
@@ -856,7 +974,8 @@ export default function DailyAccentReportForm() {
           : "Failed to save Daily Accent Report.",
       );
     } finally {
-      setSaving(false);
+      isSavingRef.current = false;
+      setProcessingAction(null);
     }
   }
 
@@ -867,10 +986,7 @@ export default function DailyAccentReportForm() {
   if (templateLoadError) {
     return (
       <main className="mx-auto max-w-6xl p-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/employee")}
-        >
+        <Button variant="ghost" onClick={() => router.push("/employee")}>
           <ArrowLeft data-icon="inline-start" />
           Back to Dashboard
         </Button>
@@ -882,14 +998,11 @@ export default function DailyAccentReportForm() {
             </h1>
 
             <p className="text-sm text-muted-foreground">
-              Check that the template API exists and returns a valid
-              template with a sections array.
+              Check that the template API exists and returns a valid template
+              with a sections array.
             </p>
 
-            <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-            >
+            <Button variant="outline" onClick={() => window.location.reload()}>
               Retry
             </Button>
           </CardContent>
@@ -912,10 +1025,7 @@ export default function DailyAccentReportForm() {
 
   return (
     <main className="mobile-safe-bottom mx-auto max-w-6xl px-5 py-8 sm:px-8">
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/employee")}
-      >
+      <Button variant="ghost" onClick={() => router.push("/employee")}>
         <ArrowLeft data-icon="inline-start" />
         Back to Dashboard
       </Button>
@@ -956,30 +1066,21 @@ export default function DailyAccentReportForm() {
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="customer-select"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="customer-select" className="text-sm font-medium">
               Customer <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
               id="customer-select"
               value={selectedCustomerId}
-              onChange={(event) =>
-                handleCustomerChange(event.target.value)
-              }
+              onChange={(event) => handleCustomerChange(event.target.value)}
               disabled={customersLoading}
               className={`w-full rounded-lg border bg-background px-3 py-2 text-sm ${
-                errors.customer
-                  ? "border-red-500 ring-1 ring-red-500"
-                  : ""
+                errors.customer ? "border-red-500 ring-1 ring-red-500" : ""
               }`}
             >
               <option value="">
-                {customersLoading
-                  ? "Loading customers..."
-                  : "Select customer"}
+                {customersLoading ? "Loading customers..." : "Select customer"}
               </option>
 
               {customers.map((customer) => (
@@ -1106,7 +1207,7 @@ export default function DailyAccentReportForm() {
 
       {/* ACTIONS */}
 
-      <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
+      {/* <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
         <Button
           type="button"
           variant="outline"
@@ -1117,16 +1218,45 @@ export default function DailyAccentReportForm() {
           {saving ? "Saving..." : "Save Draft"}
         </Button>
 
-        <Button
-          type="button"
-          disabled={saving}
-          onClick={() => save(true)}
-        >
+        <Button type="button" disabled={saving} onClick={() => save(true)}>
           <Send data-icon="inline-start" />
           {saving ? "Processing..." : "Submit Report"}
         </Button>
-      </div>
+      </div> */}
+      {/* ACTIONS */}
 
+      <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={processingAction !== null}
+          onClick={() => save(false)}
+        >
+          {processingAction === "save" ? (
+            <LoaderCircle className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Save data-icon="inline-start" />
+          )}
+
+          {processingAction === "save" ? "Saving Draft..." : "Save Draft"}
+        </Button>
+
+        <Button
+          type="button"
+          disabled={processingAction !== null}
+          onClick={() => save(true)}
+        >
+          {processingAction === "submit" ? (
+            <LoaderCircle className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Send data-icon="inline-start" />
+          )}
+
+          {processingAction === "submit"
+            ? "Submitting Report..."
+            : "Submit Report"}
+        </Button>
+      </div>
       {/* CAMERA */}
 
       {camera && (
@@ -1141,10 +1271,7 @@ export default function DailyAccentReportForm() {
               ...current,
               evidence: {
                 ...current.evidence,
-                [fieldId]: [
-                  ...(current.evidence[fieldId] || []),
-                  item,
-                ],
+                [fieldId]: [...(current.evidence[fieldId] || []), item],
               },
             }));
 
@@ -1356,20 +1483,12 @@ function SignaturePad({
         </div>
 
         <div className="mt-4 flex justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={clearSignature}
-          >
+          <Button type="button" variant="outline" onClick={clearSignature}>
             Clear
           </Button>
 
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-            >
+            <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
             </Button>
 

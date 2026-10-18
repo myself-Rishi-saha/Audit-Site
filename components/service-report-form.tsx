@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,6 +9,7 @@ import {
   Save,
   Send,
   Trash2,
+  LoaderCircle,
   Video,
   X,
 } from "lucide-react";
@@ -100,6 +100,11 @@ export default function ServiceReportForm() {
   const [template, setTemplate] = useState<Template | null>(null);
 
   const [serviceReportId, setServiceReportId] = useState("");
+  const [processingAction, setProcessingAction] = useState<
+    "save" | "submit" | null
+  >(null);
+
+  const isSavingRef = useRef(false);
 
   // --------------------------------------------------
   // CUSTOMER STATE
@@ -151,52 +156,6 @@ export default function ServiceReportForm() {
   // --------------------------------------------------
   // LOAD TEMPLATE
   // --------------------------------------------------
-
-  // useEffect(() => {
-  //   async function loadTemplate() {
-  //     try {
-  //       const response = await fetch("/api/templates/service-report");
-
-  //       if (!response.ok) {
-  //         throw new Error("Failed to load service report template");
-  //       }
-
-  //       const templateData: Template = await response.json();
-
-  //       setTemplate(templateData);
-
-  //       const initialFormData: Record<string, unknown> = {};
-
-  //       templateData.sections.forEach((section) => {
-  //         section.fields.forEach((field) => {
-  //           if (field.type === "multiple-choice") {
-  //             initialFormData[field.id] = [];
-  //           } else if (field.multiple) {
-  //             initialFormData[field.id] = [""];
-  //           } else {
-  //             initialFormData[field.id] = "";
-  //           }
-  //         });
-  //       });
-
-  //       setData({
-  //         templateId: templateData.id,
-
-  //         templateSnapshot: templateData,
-
-  //         formData: initialFormData,
-
-  //         evidence: {},
-
-  //         signatures: {},
-  //       });
-  //     } catch (error) {
-  //       console.error("Failed to load service report template:", error);
-  //     }
-  //   }
-
-  //   loadTemplate();
-  // }, []);
 
   useEffect(() => {
     async function loadTemplate() {
@@ -807,163 +766,299 @@ export default function ServiceReportForm() {
   // --------------------------------------------------
   // SAVE / SUBMIT
   // --------------------------------------------------
+const save = async (submit = false) => {
+  // Prevent duplicate calls immediately, before React re-renders.
+  if (isSavingRef.current) return;
 
-  async function save(submit = false) {
-    // ------------------------------------------------
-    // CUSTOMER REQUIRED FOR BOTH SAVE + SUBMIT
-    // ------------------------------------------------
+  // Validate customer first.
+  if (!selectedCustomerId || !selectedCustomer) {
+    setErrors((current) => ({
+      ...current,
+      customer: true,
+    }));
 
-    if (!selectedCustomerId || !selectedCustomer) {
-      setErrors((current) => ({
-        ...current,
-        customer: true,
-      }));
+    document.getElementById("customer-selector")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
 
-      document.getElementById("customer-selector")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    return;
+  }
 
-      return;
-    }
+  // Validate required fields before submission.
+  if (submit && !validateRequiredFields()) {
+    return;
+  }
 
-    // ------------------------------------------------
-    // SUBMIT VALIDATION
-    // ------------------------------------------------
+  if (
+    submit &&
+    !window.confirm(
+      "Submit this service report? You will not be able to edit the completed report.",
+    )
+  ) {
+    return;
+  }
 
-    if (submit) {
-      if (!validateRequiredFields()) {
-        return;
-      }
+  // Lock synchronously to block another click.
+  isSavingRef.current = true;
+  setProcessingAction(submit ? "submit" : "save");
 
-      if (
-        !confirm(
-          "Submit this service report? You will not be able to edit the completed report.",
-        )
-      ) {
-        return;
-      }
-    }
+  try {
+    // Give React a chance to render "Submitting Report..."
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    const payload = {
+      templateId: data.templateId,
+      templateSnapshot: data.templateSnapshot,
+      customerId: selectedCustomer.id,
+      customerName: selectedCustomer.name,
+      customerAddress: selectedCustomer.address,
+      formData: data.formData,
+      evidence: data.evidence,
+      signatures: data.signatures,
+      status: "DRAFT",
+    };
 
     let id = serviceReportId;
 
-    try {
-      // ----------------------------------------------
-      // FINAL PAYLOAD
-      // ----------------------------------------------
+    // CREATE report only when an ID does not exist.
+    if (!id) {
+      const response = await fetch("/api/service-reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
 
-      const payload = {
-        templateId: data.templateId,
-
-        templateSnapshot: data.templateSnapshot,
-
-        // Customer is stored outside formData
-        customerId: selectedCustomer.id,
-
-        customerName: selectedCustomer.name,
-
-        customerAddress: selectedCustomer.address,
-
-        formData: data.formData,
-
-        evidence: data.evidence,
-
-        signatures: data.signatures,
-
-        status: "DRAFT",
-      };
-
-      console.log(
-        "FINAL SERVICE REPORT DATA:",
-        JSON.stringify(payload, null, 2),
-      );
-
-      // ----------------------------------------------
-      // CREATE
-      // ----------------------------------------------
-
-      if (!id) {
-        const response = await fetch("/api/service-reports", {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-
-          console.error("Create service report failed:", error);
-
-          throw new Error("Failed to create service report");
-        }
-
-        const created = await response.json();
-
-        id = created.id;
-
-        setServiceReportId(id);
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to create service report.");
       }
 
-      // ----------------------------------------------
-      // UPDATE
-      // ----------------------------------------------
-      else {
-        const response = await fetch(`/api/service-reports/${id}`, {
+      const created = await response.json();
+
+      if (!created.id) {
+        throw new Error("The server did not return a service report ID.");
+      }
+
+      id = created.id;
+      setServiceReportId(id);
+    } else {
+      // UPDATE existing draft.
+      const response = await fetch(
+        `/api/service-reports/${encodeURIComponent(id)}`,
+        {
           method: "PUT",
-
           headers: {
             "Content-Type": "application/json",
           },
-
+          credentials: "include",
           body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-
-          console.error("Update service report failed:", error);
-
-          throw new Error("Failed to save service report");
-        }
-      }
-
-      // ----------------------------------------------
-      // SUBMIT
-      // ----------------------------------------------
-
-      if (submit) {
-        const response = await fetch(`/api/service-reports/${id}/submit`, {
-          method: "POST",
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-
-          console.error("Submit service report failed:", error);
-
-          throw new Error("Failed to submit service report");
-        }
-
-        router.push(`/employee/service-reports/${id}`);
-
-        router.refresh();
-      } else {
-        alert("Draft saved.");
-      }
-    } catch (error) {
-      console.error("SAVE SERVICE REPORT ERROR:", error);
-
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to save service report.",
+        },
       );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to save service report.");
+      }
     }
+
+    // Submit only after create/update succeeds.
+    if (submit) {
+      const response = await fetch(
+        `/api/service-reports/${encodeURIComponent(id)}/submit`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to submit service report.");
+      }
+
+      router.replace(`/employee/service-reports/${encodeURIComponent(id)}`);
+      router.refresh();
+      return;
+    }
+
+    alert("Draft saved successfully.");
+  } catch (error) {
+    console.error("SAVE SERVICE REPORT ERROR:", error);
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Failed to save service report.",
+    );
+  } finally {
+    isSavingRef.current = false;
+    setProcessingAction(null);
   }
+};
+
+
+  // async function save(submit = false) {
+  //   // ------------------------------------------------
+  //   // CUSTOMER REQUIRED FOR BOTH SAVE + SUBMIT
+  //   // ------------------------------------------------
+
+  //   if (!selectedCustomerId || !selectedCustomer) {
+  //     setErrors((current) => ({
+  //       ...current,
+  //       customer: true,
+  //     }));
+
+  //     document.getElementById("customer-selector")?.scrollIntoView({
+  //       behavior: "smooth",
+  //       block: "center",
+  //     });
+
+  //     return;
+  //   }
+
+  //   // ------------------------------------------------
+  //   // SUBMIT VALIDATION
+  //   // ------------------------------------------------
+
+  //   if (submit) {
+  //     if (!validateRequiredFields()) {
+  //       return;
+  //     }
+
+  //     if (
+  //       !confirm(
+  //         "Submit this service report? You will not be able to edit the completed report.",
+  //       )
+  //     ) {
+  //       return;
+  //     }
+  //   }
+
+  //   let id = serviceReportId;
+
+  //   try {
+  //     // ----------------------------------------------
+  //     // FINAL PAYLOAD
+  //     // ----------------------------------------------
+
+  //     const payload = {
+  //       templateId: data.templateId,
+
+  //       templateSnapshot: data.templateSnapshot,
+
+  //       // Customer is stored outside formData
+  //       customerId: selectedCustomer.id,
+
+  //       customerName: selectedCustomer.name,
+
+  //       customerAddress: selectedCustomer.address,
+
+  //       formData: data.formData,
+
+  //       evidence: data.evidence,
+
+  //       signatures: data.signatures,
+
+  //       status: "DRAFT",
+  //     };
+
+  //     console.log(
+  //       "FINAL SERVICE REPORT DATA:",
+  //       JSON.stringify(payload, null, 2),
+  //     );
+
+  //     // ----------------------------------------------
+  //     // CREATE
+  //     // ----------------------------------------------
+
+  //     if (!id) {
+  //       const response = await fetch("/api/service-reports", {
+  //         method: "POST",
+
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+
+  //         body: JSON.stringify(payload),
+  //       });
+
+  //       if (!response.ok) {
+  //         const error = await response.text();
+
+  //         console.error("Create service report failed:", error);
+
+  //         throw new Error("Failed to create service report");
+  //       }
+
+  //       const created = await response.json();
+
+  //       id = created.id;
+
+  //       setServiceReportId(id);
+  //     }
+
+  //     // ----------------------------------------------
+  //     // UPDATE
+  //     // ----------------------------------------------
+  //     else {
+  //       const response = await fetch(`/api/service-reports/${id}`, {
+  //         method: "PUT",
+
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+
+  //         body: JSON.stringify(payload),
+  //       });
+
+  //       if (!response.ok) {
+  //         const error = await response.text();
+
+  //         console.error("Update service report failed:", error);
+
+  //         throw new Error("Failed to save service report");
+  //       }
+  //     }
+
+  //     // ----------------------------------------------
+  //     // SUBMIT
+  //     // ----------------------------------------------
+
+  //     if (submit) {
+  //       const response = await fetch(`/api/service-reports/${id}/submit`, {
+  //         method: "POST",
+  //       });
+
+  //       if (!response.ok) {
+  //         const error = await response.text();
+
+  //         console.error("Submit service report failed:", error);
+
+  //         throw new Error("Failed to submit service report");
+  //       }
+
+  //       router.push(`/employee/service-reports/${id}`);
+
+  //       router.refresh();
+  //     } else {
+  //       alert("Draft saved.");
+  //     }
+  //   } catch (error) {
+  //     console.error("SAVE SERVICE REPORT ERROR:", error);
+
+  //     alert(
+  //       error instanceof Error
+  //         ? error.message
+  //         : "Failed to save service report.",
+  //     );
+  //   }
+  // }
 
   // --------------------------------------------------
   // LOADING
@@ -1036,7 +1131,8 @@ export default function ServiceReportForm() {
             <select
               value={selectedCustomerId}
               onChange={(e) => handleCustomerChange(e.target.value)}
-              disabled={customersLoading}
+              // disabled={customersLoading}
+              disabled={customersLoading || processingAction !== null}
               className={`w-full rounded-lg border bg-background px-3 py-2 text-sm ${
                 errors.customer ? "border-red-500 ring-1 ring-red-500" : ""
               }`}
@@ -1163,7 +1259,7 @@ export default function ServiceReportForm() {
 
       {/* ACTIONS */}
 
-      <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+      {/* <div className="mt-6 flex justify-end gap-3 border-t pt-4">
         <Button variant="outline" onClick={() => save(false)}>
           <Save data-icon="inline-start" />
           Save Draft
@@ -1172,6 +1268,41 @@ export default function ServiceReportForm() {
         <Button onClick={() => save(true)}>
           <Send data-icon="inline-start" />
           Submit Report
+        </Button>
+      </div> */}
+
+      {/* ACTIONS */}
+
+      <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={processingAction !== null}
+          onClick={() => save(false)}
+        >
+          {processingAction === "save" ? (
+            <LoaderCircle className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Save data-icon="inline-start" />
+          )}
+
+          {processingAction === "save" ? "Saving Draft..." : "Save Draft"}
+        </Button>
+
+        <Button
+          type="button"
+          disabled={processingAction !== null}
+          onClick={() => save(true)}
+        >
+          {processingAction === "submit" ? (
+            <LoaderCircle className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <Send data-icon="inline-start" />
+          )}
+
+          {processingAction === "submit"
+            ? "Submitting Report..."
+            : "Submit Report"}
         </Button>
       </div>
 
