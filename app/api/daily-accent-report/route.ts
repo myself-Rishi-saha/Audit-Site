@@ -635,6 +635,23 @@ type EmployeeRow = RowDataPacket & {
   can_access_daily_accent_report: number | boolean;
 };
 
+// type ReportRow = RowDataPacket & {
+//   id: string;
+//   employee_id: string;
+//   employee_name: string;
+//   customer_id: string | null;
+//   customer_name: string | null;
+//   customer_address: string | null;
+//   template_id: string | null;
+//   template_snapshot: unknown;
+//   form_data: unknown;
+//   evidence: unknown;
+//   signatures: unknown;
+//   status: string;
+//   created_at: string | Date;
+//   updated_at: string | Date;
+//   submitted_at: string | Date | null;
+// };
 type ReportRow = RowDataPacket & {
   id: string;
   employee_id: string;
@@ -642,6 +659,8 @@ type ReportRow = RowDataPacket & {
   customer_id: string | null;
   customer_name: string | null;
   customer_address: string | null;
+  customer_gst_no: string | null;
+  customer_contact_number: string | null;
   template_id: string | null;
   template_snapshot: unknown;
   form_data: unknown;
@@ -652,7 +671,6 @@ type ReportRow = RowDataPacket & {
   updated_at: string | Date;
   submitted_at: string | Date | null;
 };
-
 type CounterRow = RowDataPacket & {
   next_number: number | string;
 };
@@ -724,9 +742,7 @@ function toIsoString(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
 
   const raw = String(value);
-  const normalized = raw.includes("T")
-    ? raw
-    : `${raw.replace(" ", "T")}Z`;
+  const normalized = raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`;
 
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? raw : date.toISOString();
@@ -759,9 +775,7 @@ function mapDailyAccentReport(row: ReportRow) {
 
   const objectOrEmpty = (value: unknown): Record<string, unknown> => {
     const parsed = parseJson<unknown>(value, {});
-    return parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : {};
   };
@@ -774,6 +788,13 @@ function mapDailyAccentReport(row: ReportRow) {
     customerName: row.customer_name == null ? null : String(row.customer_name),
     customerAddress:
       row.customer_address == null ? null : String(row.customer_address),
+    customerGstNo:
+      row.customer_gst_no == null ? null : String(row.customer_gst_no),
+
+    customerContactNumber:
+      row.customer_contact_number == null
+        ? null
+        : String(row.customer_contact_number),
     templateId: String(row.template_id || "daily-accent-report"),
     templateSnapshot,
     template: templateSnapshot,
@@ -863,10 +884,7 @@ export async function GET(req: Request) {
         const { payload } = await jwtVerify(adminToken, getAuthSecret());
 
         if (!payload.id || payload.role !== "admin") {
-          return NextResponse.json(
-            { error: "Unauthorized." },
-            { status: 401 },
-          );
+          return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
         }
       } catch {
         return NextResponse.json(
@@ -875,8 +893,7 @@ export async function GET(req: Request) {
         );
       }
 
-      const requestedDate =
-        searchParams.get("date")?.trim() || getTodayDate();
+      const requestedDate = searchParams.get("date")?.trim() || getTodayDate();
 
       if (!isValidDate(requestedDate)) {
         return NextResponse.json(
@@ -909,7 +926,8 @@ export async function GET(req: Request) {
       const [rows] = await db.execute<ReportRow[]>(
         `SELECT
            id, employee_id, employee_name, customer_id, customer_name,
-           customer_address, template_id, template_snapshot, form_data,
+           customer_address, customer_gst_no, customer_contact_number,
+template_id, template_snapshot, form_data,
            evidence, signatures, status, created_at, updated_at, submitted_at
          FROM daily_accent_reports
          WHERE ${conditions.join(" AND ")}
@@ -940,10 +958,7 @@ export async function GET(req: Request) {
     }
 
     if (!payload.id || payload.role !== "auditor") {
-      return NextResponse.json(
-        { error: "Unauthorized." },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
     const employeeId = String(payload.id);
@@ -993,12 +1008,7 @@ export async function GET(req: Request) {
         )`,
       );
 
-      queryParams.push(
-        range.start,
-        range.end,
-        range.start,
-        range.end,
-      );
+      queryParams.push(range.start, range.end, range.start, range.end);
     }
 
     if (search) {
@@ -1015,7 +1025,8 @@ export async function GET(req: Request) {
     const [rows] = await db.execute<ReportRow[]>(
       `SELECT
          id, employee_id, employee_name, customer_id, customer_name,
-         customer_address, template_id, template_snapshot, form_data,
+         customer_address, customer_gst_no, customer_contact_number,
+template_id, template_snapshot, form_data,
          evidence, signatures, status, created_at, updated_at, submitted_at
        FROM daily_accent_reports
        WHERE ${conditions.join(" AND ")}
@@ -1067,7 +1078,9 @@ export async function POST(req: Request) {
 
     if (!payload.id || payload.role !== "auditor") {
       return NextResponse.json(
-        { error: "Only authenticated auditors can create Daily Accent Reports." },
+        {
+          error: "Only authenticated auditors can create Daily Accent Reports.",
+        },
         { status: 403 },
       );
     }
@@ -1082,10 +1095,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (
-      !isEnabled(employee.is_active) ||
-      employee.role !== "auditor"
-    ) {
+    if (!isEnabled(employee.is_active) || employee.role !== "auditor") {
       return NextResponse.json(
         { error: "Your employee account is inactive or unauthorized." },
         { status: 403 },
@@ -1104,6 +1114,16 @@ export async function POST(req: Request) {
     const customerId = body.customerId ?? null;
     const customerName = body.customerName ?? null;
     const customerAddress = body.customerAddress ?? null;
+    const customerGstNo =
+  typeof body.customerGstNo === "string" && body.customerGstNo.trim()
+    ? body.customerGstNo.trim()
+    : null;
+
+const customerContactNumber =
+  typeof body.customerContactNumber === "string" &&
+  body.customerContactNumber.trim()
+    ? body.customerContactNumber.trim()
+    : null;
 
     const templateId = "daily-accent-report";
     const submittedTemplate = body.templateSnapshot;
@@ -1131,45 +1151,83 @@ export async function POST(req: Request) {
 
     const reportId = await getReportId(connection);
 
-    await connection.execute<ResultSetHeader>(
-      `INSERT INTO daily_accent_reports (
-         id,
-         employee_id,
-         employee_name,
-         customer_id,
-         customer_name,
-         customer_address,
-         template_id,
-         template_snapshot,
-         form_data,
-         evidence,
-         signatures,
-         status,
-         created_at,
-         updated_at,
-         submitted_at
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT',
-               UTC_TIMESTAMP(), UTC_TIMESTAMP(), NULL)`,
-      [
-        reportId,
-        employeeId,
-        String(employee.name),
-        customerId,
-        customerName,
-        customerAddress,
-        templateId,
-        JSON.stringify(templateSnapshot),
-        JSON.stringify(body.formData ?? {}),
-        JSON.stringify(body.evidence ?? {}),
-        JSON.stringify(body.signatures ?? {}),
-      ],
-    );
-
+    // await connection.execute<ResultSetHeader>(
+    //   `INSERT INTO daily_accent_reports (
+    //      id,
+    //      employee_id,
+    //      employee_name,
+    //      customer_id,
+    //      customer_name,
+    //      customer_address,
+    //      template_id,
+    //      template_snapshot,
+    //      form_data,
+    //      evidence,
+    //      signatures,
+    //      status,
+    //      created_at,
+    //      updated_at,
+    //      submitted_at
+    //    )
+    //    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT',
+    //            UTC_TIMESTAMP(), UTC_TIMESTAMP(), NULL)`,
+    //   [
+    //     reportId,
+    //     employeeId,
+    //     String(employee.name),
+    //     customerId,
+    //     customerName,
+    //     customerAddress,
+    //     templateId,
+    //     JSON.stringify(templateSnapshot),
+    //     JSON.stringify(body.formData ?? {}),
+    //     JSON.stringify(body.evidence ?? {}),
+    //     JSON.stringify(body.signatures ?? {}),
+    //   ],
+    // );
+await connection.execute<ResultSetHeader>(
+  `INSERT INTO daily_accent_reports (
+     id,
+     employee_id,
+     employee_name,
+     customer_id,
+     customer_name,
+     customer_address,
+     customer_gst_no,
+     customer_contact_number,
+     template_id,
+     template_snapshot,
+     form_data,
+     evidence,
+     signatures,
+     status,
+     created_at,
+     updated_at,
+     submitted_at
+   )
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT',
+           UTC_TIMESTAMP(), UTC_TIMESTAMP(), NULL)`,
+  [
+    reportId,
+    employeeId,
+    String(employee.name),
+    customerId,
+    customerName,
+    customerAddress,
+    customerGstNo,
+    customerContactNumber,
+    templateId,
+    JSON.stringify(templateSnapshot),
+    JSON.stringify(body.formData ?? {}),
+    JSON.stringify(body.evidence ?? {}),
+    JSON.stringify(body.signatures ?? {}),
+  ],
+);
     const [rows] = await connection.execute<ReportRow[]>(
       `SELECT
          id, employee_id, employee_name, customer_id, customer_name,
-         customer_address, template_id, template_snapshot, form_data,
+        customer_address, customer_gst_no, customer_contact_number,
+template_id, template_snapshot, form_data,
          evidence, signatures, status, created_at, updated_at, submitted_at
        FROM daily_accent_reports
        WHERE id = ?

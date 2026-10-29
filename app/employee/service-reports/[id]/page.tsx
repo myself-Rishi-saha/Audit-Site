@@ -1,46 +1,5 @@
 
 
-// import { notFound } from "next/navigation";
-
-// import { AppShell } from "@/components/app-shell";
-// import { ServiceReportReport } from "@/components/service-report-report";
-// import { ServiceReportDraft } from "@/components/service-report-draft";
-
-// export default async function Report({
-//   params,
-// }: {
-//   params: Promise<{ id: string }>;
-// }) {
-//   const { id } = await params;
-
-//   const url =
-//     process.env.NEXT_PUBLIC_FRONTEND_URL ||
-//     "http://localhost:3000";
-
-//   const r = await fetch(
-//     `${url}/api/service-reports/${id}`,
-//     {
-//       cache: "no-store",
-//     },
-//   );
-
-//   if (!r.ok) {
-//     return notFound();
-//   }
-
-//   const report = await r.json();
-
-//   return (
-//     <AppShell >
-//       {report.status === "DRAFT" ? (
-//         < ServiceReportDraft report={report} />
-//       ) : (
-//         <ServiceReportReport report={report} />
-//       )}
-//     </AppShell>
-//   );
-// }
-
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 

@@ -53,6 +53,8 @@ type DailyAccentReport = {
   employeeName?: string;
   customerName?: string;
   customerAddress?: string | null;
+  customerGstNo?: string | null;
+customerContactNumber?: string | null;
   templateId: string;
   templateSnapshot: Template;
   formData: Record<string, unknown>;
@@ -515,6 +517,23 @@ export function AdminDailyAccentEditor({
               <Badge>{String(value.status || "DRAFT").toUpperCase()}</Badge>
             </p>
           </div>
+                    <label className="text-sm font-medium">
+            Customer GST No.
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerGstNo || ""}
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Customer Contact Number
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerContactNumber || ""}
+            />
+          </label>
         </CardContent>
       </Card>
 

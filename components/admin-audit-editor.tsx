@@ -1108,8 +1108,8 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
         </div>
       )}
 
-      {/* Audit information */}
-      <Card>
+      Audit information
+      {/* <Card>
         <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
           <label className="text-sm font-medium">
             Customer
@@ -1125,23 +1125,6 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
             />
           </label>
 
-          {/* <label className="text-sm font-medium">
-            Audit date
-            <Input
-              className="mt-2"
-              type="date"
-              disabled={!editing}
-              value={
-                typeof value.formData?.date === "string"
-                  ? value.formData.date
-                  : ""
-              }
-              
-              // onChange={(e) =>
-              //   updateFormValue("date", e.target.value)
-              // }
-            />
-          </label> */}
           <div className="text-sm">
             <span className="text-muted-foreground">Report date</span>
             <p className="mt-2 font-semibold">
@@ -1170,7 +1153,76 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
             </p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
+
+{/* Audit information */}
+<Card>
+  <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
+    <label className="text-sm font-medium">
+      Customer
+      <Input
+        className="mt-2"
+        disabled
+        value={value.customerName || ""}
+      />
+    </label>
+
+    <label className="text-sm font-medium">
+      Location
+      <Input
+        className="mt-2"
+        disabled
+        value={value.customerAddress || ""}
+      />
+    </label>
+
+    <label className="text-sm font-medium">
+      GST No.
+      <Input
+        className="mt-2"
+        disabled
+        value={value.customerGstNo || ""}
+      />
+    </label>
+
+    <label className="text-sm font-medium">
+      Contact Number
+      <Input
+        className="mt-2"
+        disabled
+        value={value.customerContactNumber || ""}
+      />
+    </label>
+
+    <div className="text-sm">
+      <span className="text-muted-foreground">Report date</span>
+      <p className="mt-2 font-semibold">
+        {value.createdAt
+          ? new Date(value.createdAt).toLocaleDateString("en-GB", {
+              timeZone: "Asia/Kolkata",
+            })
+          : "—"}
+      </p>
+    </div>
+
+    <div className="text-sm">
+      <span className="text-muted-foreground">Audit ID</span>
+      <p className="mt-2 font-semibold">{value.id}</p>
+    </div>
+
+    <div className="text-sm">
+      <span className="text-muted-foreground">Auditor</span>
+      <p className="mt-2 font-semibold">{value.employeeName}</p>
+    </div>
+
+    <div className="text-sm">
+      <span className="text-muted-foreground">Status</span>
+      <p className="mt-2">
+        <Badge>{value.status.toUpperCase()}</Badge>
+      </p>
+    </div>
+  </CardContent>
+</Card>
 
       {/* Dynamic template sections */}
       <div className="mt-8 flex flex-col gap-8">

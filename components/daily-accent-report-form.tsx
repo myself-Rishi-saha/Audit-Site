@@ -701,147 +701,7 @@ export default function DailyAccentReportForm() {
     );
   }
 
-  // --------------------------------------------------
-  // SAVE / SUBMIT
-  // --------------------------------------------------
 
-  // async function save(submit = false) {
-  //   if (saving) return;
-
-  //   if (!selectedCustomerId || !selectedCustomer) {
-  //     setErrors((current) => ({
-  //       ...current,
-  //       customer: true,
-  //     }));
-
-  //     document.getElementById("customer-selector")?.scrollIntoView({
-  //       behavior: "smooth",
-  //       block: "center",
-  //     });
-
-  //     return;
-  //   }
-
-  //   if (submit) {
-  //     if (!validateRequiredFields()) return;
-
-  //     if (
-  //       !window.confirm(
-  //         "Submit this Daily Accent Report? You will not be able to edit the completed report.",
-  //       )
-  //     ) {
-  //       return;
-  //     }
-  //   }
-
-  //   setSaving(true);
-
-  //   try {
-  //     const payload = {
-  //       templateId: "daily-accent-report",
-  //       templateSnapshot: {
-  //         ...data.templateSnapshot,
-  //         id: "daily-accent-report",
-  //         type: "DAILY_ACCENT_REPORT",
-  //       },
-  //       customerId: selectedCustomer.id,
-  //       customerName: selectedCustomer.name,
-  //       customerAddress: selectedCustomer.address,
-  //       formData: data.formData,
-  //       evidence: data.evidence,
-  //       signatures: data.signatures,
-  //       status: "DRAFT",
-  //     };
-
-  //     let id = dailyAccentReportId;
-
-  //     // CREATE DRAFT
-  //     if (!id) {
-  //       const response = await fetch("/api/daily-accent-report", {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         credentials: "include",
-  //         body: JSON.stringify(payload),
-  //       });
-
-  //       if (!response.ok) {
-  //         const message = await response.text();
-  //         console.error("Create Daily Accent Report failed:", message);
-  //         throw new Error(
-  //           message || "Failed to create Daily Accent Report",
-  //         );
-  //       }
-
-  //       const created = await response.json();
-
-  //       if (!created.id) {
-  //         throw new Error(
-  //           "The API did not return the created report ID",
-  //         );
-  //       }
-
-  //       id = String(created.id);
-  //       setDailyAccentReportId(id);
-  //     } else {
-  //       // UPDATE DRAFT
-  //       const response = await fetch(
-  //         `/api/daily-accent-report/${encodeURIComponent(id)}`,
-  //         {
-  //           method: "PUT",
-  //           headers: {
-  //             "Content-Type": "application/json",
-  //           },
-  //           credentials: "include",
-  //           body: JSON.stringify(payload),
-  //         },
-  //       );
-
-  //       if (!response.ok) {
-  //         const message = await response.text();
-  //         console.error("Update Daily Accent Report failed:", message);
-  //         throw new Error(
-  //           message || "Failed to save Daily Accent Report",
-  //         );
-  //       }
-  //     }
-
-  //     // SUBMIT REPORT
-  //     if (submit) {
-  //       const response = await fetch(
-  //         `/api/daily-accent-report/${encodeURIComponent(id)}/submit`,
-  //         {
-  //           method: "POST",
-  //           credentials: "include",
-  //         },
-  //       );
-
-  //       if (!response.ok) {
-  //         const message = await response.text();
-  //         console.error("Submit Daily Accent Report failed:", message);
-  //         throw new Error(
-  //           message || "Failed to submit Daily Accent Report",
-  //         );
-  //       }
-
-  //       router.push(`/employee/daily-accent-report/${id}`);
-  //       router.refresh();
-  //     } else {
-  //       window.alert("Daily Accent Report draft saved.");
-  //     }
-  //   } catch (error) {
-  //     console.error("SAVE DAILY ACCENT REPORT ERROR:", error);
-
-  //     window.alert(
-  //       error instanceof Error
-  //         ? error.message
-  //         : "Failed to save Daily Accent Report.",
-  //     );
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // }
 
   async function save(submit = false) {
     // Prevent rapid clicks before React re-renders.
@@ -887,6 +747,8 @@ export default function DailyAccentReportForm() {
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
         customerAddress: selectedCustomer.address,
+         customerGstNo: selectedCustomer.gstNo ?? "",
+  customerContactNumber: selectedCustomer.contactNumber ?? "",
         formData: data.formData,
         evidence: data.evidence,
         signatures: data.signatures,

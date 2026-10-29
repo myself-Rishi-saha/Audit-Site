@@ -61,6 +61,8 @@ type DailyAccentReportData = {
   customerId?: string;
   customerName?: string;
   customerAddress?: string;
+customerGstNo?: string | null;
+customerContactNumber?: string | null;
   employeeId?: string;
   employeeName?: string;
   templateId?: string;
@@ -337,8 +339,27 @@ export function DailyAccentReportReport({
               {report.customerAddress || "—"}
             </p>
           </div>
+
+                    <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer GST No.
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerGstNo || "—"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer Contact Number
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerContactNumber || "—"}
+            </p>
+          </div>
         </CardContent>
       </Card>
+
 
       {template.sections.map((section, sectionIndex) => (
         <Card key={`${section.id || section.name || "section"}-${sectionIndex}`}>

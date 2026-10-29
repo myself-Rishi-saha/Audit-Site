@@ -551,6 +551,8 @@ type ReportRow = RowDataPacket & {
   customer_id: string | null;
   customer_name: string | null;
   customer_address: string | null;
+  customer_gst_no: string | null;
+customer_contact_number: string | null;
   template_id: string | null;
   template_snapshot: unknown;
   form_data: unknown;
@@ -629,6 +631,15 @@ function mapServiceReport(row: ReportRow) {
       row.customer_id == null ? null : String(row.customer_id),
     customerName: row.customer_name,
     customerAddress: row.customer_address,
+    customerGstNo:
+  row.customer_gst_no == null
+    ? null
+    : String(row.customer_gst_no),
+
+customerContactNumber:
+  row.customer_contact_number == null
+    ? null
+    : String(row.customer_contact_number),
     templateId: String(row.template_id || "service-report"),
     templateSnapshot: template,
     template,
@@ -757,6 +768,25 @@ async function getAccessContext() {
   };
 }
 
+// const REPORT_SELECT = `
+//   SELECT
+//     id,
+//     employee_id,
+//     employee_name,
+//     customer_id,
+//     customer_name,
+//     customer_address,
+//     template_id,
+//     template_snapshot,
+//     form_data,
+//     evidence,
+//     signatures,
+//     status,
+//     created_at,
+//     updated_at,
+//     submitted_at
+//   FROM service_reports
+// `;
 const REPORT_SELECT = `
   SELECT
     id,
@@ -765,6 +795,8 @@ const REPORT_SELECT = `
     customer_id,
     customer_name,
     customer_address,
+    customer_gst_no,
+    customer_contact_number,
     template_id,
     template_snapshot,
     form_data,
@@ -776,7 +808,6 @@ const REPORT_SELECT = `
     submitted_at
   FROM service_reports
 `;
-
 /**
  * GET /api/service-reports/[id]
  */

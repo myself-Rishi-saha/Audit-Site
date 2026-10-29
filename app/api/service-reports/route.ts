@@ -458,6 +458,8 @@ interface ServiceReportRow extends RowDataPacket {
   customer_id: string | null;
   customer_name: string | null;
   customer_address: string | null;
+  customer_gst_no: string | null;
+  customer_contact_number: string | null;
   template_id: string;
   template_snapshot: unknown;
   form_data: unknown;
@@ -557,6 +559,13 @@ function mapServiceReport(row: ServiceReportRow) {
     customerName: row.customer_name == null ? null : String(row.customer_name),
     customerAddress:
       row.customer_address == null ? null : String(row.customer_address),
+    customerGstNo:
+      row.customer_gst_no == null ? null : String(row.customer_gst_no),
+
+    customerContactNumber:
+      row.customer_contact_number == null
+        ? null
+        : String(row.customer_contact_number),
 
     templateId: String(row.template_id || ""),
     templateSnapshot: parseJsonObject<Record<string, unknown>>(
@@ -678,9 +687,10 @@ export async function GET(request: Request) {
     }
 
     // Build optional filters without comparing parameters to empty strings.
-    function buildOptionalFilters(
-      includeEmployeeName: boolean,
-    ): { sql: string; params: string[] } {
+    function buildOptionalFilters(includeEmployeeName: boolean): {
+      sql: string;
+      params: string[];
+    } {
       const conditions: string[] = [];
       const params: string[] = [];
 
@@ -705,16 +715,12 @@ export async function GET(request: Request) {
       }
 
       if (dateStart && dateEnd) {
-        conditions.push(
-          "created_at >= ? AND created_at < ?",
-        );
+        conditions.push("created_at >= ? AND created_at < ?");
         params.push(dateStart, dateEnd);
       }
 
       return {
-        sql: conditions.length
-          ? ` AND ${conditions.join(" AND ")}`
-          : "",
+        sql: conditions.length ? ` AND ${conditions.join(" AND ")}` : "",
         params,
       };
     }
@@ -739,6 +745,8 @@ export async function GET(request: Request) {
            customer_id,
            customer_name,
            customer_address,
+           customer_gst_no,
+customer_contact_number,
            template_id,
            template_snapshot,
            form_data,
@@ -787,19 +795,12 @@ export async function GET(request: Request) {
       );
     }
 
-    if (
-      employee.role !== "auditor" ||
-      !toBoolean(employee.is_active)
-    ) {
-      return forbidden(
-        "Your employee account is inactive or unauthorized.",
-      );
+    if (employee.role !== "auditor" || !toBoolean(employee.is_active)) {
+      return forbidden("Your employee account is inactive or unauthorized.");
     }
 
     if (!toBoolean(employee.can_access_service_report)) {
-      return forbidden(
-        "You do not have permission to access service reports.",
-      );
+      return forbidden("You do not have permission to access service reports.");
     }
 
     const filters = buildOptionalFilters(false);
@@ -812,6 +813,8 @@ export async function GET(request: Request) {
          customer_id,
          customer_name,
          customer_address,
+         customer_gst_no,
+customer_contact_number,
          template_id,
          template_snapshot,
          form_data,
@@ -906,6 +909,17 @@ export async function POST(request: Request) {
         ? body.customerAddress.trim()
         : null;
 
+    const customerGstNo =
+      typeof body.customerGstNo === "string" && body.customerGstNo.trim()
+        ? body.customerGstNo.trim()
+        : null;
+
+    const customerContactNumber =
+      typeof body.customerContactNumber === "string" &&
+      body.customerContactNumber.trim()
+        ? body.customerContactNumber.trim()
+        : null;
+
     const templateId =
       typeof body.templateId === "string" && body.templateId.trim()
         ? body.templateId.trim()
@@ -998,31 +1012,74 @@ export async function POST(request: Request) {
         [nextNumber + 1],
       );
 
+      //       await connection.execute(
+      //         `INSERT INTO service_reports (
+      //            id,
+      //            employee_id,
+      //            employee_name,
+      //            customer_id,
+      //            customer_name,
+      //            customer_address,
+      //            customer_gst_no,
+      // customer_contact_number,
+      //            template_id,
+      //            template_snapshot,
+      //            form_data,
+      //            evidence,
+      //            signatures,
+      //            status,
+      //            created_at,
+      //            updated_at,
+      //            submitted_at
+      //          )
+      //          VALUES (
+      //            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      //            'DRAFT',
+      //            UTC_TIMESTAMP(3),
+      //            UTC_TIMESTAMP(3),
+      //            NULL
+      //          )`,
+      //         [
+      //           reportId,
+      //           String(employee.id),
+      //           String(employee.name),
+      //           customerId,
+      //           customerName,
+      //           customerAddress,
+      //           templateId,
+      //           JSON.stringify(templateSnapshot),
+      //           JSON.stringify(formData),
+      //           JSON.stringify(evidence),
+      //           JSON.stringify(signatures),
+      //         ],
+      //       );
       await connection.execute(
         `INSERT INTO service_reports (
-           id,
-           employee_id,
-           employee_name,
-           customer_id,
-           customer_name,
-           customer_address,
-           template_id,
-           template_snapshot,
-           form_data,
-           evidence,
-           signatures,
-           status,
-           created_at,
-           updated_at,
-           submitted_at
-         )
-         VALUES (
-           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-           'DRAFT',
-           UTC_TIMESTAMP(3),
-           UTC_TIMESTAMP(3),
-           NULL
-         )`,
+     id,
+     employee_id,
+     employee_name,
+     customer_id,
+     customer_name,
+     customer_address,
+     customer_gst_no,
+     customer_contact_number,
+     template_id,
+     template_snapshot,
+     form_data,
+     evidence,
+     signatures,
+     status,
+     created_at,
+     updated_at,
+     submitted_at
+   )
+   VALUES (
+     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+     'DRAFT',
+     UTC_TIMESTAMP(3),
+     UTC_TIMESTAMP(3),
+     NULL
+   )`,
         [
           reportId,
           String(employee.id),
@@ -1030,6 +1087,8 @@ export async function POST(request: Request) {
           customerId,
           customerName,
           customerAddress,
+          customerGstNo,
+          customerContactNumber,
           templateId,
           JSON.stringify(templateSnapshot),
           JSON.stringify(formData),
@@ -1037,30 +1096,52 @@ export async function POST(request: Request) {
           JSON.stringify(signatures),
         ],
       );
-
+      // const [rows] = await connection.execute<ServiceReportRow[]>(
+      //   `SELECT
+      //      id,
+      //      employee_id,
+      //      employee_name,
+      //      customer_id,
+      //      customer_name,
+      //      customer_address,
+      //      template_id,
+      //      template_snapshot,
+      //      form_data,
+      //      evidence,
+      //      signatures,
+      //      status,
+      //      created_at,
+      //      updated_at,
+      //      submitted_at
+      //    FROM service_reports
+      //    WHERE id = ?
+      //    LIMIT 1`,
+      //   [reportId],
+      // );
       const [rows] = await connection.execute<ServiceReportRow[]>(
         `SELECT
-           id,
-           employee_id,
-           employee_name,
-           customer_id,
-           customer_name,
-           customer_address,
-           template_id,
-           template_snapshot,
-           form_data,
-           evidence,
-           signatures,
-           status,
-           created_at,
-           updated_at,
-           submitted_at
-         FROM service_reports
-         WHERE id = ?
-         LIMIT 1`,
+     id,
+     employee_id,
+     employee_name,
+     customer_id,
+     customer_name,
+     customer_address,
+     customer_gst_no,
+     customer_contact_number,
+     template_id,
+     template_snapshot,
+     form_data,
+     evidence,
+     signatures,
+     status,
+     created_at,
+     updated_at,
+     submitted_at
+   FROM service_reports
+   WHERE id = ?
+   LIMIT 1`,
         [reportId],
       );
-
       if (rows.length === 0) {
         throw new Error("Created service report could not be retrieved");
       }

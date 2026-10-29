@@ -54,7 +54,8 @@ type ServiceReport = {
 
   customerName?: string;
   customerAddress?: string | null;
-
+  customerGstNo?: string | null;
+  customerContactNumber?: string | null;
   templateId: string;
   templateSnapshot: Template;
 
@@ -684,7 +685,7 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
       </div>
 
       {/* SERVICE REPORT INFORMATION */}
-      <Card>
+      {/* <Card>
         <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
           <label className="text-sm font-medium">
             Customer
@@ -713,6 +714,73 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
               //     customerAddress: e.target.value,
               //   }))
               // }
+            />
+          </label>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Report date</span>
+            <p className="mt-2 font-semibold">
+              {value.createdAt
+                ? new Date(value.createdAt).toLocaleDateString("en-GB", {
+                    timeZone: "Asia/Kolkata",
+                  })
+                : "—"}
+            </p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Report ID</span>
+            <p className="mt-2 font-semibold">{value.id}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Auditor</span>
+            <p className="mt-2 font-semibold">{value.employeeName || "—"}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <p className="mt-2">
+              <Badge>{String(value.status || "DRAFT").toUpperCase()}</Badge>
+            </p>
+          </div>
+        </CardContent>
+      </Card> */}
+      <Card>
+        <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
+          <label className="text-sm font-medium">
+            Customer
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerName || ""}
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Location
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerAddress || ""}
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Customer GST No.
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerGstNo || ""}
+            />
+          </label>
+
+          <label className="text-sm font-medium">
+            Customer Contact Number
+            <Input
+              className="mt-2"
+              disabled={!editing}
+              value={value.customerContactNumber || ""}
             />
           </label>
 

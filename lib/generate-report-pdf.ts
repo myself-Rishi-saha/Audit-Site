@@ -1,219 +1,3 @@
-
-// import jsPDF from "jspdf";
-// import autoTable from "jspdf-autotable";
-
-// type ReportData = {
-//   id?: string;
-//   employeeName?: string;
-//   employee_name?: string;
-//   customerName?: string;
-//   customer_name?: string;
-//   customerAddress?: string;
-//   customer_address?: string;
-//   status?: string;
-//   createdAt?: string;
-//   submittedAt?: string;
-//   created_at?: string;
-//   submitted_at?: string;
-//   templateSnapshot?: {
-//     title?: string;
-//     name?: string;
-//     sections?: Array<{
-//       title?: string;
-//       name?: string;
-//       fields?: Array<{
-//         id?: string;
-//         key?: string;
-//         label?: string;
-//         title?: string;
-//         type?: string;
-//       }>;
-//     }>;
-//   };
-//   formData?: Record<string, unknown>;
-//   form_data?: Record<string, unknown>;
-// };
-
-// const NAVY: [number, number, number] = [0, 53, 74];
-
-// function formatValue(value: unknown): string {
-//   if (value === null || value === undefined || value === "") {
-//     return "—";
-//   }
-
-//   if (Array.isArray(value)) {
-//     return value.map(formatValue).join(", ");
-//   }
-
-//   if (typeof value === "object") {
-//     return Object.entries(value as Record<string, unknown>)
-//       .map(([key, item]) => `${key}: ${formatValue(item)}`)
-//       .join("\n");
-//   }
-
-//   return String(value);
-// }
-
-// async function loadLogo(): Promise<string | null> {
-//   try {
-//     const response = await fetch("/Deep Teal System & Solution Logo.png");
-//     if (!response.ok) return null;
-
-//     const blob = await response.blob();
-
-//     return await new Promise((resolve, reject) => {
-//       const reader = new FileReader();
-//       reader.onload = () => resolve(String(reader.result));
-//       reader.onerror = reject;
-//       reader.readAsDataURL(blob);
-//     });
-//   } catch {
-//     return null;
-//   }
-// }
-
-// export async function generateReportPdf(
-//   report: ReportData,
-//   reportType: string,
-// ) {
-//   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-//   const pageWidth = pdf.internal.pageSize.getWidth();
-//   const margin = 15;
-//   const logo = await loadLogo();
-
-//   // Company header
-//   pdf.setFillColor(...NAVY);
-//   pdf.rect(0, 0, pageWidth, 37, "F");
-
-//   if (logo) {
-//     pdf.addImage(logo, "PNG", margin, 5, 25, 25, undefined, "FAST");
-//   }
-
-//   pdf.setTextColor(255, 255, 255);
-//   pdf.setFont("helvetica", "bold");
-//   pdf.setFontSize(17);
-//   pdf.text("SYSTEM & SOLUTIONS", logo ? 45 : margin, 13);
-
-//   pdf.setFont("helvetica", "normal");
-//   pdf.setFontSize(8);
-//   pdf.text("Ahmedabad, Gujarat - 380 006", logo ? 45 : margin, 20);
-//   pdf.text("+91 94273 10670 | +91 9898 188 345", logo ? 45 : margin, 25);
-//   pdf.text("info@systemsandsolutions.in", logo ? 45 : margin, 30);
-
-//   // Report title
-//   let y = 47;
-//   pdf.setTextColor(...NAVY);
-//   pdf.setFont("helvetica", "bold");
-//   pdf.setFontSize(15);
-//   pdf.text(reportType.toUpperCase(), margin, y);
-
-//   y += 9;
-
-//   const template = report.templateSnapshot;
-//   const formData = report.formData ?? report.form_data ?? {};
-
-//   // Report metadata
-//   autoTable(pdf, {
-//     startY: y,
-//     theme: "grid",
-//     margin: { left: margin, right: margin },
-//     head: [["Report information", "Details"]],
-//     body: [
-//       ["Report ID", report.id ?? "—"],
-//       ["Customer", report.customerName ?? report.customer_name ?? "—"],
-//       ["Customer address", report.customerAddress ?? report.customer_address ?? "—"],
-//       ["Employee / Engineer", report.employeeName ?? report.employee_name ?? "—"],
-//       ["Status", report.status ?? "—"],
-//       [
-//         "Submitted date",
-//         formatValue(report.submittedAt ?? report.submitted_at ??
-//           report.createdAt ?? report.created_at),
-//       ],
-//     ],
-//     headStyles: { fillColor: NAVY },
-//     styles: { fontSize: 9, cellPadding: 3, overflow: "linebreak" },
-//   });
-
-//   y = (pdf as jsPDF & { lastAutoTable: { finalY: number } })
-//     .lastAutoTable.finalY + 8;
-
-//   // Dynamic sections and fields from the saved template
-//   for (const section of template?.sections ?? []) {
-//     const rows = (section.fields ?? []).map((field) => {
-//       const key = field.id ?? field.key ?? "";
-//       return [
-//         field.label ?? field.title ?? key,
-//         formatValue(formData[key]),
-//       ];
-//     });
-
-//     if (rows.length === 0) continue;
-
-//     // Keep each section heading with its table.
-//     if (y > 245) {
-//       pdf.addPage();
-//       y = 18;
-//     }
-
-//     pdf.setTextColor(...NAVY);
-//     pdf.setFont("helvetica", "bold");
-//     pdf.setFontSize(11);
-//     pdf.text(section.title ?? section.name ?? "Report details", margin, y);
-
-//     autoTable(pdf, {
-//       startY: y + 3,
-//       theme: "striped",
-//       margin: { left: margin, right: margin },
-//       head: [["Field", "Response"]],
-//       body: rows,
-//       headStyles: { fillColor: NAVY },
-//       styles: {
-//         fontSize: 8.5,
-//         cellPadding: 3,
-//         overflow: "linebreak",
-//         valign: "top",
-//       },
-//       columnStyles: {
-//         0: { cellWidth: 55 },
-//         1: { cellWidth: "auto" },
-//       },
-//     });
-
-//     y = (pdf as jsPDF & { lastAutoTable: { finalY: number } })
-//       .lastAutoTable.finalY + 8;
-//   }
-
-//   // Footer on every page
-//   const pageCount = pdf.getNumberOfPages();
-
-//   for (let page = 1; page <= pageCount; page++) {
-//     pdf.setPage(page);
-//     const height = pdf.internal.pageSize.getHeight();
-
-//     pdf.setDrawColor(...NAVY);
-//     pdf.line(margin, height - 13, pageWidth - margin, height - 13);
-
-//     pdf.setFont("helvetica", "normal");
-//     pdf.setFontSize(8);
-//     pdf.setTextColor(90, 90, 90);
-//     pdf.text(
-//       "www.systemsandsolutions.in",
-//       margin,
-//       height - 7,
-//     );
-//     pdf.text(
-//       `Page ${page} of ${pageCount}`,
-//       pageWidth - margin,
-//       height - 7,
-//       { align: "right" },
-//     );
-//   }
-
-//   const safeId = (report.id ?? "report").replace(/[^a-zA-Z0-9_-]/g, "_");
-//   pdf.save(`${safeId}.pdf`);
-// }
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -243,10 +27,10 @@ type ReportData = {
   customer_address?: string;
   customerId?: string;
   customer_id?: string;
-  customerGst?: string;
-  customer_gst?: string;
-  customerContact?: string;
-  customer_contact?: string;
+  customerGstNo?: string | null;
+  customer_gst_no?: string | null;
+  customerContactNumber?: string | null;
+  customer_contact_number?: string | null;
   status?: string;
 
   createdAt?: string;
@@ -287,9 +71,7 @@ const NAVY: [number, number, number] = [0, 53, 74];
 const TEAL: [number, number, number] = [0, 102, 130];
 const TIME_ZONE = "Asia/Kolkata";
 
-function getValue(
-  ...values: (string | undefined)[]
-): string {
+function getValue(...values: (string | undefined)[]): string {
   return values.find((value) => value !== undefined && value !== "") ?? "—";
 }
 
@@ -315,8 +97,10 @@ function formatDate(value: unknown): string {
 
     // SQL DATETIME strings usually represent a wall-clock time
     // without an explicit timezone. Treat them as Kolkata time.
-    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(input) &&
-        !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)) {
+    if (
+      /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(input) &&
+      !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)
+    ) {
       date = new Date(input.replace(" ", "T") + "+05:30");
     } else {
       date = new Date(input);
@@ -329,15 +113,17 @@ function formatDate(value: unknown): string {
     return String(value);
   }
 
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date) + " IST";
+  return (
+    new Intl.DateTimeFormat("en-IN", {
+      timeZone: TIME_ZONE,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date) + " IST"
+  );
 }
 
 function formatValue(value: unknown): string {
@@ -421,11 +207,7 @@ function collectEvidence(value: unknown): EvidenceLink[] {
               : undefined;
 
       const explicitType = String(
-        obj.type ??
-        obj.resource_type ??
-        obj.mimeType ??
-        obj.mime_type ??
-        "",
+        obj.type ?? obj.resource_type ?? obj.mimeType ?? obj.mime_type ?? "",
       ).toLowerCase();
 
       const extension = `${fileName ?? ""} ${url.split("?")[0]}`;
@@ -537,7 +319,8 @@ function formatFieldResponse(
 
   if (evidence.length > 0) {
     const normalValue =
-      value && typeof value === "object" &&
+      value &&
+      typeof value === "object" &&
       !Array.isArray(value) &&
       !("url" in value)
         ? formatValue(value)
@@ -591,8 +374,7 @@ export async function generateReportPdf(
   const margin = 15;
   const logo = await loadLogo();
 
-  const template =
-    report.templateSnapshot ?? report.template_snapshot;
+  const template = report.templateSnapshot ?? report.template_snapshot;
 
   const formData = report.formData ?? report.form_data ?? {};
 
@@ -613,22 +395,10 @@ export async function generateReportPdf(
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7.5);
-  pdf.text(
-    "509, Ashwamegh Elegance, Nr. Parimal Garden,",
-    textX,
-    18,
-  );
-  pdf.text(
-    "Kalyan Jewellers Lane, Bhudarpura Road, Ambawadi,",
-    textX,
-    22,
-  );
+  pdf.text("509, Ashwamegh Elegance, Nr. Parimal Garden,", textX, 18);
+  pdf.text("Kalyan Jewellers Lane, Bhudarpura Road, Ambawadi,", textX, 22);
   pdf.text("Ahmedabad - 380 006", textX, 26);
-  pdf.text(
-    "+91 94273 10670 | +91 9898 188 345",
-    textX,
-    30,
-  );
+  pdf.text("+91 94273 10670 | +91 9898 188 345", textX, 30);
   pdf.text("info@systemsandsolutions.in", textX, 34);
 
   // Report title and generation timestamp
@@ -642,12 +412,9 @@ export async function generateReportPdf(
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
   pdf.setTextColor(90, 90, 90);
-  pdf.text(
-    `Generated: ${formatDate(new Date())}`,
-    pageWidth - margin,
-    y,
-    { align: "right" },
-  );
+  pdf.text(`Generated: ${formatDate(new Date())}`, pageWidth - margin, y, {
+    align: "right",
+  });
 
   y += 8;
 
@@ -659,39 +426,33 @@ export async function generateReportPdf(
     head: [["Report information", "Details"]],
     body: [
       ["Report ID", getValue(report.id)],
-      [
-        "Customer",
-        getValue(report.customerName, report.customer_name),
-      ],
+      ["Customer", getValue(report.customerName, report.customer_name)],
       [
         "Customer address",
         getValue(report.customerAddress, report.customer_address),
       ],
       [
-        "Customer GST",
-        getValue(report.customerGst, report.customer_gst),
+        "Customer GST No.",
+        getValue(
+          report.customerGstNo ?? undefined,
+          report.customer_gst_no ?? undefined,
+        ),
       ],
       [
-        "Customer contact",
-        getValue(report.customerContact, report.customer_contact),
+        "Customer contact number",
+        getValue(
+          report.customerContactNumber ?? undefined,
+          report.customer_contact_number ?? undefined,
+        ),
       ],
       [
         "Employee / Engineer",
         getValue(report.employeeName, report.employee_name),
       ],
-      [
-        "Employee ID",
-        getValue(report.employeeId, report.employee_id),
-      ],
+      ["Employee ID", getValue(report.employeeId, report.employee_id)],
       ["Status", getValue(report.status)],
-      [
-        "Created date",
-        formatDate(report.createdAt ?? report.created_at),
-      ],
-      [
-        "Submitted date",
-        formatDate(report.submittedAt ?? report.submitted_at),
-      ],
+      ["Created date", formatDate(report.createdAt ?? report.created_at)],
+      ["Submitted date", formatDate(report.submittedAt ?? report.submitted_at)],
     ],
     headStyles: {
       fillColor: NAVY,
@@ -709,300 +470,136 @@ export async function generateReportPdf(
     },
   });
 
-  y = (
-    pdf as jsPDF & { lastAutoTable: { finalY: number } }
-  ).lastAutoTable.finalY + 8;
+  y =
+    (pdf as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable
+      .finalY + 8;
 
   // Dynamic sections and fields from the saved template
   // Dynamic sections and fields, with media links beside their fields.
-for (const section of template?.sections ?? []) {
-  const fields = section.fields ?? [];
+  for (const section of template?.sections ?? []) {
+    const fields = section.fields ?? [];
 
-  if (fields.length === 0) continue;
+    if (fields.length === 0) continue;
 
-  if (y > pageHeight - 35) {
-    pdf.addPage();
-    y = 18;
-  }
-
-  pdf.setTextColor(...NAVY);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10.5);
-
-  pdf.text(
-    section.title ?? section.name ?? "Report details",
-    margin,
-    y,
-  );
-
-  y += 3;
-
-  const body: string[][] = [];
-  const mediaRows: Array<{
-    rowIndex: number;
-    links: EvidenceLink[];
-  }> = [];
-
-  for (const field of fields) {
-    const key = field.id ?? field.key ?? "";
-    const label = (field.label ?? field.title ?? key) || "Field";
-
-    const links = getFieldEvidence(
-      field,
-      formData,
-      report.evidence,
-    );
-
-    const response = formatFieldResponse(
-      field,
-      formData,
-      report.evidence,
-    );
-
-    const rowIndex = body.length;
-
-    body.push([label, response]);
-
-    if (links.length > 0) {
-      mediaRows.push({ rowIndex, links });
+    if (y > pageHeight - 35) {
+      pdf.addPage();
+      y = 18;
     }
-  }
 
-  autoTable(pdf, {
-    startY: y,
-    theme: "striped",
-    margin: { left: margin, right: margin },
-    head: [["Field", "Response / Evidence"]],
-    body,
-    headStyles: {
-      fillColor: NAVY,
-      textColor: [255, 255, 255],
-    },
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-      overflow: "linebreak",
-      valign: "top",
-    },
-    columnStyles: {
-      0: { cellWidth: 55 },
-      1: { cellWidth: "auto" },
-    },
-    didDrawCell: (data) => {
-      if (data.section !== "body" || data.column.index !== 1) {
-        return;
+    pdf.setTextColor(...NAVY);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10.5);
+
+    pdf.text(section.title ?? section.name ?? "Report details", margin, y);
+
+    y += 3;
+
+    const body: string[][] = [];
+    const mediaRows: Array<{
+      rowIndex: number;
+      links: EvidenceLink[];
+    }> = [];
+
+    for (const field of fields) {
+      const key = field.id ?? field.key ?? "";
+      const label = (field.label ?? field.title ?? key) || "Field";
+
+      const links = getFieldEvidence(field, formData, report.evidence);
+
+      const response = formatFieldResponse(field, formData, report.evidence);
+
+      const rowIndex = body.length;
+
+      body.push([label, response]);
+
+      if (links.length > 0) {
+        mediaRows.push({ rowIndex, links });
       }
+    }
 
-      const media = mediaRows.find(
-        (item) => item.rowIndex === data.row.index,
-      );
-
-      if (!media) return;
-
-      const links = media.links;
-      const lineHeight = 4;
-      let linkY = data.cell.y + data.cell.height - 3;
-
-      // Draw clickable media links inside the corresponding table cell.
-      for (let i = links.length - 1; i >= 0; i--) {
-        const item = links[i];
-
-        const action =
-          item.kind === "video"
-            ? "Watch video"
-            : item.kind === "image"
-              ? "View image"
-              : "Open file";
-
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(8);
-        pdf.setTextColor(...TEAL);
-
-        const linkText = `${action}: ${item.fileName ?? item.label}`;
-
-        // Keep the link within the response column.
-        const maxWidth = data.cell.width - 6;
-        const lines = pdf.splitTextToSize(linkText, maxWidth);
-
-        // This is a fallback if a long filename wraps.
-        for (let j = lines.length - 1; j >= 0; j--) {
-          pdf.text(lines[j], data.cell.x + 3, linkY, {
-            maxWidth,
-          });
-
-          const textWidth = Math.min(
-            pdf.getTextWidth(lines[j]),
-            maxWidth,
-          );
-
-          pdf.link(
-            data.cell.x + 3,
-            linkY - 3,
-            textWidth,
-            lineHeight,
-            { url: item.url },
-          );
-
-          linkY -= lineHeight;
+    autoTable(pdf, {
+      startY: y,
+      theme: "striped",
+      margin: { left: margin, right: margin },
+      head: [["Field", "Response / Evidence"]],
+      body,
+      headStyles: {
+        fillColor: NAVY,
+        textColor: [255, 255, 255],
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        overflow: "linebreak",
+        valign: "top",
+      },
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: "auto" },
+      },
+      didDrawCell: (data) => {
+        if (data.section !== "body" || data.column.index !== 1) {
+          return;
         }
-      }
-    },
-  });
 
-  y = (
-    pdf as jsPDF & { lastAutoTable: { finalY: number } }
-  ).lastAutoTable.finalY + 8;
-}
-//   for (const section of template?.sections ?? []) {
-//     const rows = (section.fields ?? []).map((field) => {
-//       const key = field.id ?? field.key ?? "";
-//       const value = formData[key];
+        const media = mediaRows.find(
+          (item) => item.rowIndex === data.row.index,
+        );
 
-//       return [
-//         (field.label ?? field.title ?? key) || "Field",
-//         formatValue(value),
-//       ];
-//     });
+        if (!media) return;
 
-//     if (rows.length === 0) continue;
+        const links = media.links;
+        const lineHeight = 4;
+        let linkY = data.cell.y + data.cell.height - 3;
 
-//     if (y > pageHeight - 35) {
-//       pdf.addPage();
-//       y = 18;
-//     }
+        // Draw clickable media links inside the corresponding table cell.
+        for (let i = links.length - 1; i >= 0; i--) {
+          const item = links[i];
 
-//     pdf.setTextColor(...NAVY);
-//     pdf.setFont("helvetica", "bold");
-//     pdf.setFontSize(10.5);
+          const action =
+            item.kind === "video"
+              ? "Watch video"
+              : item.kind === "image"
+                ? "View image"
+                : "Open file";
 
-//     pdf.text(
-//       section.title ?? section.name ?? "Report details",
-//       margin,
-//       y,
-//     );
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8);
+          pdf.setTextColor(...TEAL);
 
-//     autoTable(pdf, {
-//       startY: y + 3,
-//       theme: "striped",
-//       margin: { left: margin, right: margin },
-//       head: [["Field", "Response"]],
-//       body: rows,
-//       headStyles: {
-//         fillColor: NAVY,
-//         textColor: [255, 255, 255],
-//       },
-//       styles: {
-//         fontSize: 8,
-//         cellPadding: 3,
-//         overflow: "linebreak",
-//         valign: "top",
-//       },
-//       columnStyles: {
-//         0: { cellWidth: 55 },
-//         1: { cellWidth: "auto" },
-//       },
-//     });
+          const linkText = `${action}: ${item.fileName ?? item.label}`;
 
-//     y = (
-//       pdf as jsPDF & { lastAutoTable: { finalY: number } }
-//     ).lastAutoTable.finalY + 8;
-//   }
+          // Keep the link within the response column.
+          const maxWidth = data.cell.width - 6;
+          const lines = pdf.splitTextToSize(linkText, maxWidth);
 
-  // Clickable evidence links
-//   const evidence = collectEvidence([
-//     report.evidence,
-//     formData,
-//   ]);
+          // This is a fallback if a long filename wraps.
+          for (let j = lines.length - 1; j >= 0; j--) {
+            pdf.text(lines[j], data.cell.x + 3, linkY, {
+              maxWidth,
+            });
 
-//   if (evidence.length > 0) {
-//     if (y > pageHeight - 35) {
-//       pdf.addPage();
-//       y = 18;
-//     }
+            const textWidth = Math.min(pdf.getTextWidth(lines[j]), maxWidth);
 
-//     pdf.setTextColor(...NAVY);
-//     pdf.setFont("helvetica", "bold");
-//     pdf.setFontSize(12);
-//     pdf.text("UPLOADED EVIDENCE", margin, y);
+            pdf.link(data.cell.x + 3, linkY - 3, textWidth, lineHeight, {
+              url: item.url,
+            });
 
-//     y += 8;
+            linkY -= lineHeight;
+          }
+        }
+      },
+    });
 
-//     for (const item of evidence) {
-//       const label = `${item.label}: ${item.fileName ?? "Uploaded file"}`;
-
-//       const labelLines = pdf.splitTextToSize(
-//         label,
-//         pageWidth - margin * 2,
-//       );
-
-//       const dateLine = item.capturedAt
-//         ? `Captured: ${formatDate(item.capturedAt)}`
-//         : "";
-
-//       const neededHeight =
-//         labelLines.length * 4 + (dateLine ? 9 : 5) + 8;
-
-//       if (y + neededHeight > pageHeight - 19) {
-//         pdf.addPage();
-//         y = 18;
-//       }
-
-//       pdf.setFont("helvetica", "normal");
-//       pdf.setFontSize(8.5);
-//       pdf.setTextColor(45, 45, 45);
-
-//       pdf.text(labelLines, margin, y);
-//       y += labelLines.length * 4;
-
-//       if (dateLine) {
-//         pdf.setFontSize(7.5);
-//         pdf.setTextColor(90, 90, 90);
-//         pdf.text(dateLine, margin, y);
-//         y += 4;
-//       }
-
-//       const action =
-//         item.kind === "video"
-//           ? "Watch video"
-//           : item.kind === "image"
-//             ? "View image"
-//             : "Open file";
-
-//       pdf.setFont("helvetica", "bold");
-//       pdf.setFontSize(8.5);
-//       pdf.setTextColor(...TEAL);
-//       pdf.text(action, margin, y);
-
-//       // PDF hyperlink annotation
-//       pdf.link(
-//         margin,
-//         y - 3.5,
-//         pdf.getTextWidth(action),
-//         5,
-//         { url: item.url },
-//       );
-
-//       y += 9;
-//     }
-//   } else {
-//     if (y > pageHeight - 25) {
-//       pdf.addPage();
-//       y = 18;
-//     }
-
-//     pdf.setFont("helvetica", "italic");
-//     pdf.setFontSize(8.5);
-//     pdf.setTextColor(100, 100, 100);
-//     pdf.text("No uploaded evidence links found.", margin, y);
-//   }
+    y =
+      (pdf as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + 8;
+  }
 
   // Footer on every page
   addFooter(pdf);
 
-  const safeId = (report.id ?? "report").replace(
-    /[^a-zA-Z0-9_-]/g,
-    "_",
-  );
+  const safeId = (report.id ?? "report").replace(/[^a-zA-Z0-9_-]/g, "_");
 
   pdf.save(`${safeId}.pdf`);
 }

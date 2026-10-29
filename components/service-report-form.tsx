@@ -815,6 +815,8 @@ const save = async (submit = false) => {
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
       customerAddress: selectedCustomer.address,
+      customerGstNo: selectedCustomer.gstNo ?? "",
+customerContactNumber: selectedCustomer.contactNumber ?? "",
       formData: data.formData,
       evidence: data.evidence,
       signatures: data.signatures,

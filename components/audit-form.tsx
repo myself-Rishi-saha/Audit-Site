@@ -839,6 +839,8 @@ export default function AuditForm() {
       // IMPORTANT:
       // Save the exact latest template
       // that this employee used.
+      customerGstNo: selectedCustomer.gstNo ?? "",
+      customerContactNumber: selectedCustomer.contactNumber ?? "",
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
       customerAddress: selectedCustomer.address,

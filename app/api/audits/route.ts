@@ -1,5 +1,3 @@
-
-
 // import { NextResponse } from "next/server";
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
@@ -552,6 +550,8 @@ interface AuditRow extends RowDataPacket {
   created_at: Date | string;
   updated_at: Date | string;
   submitted_at: Date | string | null;
+  customer_gst_no: string | null;
+  customer_contact_number: string | null;
 }
 
 interface EmployeeRow extends RowDataPacket {
@@ -591,11 +591,7 @@ function parseJsonObject(value: unknown): Record<string, unknown> {
     }
   }
 
-  if (
-    parsed !== null &&
-    typeof parsed === "object" &&
-    !Array.isArray(parsed)
-  ) {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
     return parsed as Record<string, unknown>;
   }
 
@@ -613,10 +609,9 @@ function toIsoString(value: Date | string | null): string | null {
   const normalized = value.trim().replace(" ", "T");
 
   // A DATETIME string has no timezone suffix. Interpret it as UTC.
-  const withTimezone =
-    /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized)
-      ? normalized
-      : `${normalized}Z`;
+  const withTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized)
+    ? normalized
+    : `${normalized}Z`;
 
   const date = new Date(withTimezone);
 
@@ -629,8 +624,9 @@ function mapAudit(row: AuditRow) {
     employeeId: String(row.employee_id),
     employeeName: String(row.employee_name),
     customerId: row.customer_id == null ? null : String(row.customer_id),
-    customerName:
-      row.customer_name == null ? null : String(row.customer_name),
+    customerName: row.customer_name == null ? null : String(row.customer_name),
+    customerGstNo: row.customer_gst_no ?? null,
+    customerContactNumber: row.customer_contact_number ?? null,
     customerAddress:
       row.customer_address == null ? null : String(row.customer_address),
     templateId: String(row.template_id || ""),
@@ -783,7 +779,9 @@ export async function GET(request: Request) {
       const [rows] = await db.execute<AuditRow[]>(
         `SELECT
            id, employee_id, employee_name, template_id, template_snapshot,
-           customer_id, customer_name, customer_address, form_data, evidence,
+           customer_id, customer_name, customer_address,
+customer_gst_no, customer_contact_number,
+form_data, evidence,
            signatures, status, score, created_at, updated_at, submitted_at
          FROM audits
          WHERE ${conditions.join(" AND ")}
@@ -816,24 +814,18 @@ export async function GET(request: Request) {
         !toBoolean(employee.is_active) ||
         employee.role !== "auditor"
       ) {
-        return forbidden(
-          "Your employee account is inactive or unauthorized.",
-        );
+        return forbidden("Your employee account is inactive or unauthorized.");
       }
 
       if (!toBoolean(employee.can_access_audit)) {
-        return forbidden(
-          "You do not have permission to access audit reports.",
-        );
+        return forbidden("You do not have permission to access audit reports.");
       }
 
       const conditions = ["employee_id = ?"];
       const values: (string | number | null)[] = [employeeId];
 
       if (searchTerm) {
-        conditions.push(
-          "(id LIKE ? OR COALESCE(customer_name, '') LIKE ?)",
-        );
+        conditions.push("(id LIKE ? OR COALESCE(customer_name, '') LIKE ?)");
         values.push(searchPattern, searchPattern);
       }
 
@@ -848,7 +840,9 @@ export async function GET(request: Request) {
       const [rows] = await db.execute<AuditRow[]>(
         `SELECT
            id, employee_id, employee_name, template_id, template_snapshot,
-           customer_id, customer_name, customer_address, form_data, evidence,
+           customer_id, customer_name, customer_address,
+customer_gst_no, customer_contact_number,
+form_data, evidence,
            signatures, status, score, created_at, updated_at, submitted_at
          FROM audits
          WHERE ${conditions.join(" AND ")}
@@ -909,19 +903,12 @@ export async function POST(req: Request) {
       );
     }
 
-    if (
-      !toBoolean(employee.is_active) ||
-      employee.role !== "auditor"
-    ) {
-      return forbidden(
-        "Your employee account is inactive or unauthorized.",
-      );
+    if (!toBoolean(employee.is_active) || employee.role !== "auditor") {
+      return forbidden("Your employee account is inactive or unauthorized.");
     }
 
     if (!toBoolean(employee.can_access_audit)) {
-      return forbidden(
-        "You do not have permission to create audit reports.",
-      );
+      return forbidden("You do not have permission to create audit reports.");
     }
 
     const body = await req.json();
@@ -941,6 +928,8 @@ export async function POST(req: Request) {
     const customerId = body.customerId ?? null;
     const customerName = body.customerName ?? null;
     const customerAddress = body.customerAddress ?? null;
+    const customerGstNo = body.customerGstNo ?? null;
+    const customerContactNumber = body.customerContactNumber ?? null;
     const formData = body.formData ?? {};
     const evidence = body.evidence ?? {};
     const signatures = body.signatures ?? {};
@@ -985,33 +974,75 @@ export async function POST(req: Request) {
 
     const auditId = `AUD-${String(nextNumber).padStart(3, "0")}`;
 
-    await connection.execute(
-      `UPDATE report_id_counters
-       SET next_number = ?
-       WHERE report_type = 'AUD'`,
-      [nextNumber + 1],
-    );
+    // await connection.execute(
+    //   `UPDATE report_id_counters
+    //    SET next_number = ?
+    //    WHERE report_type = 'AUD'`,
+    //   [nextNumber + 1],
+    // );
+
+    // await connection.execute(
+    //   `INSERT INTO audits (
+    //      id,
+    //      employee_id,
+    //      employee_name,
+    //      template_id,
+    //      template_snapshot,
+    //      customer_id,
+    //      customer_name,
+    //      customer_address,
+    //          customerGstNo,
+    // customerContactNumber,
+    //      form_data,
+    //      evidence,
+    //      signatures,
+    //      status,
+    //      score,
+    //      created_at,
+    //      updated_at
+    //    )
+    //    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', NULL,
+    //            UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+    //   [
+    //     auditId,
+    //     employeeId,
+    //     String(employee.name ?? ""),
+    //     templateId,
+    //     JSON.stringify(templateSnapshot),
+    //     customerId,
+    //     customerName,
+    //     customerAddress,
+
+    //     JSON.stringify(formData),
+    //     JSON.stringify(evidence),
+    //     JSON.stringify(signatures),
+    //   ],
+    // );
 
     await connection.execute(
       `INSERT INTO audits (
-         id,
-         employee_id,
-         employee_name,
-         template_id,
-         template_snapshot,
-         customer_id,
-         customer_name,
-         customer_address,
-         form_data,
-         evidence,
-         signatures,
-         status,
-         score,
-         created_at,
-         updated_at
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', NULL,
-               UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+     id,
+     employee_id,
+     employee_name,
+     template_id,
+     template_snapshot,
+     customer_id,
+     customer_name,
+     customer_address,
+     customer_gst_no,
+     customer_contact_number,
+     form_data,
+     evidence,
+     signatures,
+     status,
+     score,
+     created_at,
+     updated_at
+   )
+   VALUES (
+     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+     'DRAFT', NULL, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3)
+   )`,
       [
         auditId,
         employeeId,
@@ -1021,6 +1052,8 @@ export async function POST(req: Request) {
         customerId,
         customerName,
         customerAddress,
+        customerGstNo,
+        customerContactNumber,
         JSON.stringify(formData),
         JSON.stringify(evidence),
         JSON.stringify(signatures),
@@ -1030,7 +1063,9 @@ export async function POST(req: Request) {
     const [createdRows] = await connection.execute<AuditRow[]>(
       `SELECT
          id, employee_id, employee_name, template_id, template_snapshot,
-         customer_id, customer_name, customer_address, form_data, evidence,
+         customer_id, customer_name, customer_address,
+customer_gst_no, customer_contact_number,
+form_data, evidence,
          signatures, status, score, created_at, updated_at, submitted_at
        FROM audits
        WHERE id = ?

@@ -47,6 +47,8 @@ type ServiceReport = {
   status?: string;
   customerId?: string;
   customerAddress?: string;
+  customerGstNo?: string | null;
+  customerContactNumber?: string | null;
   templateId?: string;
 
   /*
@@ -229,7 +231,9 @@ export function ServiceReportReport({ report }: { report: ServiceReport }) {
       </Button>
 
       <div>
-        <p className="text-sm font-semibold text-primary">serial number {report.id}</p>
+        <p className="text-sm font-semibold text-primary">
+          serial number {report.id}
+        </p>
 
         <h1 className="mt-2 text-3xl font-bold">
           {(
@@ -242,6 +246,41 @@ export function ServiceReportReport({ report }: { report: ServiceReport }) {
         {report.status && <Badge className="mt-3">{report.status}</Badge>}
       </div>
 
+      {/* CUSTOMER INFORMATION
+      <Card>
+        <CardHeader>
+          <CardTitle>CUSTOMER INFORMATION</CardTitle>
+        </CardHeader>
+
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer ID
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerId || "—"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer Name
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerName || "—"}
+            </p>
+          </div>
+
+          <div className="sm:col-span-2">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer Address
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm">
+              {report.customerAddress || "—"}
+            </p>
+          </div>
+        </CardContent>
+      </Card> */}
       {/* CUSTOMER INFORMATION */}
       <Card>
         <CardHeader>
@@ -264,6 +303,24 @@ export function ServiceReportReport({ report }: { report: ServiceReport }) {
             </p>
             <p className="mt-1 text-sm font-medium">
               {report.customerName || "—"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer GST No.
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerGstNo || "—"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Customer Contact Number
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {report.customerContactNumber || "—"}
             </p>
           </div>
 

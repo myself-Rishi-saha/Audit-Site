@@ -743,7 +743,7 @@ export function AuditReport({
         />
       </div>
       {/* Inspection Details */}
-      <Card className="mt-6 shadow-sm">
+      {/* <Card className="mt-6 shadow-sm">
         <CardHeader>
           <CardTitle>Inspection details</CardTitle>
         </CardHeader>
@@ -760,7 +760,36 @@ export function AuditReport({
                 : "—"} />
         </CardContent>
 
-      </Card>
+      </Card> */}
+
+{/* Inspection Details */}
+<Card className="mt-6 shadow-sm">
+  <CardHeader>
+    <CardTitle>Inspection details</CardTitle>
+  </CardHeader>
+
+  <CardContent className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <Info label="Customer" value={audit.customerName} />
+    <Info label="Location" value={audit.customerAddress} />
+    <Info label="GST No." value={audit.customerGstNo} />
+    <Info
+      label="Contact Number"
+      value={audit.customerContactNumber}
+    />
+    <Info label="Auditor" value={audit.employeeName} />
+    <Info
+      label="Date"
+      value={
+        audit.createdAt
+          ? new Date(audit.createdAt).toLocaleDateString("en-GB", {
+              timeZone: "Asia/Kolkata",
+            })
+          : "—"
+      }
+    />
+  </CardContent>
+</Card>
+
 
       {/* Sections */}
 

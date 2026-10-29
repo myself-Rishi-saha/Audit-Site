@@ -552,6 +552,8 @@ type AuditRow = RowDataPacket & {
   customer_id: string | null;
   customer_name: string | null;
   customer_address: string | null;
+  customer_gst_no: string | null;
+customer_contact_number: string | null;
   form_data: unknown;
   evidence: unknown;
   signatures: unknown;
@@ -629,6 +631,13 @@ function mapAudit(row: AuditRow) {
     customerName: row.customer_name == null ? null : String(row.customer_name),
     customerAddress:
       row.customer_address == null ? null : String(row.customer_address),
+      customerGstNo:
+  row.customer_gst_no == null ? null : String(row.customer_gst_no),
+
+customerContactNumber:
+  row.customer_contact_number == null
+    ? null
+    : String(row.customer_contact_number),
     templateId: String(row.template_id || ""),
     templateSnapshot,
     template: templateSnapshot,
@@ -746,17 +755,41 @@ async function getAccessContext() {
 async function findAudit(id: string) {
   const db = getDatabase();
 
-  const [rows] = await db.execute<AuditRow[]>(
-    `SELECT
-       id, employee_id, employee_name, template_id, template_snapshot,
-       customer_id, customer_name, customer_address, form_data, evidence,
-       signatures, status, score, created_at, updated_at, submitted_at
-     FROM audits
-     WHERE id = ?
-     LIMIT 1`,
-    [id],
-  );
-
+  // const [rows] = await db.execute<AuditRow[]>(
+  //   `SELECT
+  //      id, employee_id, employee_name, template_id, template_snapshot,
+  //      customer_id, customer_name, customer_address, form_data, evidence,
+  //      signatures, status, score, created_at, updated_at, submitted_at
+  //    FROM audits
+  //    WHERE id = ?
+  //    LIMIT 1`,
+  //   [id],
+  // );
+const [rows] = await db.execute<AuditRow[]>(
+  `SELECT
+     id,
+     employee_id,
+     employee_name,
+     template_id,
+     template_snapshot,
+     customer_id,
+     customer_name,
+     customer_address,
+     customer_gst_no,
+     customer_contact_number,
+     form_data,
+     evidence,
+     signatures,
+     status,
+     score,
+     created_at,
+     updated_at,
+     submitted_at
+   FROM audits
+   WHERE id = ?
+   LIMIT 1`,
+  [id],
+);
   return rows[0] ?? null;
 }
 
