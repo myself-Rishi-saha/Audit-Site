@@ -2,13 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { generateReportPdf } from "@/lib/generate-report-pdf";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -131,9 +126,7 @@ export function AdminDailyAccentEditor({
     const commonLabel = (
       <label className="block text-sm font-medium">
         {field.label}
-        {field.required && (
-          <span className="ml-1 text-destructive">*</span>
-        )}
+        {field.required && <span className="ml-1 text-destructive">*</span>}
       </label>
     );
 
@@ -151,9 +144,7 @@ export function AdminDailyAccentEditor({
             className="mt-2"
             disabled={!editing}
             value={String(fieldValue ?? "")}
-            onChange={(event) =>
-              setFieldValue(field.id, event.target.value)
-            }
+            onChange={(event) => setFieldValue(field.id, event.target.value)}
           />
         </div>
       );
@@ -195,10 +186,7 @@ export function AdminDailyAccentEditor({
       );
     }
 
-    if (
-      field.type === "single-choice" ||
-      field.type === "multiple-choice"
-    ) {
+    if (field.type === "single-choice" || field.type === "multiple-choice") {
       const isMultiple = field.type === "multiple-choice";
       const selectedValues = Array.isArray(fieldValue)
         ? fieldValue.map(String)
@@ -224,15 +212,10 @@ export function AdminDailyAccentEditor({
                     } else if (selected) {
                       setFieldValue(
                         field.id,
-                        selectedValues.filter(
-                          (item) => item !== option,
-                        ),
+                        selectedValues.filter((item) => item !== option),
                       );
                     } else {
-                      setFieldValue(field.id, [
-                        ...selectedValues,
-                        option,
-                      ]);
+                      setFieldValue(field.id, [...selectedValues, option]);
                     }
                   }}
                   className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
@@ -250,25 +233,17 @@ export function AdminDailyAccentEditor({
       );
     }
 
-    if (
-      field.type === "camera-photo" ||
-      field.type === "camera-video"
-    ) {
+    if (field.type === "camera-photo" || field.type === "camera-video") {
       const fieldEvidence = value.evidence?.[field.id] || [];
       const isVideo = field.type === "camera-video";
 
       return (
-        <div
-          key={field.id}
-          className="rounded-xl border bg-muted/20 p-4"
-        >
+        <div key={field.id} className="rounded-xl border bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium">{field.label}</p>
               {field.required && (
-                <span className="text-xs text-destructive">
-                  Required
-                </span>
+                <span className="text-xs text-destructive">Required</span>
               )}
             </div>
             <span className="text-xs text-muted-foreground">
@@ -324,10 +299,7 @@ export function AdminDailyAccentEditor({
       const signature = value.signatures?.[field.id];
 
       return (
-        <div
-          key={field.id}
-          className="rounded-xl border bg-muted/20 p-4"
-        >
+        <div key={field.id} className="rounded-xl border bg-muted/20 p-4">
           <p className="text-sm font-medium">{field.label}</p>
 
           {signature?.signature ? (
@@ -371,9 +343,7 @@ export function AdminDailyAccentEditor({
           className="mt-2"
           disabled={!editing}
           value={String(fieldValue ?? "")}
-          onChange={(event) =>
-            setFieldValue(field.id, event.target.value)
-          }
+          onChange={(event) => setFieldValue(field.id, event.target.value)}
         />
         <p className="mt-1 text-xs text-muted-foreground">
           Field type: {field.type}
@@ -403,10 +373,7 @@ export function AdminDailyAccentEditor({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          "Failed to save Daily Accent Report:",
-          errorText,
-        );
+        console.error("Failed to save Daily Accent Report:", errorText);
         alert("Failed to save Daily Accent Report.");
         return;
       }
@@ -416,8 +383,7 @@ export function AdminDailyAccentEditor({
       setValue((current) => ({
         ...current,
         ...updated,
-        templateSnapshot:
-          updated.templateSnapshot || current.templateSnapshot,
+        templateSnapshot: updated.templateSnapshot || current.templateSnapshot,
         formData: updated.formData || current.formData || {},
         evidence: updated.evidence || current.evidence || {},
         signatures: updated.signatures || current.signatures || {},
@@ -459,9 +425,7 @@ export function AdminDailyAccentEditor({
     <main className="mx-auto max-w-5xl px-5 py-8">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Admin review
-          </p>
+          <p className="text-sm font-medium text-primary">Admin review</p>
           <h1 className="mt-1 text-3xl font-semibold">
             {template.title || template.name || "Daily Accent Report"}
           </h1>
@@ -476,18 +440,18 @@ export function AdminDailyAccentEditor({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => generateReportPdf(value, "Service Report")}
+          >
             Generate PDF
           </Button>
           <Button
             onClick={() => (editing ? save() : setEditing(true))}
             disabled={saving}
           >
-            {saving
-              ? "Saving…"
-              : editing
-                ? "Save Changes"
-                : "Edit Report"}
+            {saving ? "Saving…" : editing ? "Save Changes" : "Edit Report"}
           </Button>
         </div>
       </div>
@@ -528,10 +492,9 @@ export function AdminDailyAccentEditor({
             <span className="text-muted-foreground">Report date</span>
             <p className="mt-2 font-semibold">
               {value.createdAt
-                ? new Date(value.createdAt).toLocaleDateString(
-                    "en-GB",
-                    { timeZone: "Asia/Kolkata" },
-                  )
+                ? new Date(value.createdAt).toLocaleDateString("en-GB", {
+                    timeZone: "Asia/Kolkata",
+                  })
                 : "—"}
             </p>
           </div>
@@ -543,17 +506,13 @@ export function AdminDailyAccentEditor({
 
           <div className="text-sm">
             <span className="text-muted-foreground">Employee</span>
-            <p className="mt-2 font-semibold">
-              {value.employeeName || "—"}
-            </p>
+            <p className="mt-2 font-semibold">{value.employeeName || "—"}</p>
           </div>
 
           <div className="text-sm">
             <span className="text-muted-foreground">Status</span>
             <p className="mt-2">
-              <Badge>
-                {String(value.status || "DRAFT").toUpperCase()}
-              </Badge>
+              <Badge>{String(value.status || "DRAFT").toUpperCase()}</Badge>
             </p>
           </div>
         </CardContent>
@@ -567,11 +526,9 @@ export function AdminDailyAccentEditor({
           <CardContent
             className={
               section.fields?.some((field) =>
-                [
-                  "camera-photo",
-                  "camera-video",
-                  "signature",
-                ].includes(field.type),
+                ["camera-photo", "camera-video", "signature"].includes(
+                  field.type,
+                ),
               )
                 ? "space-y-5"
                 : "grid gap-5 sm:grid-cols-2"

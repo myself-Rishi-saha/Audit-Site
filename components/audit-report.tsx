@@ -752,8 +752,14 @@ export function AuditReport({
           <Info label="Customer" value={audit.customerName} />
           <Info label="Location" value={audit.customerAddress} />
           <Info label="Auditor" value={audit.employeeName} />
-          <Info label="Date" value={audit.updatedAt} />
+          <Info label="Date" value={audit.createdAt
+                ? new Date(audit.createdAt).toLocaleDateString(
+                    "en-GB",
+                    { timeZone: "Asia/Kolkata" },
+                  )
+                : "—"} />
         </CardContent>
+
       </Card>
 
       {/* Sections */}

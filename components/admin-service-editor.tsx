@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { generateReportPdf } from "@/lib/generate-report-pdf";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -666,7 +666,11 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => generateReportPdf(value, "Service Report")}
+          >
             Generate PDF
           </Button>
 
@@ -829,73 +833,6 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
           )}
         </CardContent>
       </Card>
-
-      {/* SIGNATURE SUMMARY */}
-      {/* 
-      {Object.keys(
-        value.signatures || {},
-      ).length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>
-              Signatures
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="grid gap-5 sm:grid-cols-2">
-            {Object.entries(
-              value.signatures,
-            ).map(
-              ([
-                fieldId,
-                signature,
-              ]) => (
-                <div
-                  key={fieldId}
-                  className="rounded-xl border bg-muted/20 p-4"
-                >
-                  <p className="text-sm font-medium">
-                    {template.sections
-                      ?.flatMap(
-                        (
-                          section,
-                        ) =>
-                          section.fields ||
-                          [],
-                      )
-                      .find(
-                        (field) =>
-                          field.id ===
-                          fieldId,
-                      )
-                      ?.label ||
-                      fieldId}
-                  </p>
-
-                  <div className="mt-3 overflow-hidden rounded-lg border bg-white">
-                    <img
-                      src={
-                        signature.signature
-                      }
-                      alt={`${fieldId} signature`}
-                      className="max-h-40 w-full object-contain"
-                    />
-                  </div>
-
-                  {signature.signedAt && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Signed:{" "}
-                      {new Date(
-                        signature.signedAt,
-                      ).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              ),
-            )}
-          </CardContent>
-        </Card>
-      )} */}
     </main>
   );
 }

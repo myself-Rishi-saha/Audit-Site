@@ -1,4 +1,3 @@
-
 // "use client";
 
 // import { useState } from "react";
@@ -166,7 +165,7 @@
 //       if (!res.ok) {
 //         throw new Error("Failed to save audit");
 //       }
-      
+
 //       const updatedAudit = await res.json();
 
 //       setValue(updatedAudit);
@@ -505,8 +504,6 @@
 //         </div>
 //       </div>
 
-      
-
 //       {/* AUDIT INFORMATION */}
 //       <Card>
 //         <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
@@ -658,13 +655,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { generateReportPdf } from "@/lib/generate-report-pdf";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -794,9 +786,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
       if (!res.ok) {
         const result = await res.json().catch(() => null);
 
-        throw new Error(
-          result?.error || "Failed to save audit changes.",
-        );
+        throw new Error(result?.error || "Failed to save audit changes.");
       }
 
       const updatedAudit = (await res.json()) as Audit;
@@ -821,10 +811,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
     const fieldValue = value.formData?.[field.id];
 
     // Customer evidence: display existing files and allow removal while editing.
-    if (
-      field.type === "camera-photo" ||
-      field.type === "camera-video"
-    ) {
+    if (field.type === "camera-photo" || field.type === "camera-video") {
       const evidence = value.evidence?.[field.id] || [];
 
       return (
@@ -900,8 +887,8 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
 
           <p className="mt-3 text-xs text-muted-foreground">
             Existing evidence can be viewed
-            {editing ? " or removed." : "."}
-            {" "}Uploading new evidence is not available in this editor.
+            {editing ? " or removed." : "."} Uploading new evidence is not
+            available in this editor.
           </p>
         </div>
       );
@@ -955,9 +942,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
             <Button
               key={option}
               type="button"
-              variant={
-                fieldValue === option ? "default" : "outline"
-              }
+              variant={fieldValue === option ? "default" : "outline"}
               disabled={!editing}
               onClick={() => updateFormValue(field.id, option)}
             >
@@ -971,9 +956,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
     // Multiple choice.
     if (field.type === "multiple-choice") {
       const selected = Array.isArray(fieldValue)
-        ? fieldValue.filter(
-            (item): item is string => typeof item === "string",
-          )
+        ? fieldValue.filter((item): item is string => typeof item === "string")
         : [];
 
       return (
@@ -1009,12 +992,8 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
         <Textarea
           className="min-h-24"
           disabled={!editing}
-          value={
-            typeof fieldValue === "string" ? fieldValue : ""
-          }
-          onChange={(e) =>
-            updateFormValue(field.id, e.target.value)
-          }
+          value={typeof fieldValue === "string" ? fieldValue : ""}
+          onChange={(e) => updateFormValue(field.id, e.target.value)}
         />
       );
     }
@@ -1031,22 +1010,17 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
           type={field.type}
           disabled={!editing}
           value={
-            typeof fieldValue === "string" ||
-            typeof fieldValue === "number"
+            typeof fieldValue === "string" || typeof fieldValue === "number"
               ? String(fieldValue)
               : ""
           }
-          onChange={(e) =>
-            updateFormValue(field.id, e.target.value)
-          }
+          onChange={(e) => updateFormValue(field.id, e.target.value)}
         />
       );
     }
 
     return (
-      <p className="text-sm text-muted-foreground">
-        Unsupported field type
-      </p>
+      <p className="text-sm text-muted-foreground">Unsupported field type</p>
     );
   }
 
@@ -1055,9 +1029,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Admin review
-          </p>
+          <p className="text-sm font-medium text-primary">Admin review</p>
 
           <h1 className="mt-1 text-3xl font-semibold">
             {template.title || template.name || "AUDIT REPORT"}
@@ -1069,14 +1041,20 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             onClick={() => window.print()}
           >
             Generate PDF
+          </Button> */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => generateReportPdf(audit, "Audit Report")}
+          >
+            Generate PDF
           </Button>
-
           {editing && (
             <Button
               type="button"
@@ -1106,11 +1084,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
               }
             }}
           >
-            {saving
-              ? "Saving…"
-              : editing
-                ? "Save Changes"
-                : "Edit Report"}
+            {saving ? "Saving…" : editing ? "Save Changes" : "Edit Report"}
           </Button>
         </div>
       </div>
@@ -1139,11 +1113,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
         <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
           <label className="text-sm font-medium">
             Customer
-            <Input
-              className="mt-2"
-              disabled
-              value={value.customerName || ""}
-            />
+            <Input className="mt-2" disabled value={value.customerName || ""} />
           </label>
 
           <label className="text-sm font-medium">
@@ -1155,7 +1125,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
             />
           </label>
 
-          <label className="text-sm font-medium">
+          {/* <label className="text-sm font-medium">
             Audit date
             <Input
               className="mt-2"
@@ -1166,32 +1136,35 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
                   ? value.formData.date
                   : ""
               }
+              
               // onChange={(e) =>
               //   updateFormValue("date", e.target.value)
               // }
             />
-          </label>
-
+          </label> */}
           <div className="text-sm">
-            <span className="text-muted-foreground">
-              Audit ID
-            </span>
-            <p className="mt-2 font-semibold">{value.id}</p>
-          </div>
-
-          <div className="text-sm">
-            <span className="text-muted-foreground">
-              Auditor
-            </span>
+            <span className="text-muted-foreground">Report date</span>
             <p className="mt-2 font-semibold">
-              {value.employeeName}
+              {value.createdAt
+                ? new Date(value.createdAt).toLocaleDateString("en-GB", {
+                    timeZone: "Asia/Kolkata",
+                  })
+                : "—"}
             </p>
           </div>
 
           <div className="text-sm">
-            <span className="text-muted-foreground">
-              Status
-            </span>
+            <span className="text-muted-foreground">Audit ID</span>
+            <p className="mt-2 font-semibold">{value.id}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Auditor</span>
+            <p className="mt-2 font-semibold">{value.employeeName}</p>
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Status</span>
             <p className="mt-2">
               <Badge>{value.status.toUpperCase()}</Badge>
             </p>
@@ -1212,17 +1185,12 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
 
             <div className="flex flex-col gap-6">
               {section.fields.map((field) => (
-                <Card
-                  key={field.id}
-                  className="break-inside-avoid"
-                >
+                <Card key={field.id} className="break-inside-avoid">
                   <CardHeader>
                     <CardTitle className="text-base">
                       {field.label}
                       {field.required && (
-                        <span className="ml-1 text-destructive">
-                          *
-                        </span>
+                        <span className="ml-1 text-destructive">*</span>
                       )}
                     </CardTitle>
                   </CardHeader>
@@ -1240,11 +1208,7 @@ export function AdminAuditEditor({ audit }: { audit: Audit }) {
 
 export function PrintButton() {
   return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => window.print()}
-    >
+    <Button type="button" variant="outline" onClick={() => window.print()}>
       Generate PDF
     </Button>
   );
