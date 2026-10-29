@@ -688,12 +688,12 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
               className="mt-2"
               disabled={!editing}
               value={value.customerName || ""}
-              onChange={(e) =>
-                setValue((current) => ({
-                  ...current,
-                  customerName: e.target.value,
-                }))
-              }
+              // onChange={(e) =>
+              //   setValue((current) => ({
+              //     ...current,
+              //     customerName: e.target.value,
+              //   }))
+              // }
             />
           </label>
 
@@ -703,12 +703,12 @@ export function AdminServiceEditor({ report }: { report: ServiceReport }) {
               className="mt-2"
               disabled={!editing}
               value={value.customerAddress || ""}
-              onChange={(e) =>
-                setValue((current) => ({
-                  ...current,
-                  customerAddress: e.target.value,
-                }))
-              }
+              // onChange={(e) =>
+              //   setValue((current) => ({
+              //     ...current,
+              //     customerAddress: e.target.value,
+              //   }))
+              // }
             />
           </label>
 

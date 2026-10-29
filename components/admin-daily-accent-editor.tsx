@@ -500,12 +500,12 @@ export function AdminDailyAccentEditor({
               className="mt-2"
               disabled={!editing}
               value={value.customerName || ""}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  customerName: event.target.value,
-                }))
-              }
+              // onChange={(event) =>
+              //   setValue((current) => ({
+              //     ...current,
+              //     customerName: event.target.value,
+              //   }))
+              // }
             />
           </label>
 
@@ -515,12 +515,12 @@ export function AdminDailyAccentEditor({
               className="mt-2"
               disabled={!editing}
               value={value.customerAddress || ""}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  customerAddress: event.target.value,
-                }))
-              }
+              // onChange={(event) =>
+              //   setValue((current) => ({
+              //     ...current,
+              //     customerAddress: event.target.value,
+              //   }))
+              // }
             />
           </label>
 

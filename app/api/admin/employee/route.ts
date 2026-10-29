@@ -185,9 +185,20 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error("Create employee error:", error);
 
-    const dbError = error as { code?: string };
+    // const dbError = error as { code?: string };
 
-    if (dbError.code === "23505") {
+    // if (dbError.code === "23505") {
+    //   return NextResponse.json(
+    //     {
+    //       error: "An employee with this username or email already exists",
+    //     },
+    //     { status: 409 },
+    //   );
+    // }
+
+    const dbError = error as { code?: string; errno?: number };
+
+    if (dbError.code === "ER_DUP_ENTRY" || dbError.errno === 1062) {
       return NextResponse.json(
         {
           error: "An employee with this username or email already exists",
