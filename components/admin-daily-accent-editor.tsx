@@ -445,7 +445,7 @@ export function AdminDailyAccentEditor({
           <Button
             type="button"
             variant="outline"
-            onClick={() => generateReportPdf(value, "Service Report")}
+            onClick={() => generateReportPdf(value, "Daily Accent Report")}
           >
             Generate PDF
           </Button>
