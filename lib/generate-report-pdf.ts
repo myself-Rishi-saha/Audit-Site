@@ -627,7 +627,7 @@ export async function generateReportPdf(
   // ========================================
 
   const headerHeight = 49;
-  const qrSize = 25;
+  const qrSize = 16;
   const qrX = pageWidth - margin - qrSize;
 
   pdf.setFillColor(...PRIMARY);
@@ -654,7 +654,7 @@ export async function generateReportPdf(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(13);
 
-  pdf.text("M/S SYSTEM & SOLUTION", textX, 10);
+  pdf.text("M/S SYSTEM & SOLUTION", textX, 12);
 
   // Address.
   pdf.setFont("helvetica", "normal");
@@ -706,7 +706,13 @@ export async function generateReportPdf(
   pdf.text("MSME Reg No:", textX, 40);
 
   pdf.setFont("helvetica", "normal");
-  pdf.text("WB-18-0026029", textX + 25, 40);
+  pdf.text("WB-18-0026029", textX + 20, 40);
+  // Promo.
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Segment:", textX, 45);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.text(" FIRE SAFETY | BUILDING AUTOMATION | ENERGY MANAGEMNT | HVAC | CCTV.", textX + 16, 45);
 
   // QR code on the right.
   if (qrCode) {
@@ -742,7 +748,7 @@ export async function generateReportPdf(
 
   pdf.setTextColor(...PRIMARY);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
+  pdf.setFontSize(10);
 
   pdf.text(reportType.toUpperCase(), margin, y);
 
