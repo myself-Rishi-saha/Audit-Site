@@ -113,8 +113,8 @@ export default function DailyAccentReportForm() {
     templateSnapshot: {
       id: "daily-accent-report",
       type: "DAILY_ACCENT_REPORT",
-      name: "Daily Accent Report",
-      title: "Daily Accent Report",
+      name: "Daily Action Report",
+      title: "Daily Action Report",
       sections: [],
     },
     formData: {},
@@ -149,7 +149,7 @@ export default function DailyAccentReportForm() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to load Daily Accent Report template");
+          throw new Error("Failed to load Daily Action Report template");
         }
 
         const templateData: Template = await response.json();
@@ -159,7 +159,7 @@ export default function DailyAccentReportForm() {
           !Array.isArray(templateData.sections)
         ) {
           throw new Error(
-            "Invalid Daily Accent Report template returned by API",
+            "Invalid Daily Action Report template returned by API",
           );
         }
 
@@ -193,7 +193,7 @@ export default function DailyAccentReportForm() {
           signatures: {},
         });
       } catch (error) {
-        console.error("Failed to load Daily Accent Report template:", error);
+        console.error("Failed to load Daily Action Report template:", error);
 
         if (!cancelled) {
           setTemplateLoadError(true);
@@ -730,7 +730,7 @@ export default function DailyAccentReportForm() {
 
         if (
           !window.confirm(
-            "Submit this Daily Accent Report? You will not be able to edit the completed report.",
+            "Submit this Daily Action Report? You will not be able to edit the completed report.",
           )
         ) {
           return;
@@ -770,9 +770,9 @@ export default function DailyAccentReportForm() {
 
         if (!response.ok) {
           const message = await response.text();
-          console.error("Create Daily Accent Report failed:", message);
+          console.error("Create Daily Action Report failed:", message);
 
-          throw new Error(message || "Failed to create Daily Accent Report.");
+          throw new Error(message || "Failed to create Daily Action Report.");
         }
 
         const created = await response.json();
@@ -799,9 +799,9 @@ export default function DailyAccentReportForm() {
 
         if (!response.ok) {
           const message = await response.text();
-          console.error("Update Daily Accent Report failed:", message);
+          console.error("Update Daily Action Report failed:", message);
 
-          throw new Error(message || "Failed to save Daily Accent Report.");
+          throw new Error(message || "Failed to save Daily Action Report.");
         }
       }
 
@@ -817,23 +817,23 @@ export default function DailyAccentReportForm() {
 
         if (!response.ok) {
           const message = await response.text();
-          console.error("Submit Daily Accent Report failed:", message);
+          console.error("Submit Daily Action Report failed:", message);
 
-          throw new Error(message || "Failed to submit Daily Accent Report.");
+          throw new Error(message || "Failed to submit Daily Action Report.");
         }
 
         router.push(`/employee/daily-accent-report/${id}`);
         router.refresh();
       } else {
-        window.alert("Daily Accent Report draft saved.");
+        window.alert("Daily Action Report draft saved.");
       }
     } catch (error) {
-      console.error("SAVE DAILY ACCENT REPORT ERROR:", error);
+      console.error("SAVE DAILY ACTION REPORT ERROR:", error);
 
       window.alert(
         error instanceof Error
           ? error.message
-          : "Failed to save Daily Accent Report.",
+          : "Failed to save Daily Action Report.",
       );
     } finally {
       isSavingRef.current = false;
@@ -856,7 +856,7 @@ export default function DailyAccentReportForm() {
         <Card className="mt-5">
           <CardContent className="space-y-3 p-6">
             <h1 className="text-lg font-semibold">
-              Unable to load Daily Accent Report
+              Unable to load Daily Action Report
             </h1>
 
             <p className="text-sm text-muted-foreground">
@@ -876,7 +876,7 @@ export default function DailyAccentReportForm() {
   if (!template) {
     return (
       <main className="p-8 text-muted-foreground">
-        Loading Daily Accent Report template…
+        Loading Daily Action Report template…
       </main>
     );
   }
@@ -897,11 +897,11 @@ export default function DailyAccentReportForm() {
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-semibold text-primary">
-                New Daily Accent Report
+                New Daily Action Report
               </p>
 
               <h1 className="mt-2 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-                {template.title || template.name || "Daily Accent Report"}
+                {template.title || template.name || "Daily Action Report"}
               </h1>
 
               <p className="mt-2 text-sm text-muted-foreground">
@@ -923,7 +923,7 @@ export default function DailyAccentReportForm() {
             <h2 className="font-semibold">Customer Information</h2>
 
             <p className="text-sm text-muted-foreground">
-              Select the customer for this Daily Accent Report.
+              Select the customer for this Daily Action Report.
             </p>
           </div>
 

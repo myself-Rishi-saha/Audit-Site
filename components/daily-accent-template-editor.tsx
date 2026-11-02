@@ -105,7 +105,7 @@ const labelFor = (type: string) =>
     "camera-photo": "Camera Photo",
     "camera-video": "Camera Video",
     signature: "Signature",
-    DAILY_ACCENT_REPORT: "Daily Accent Report",
+    DAILY_ACCENT_REPORT: "Daily Action Report",
   })[type] || type;
 
 const clone = <T,>(value: T): T =>
@@ -139,7 +139,7 @@ function normalizeTemplate(data: any): Template {
     name:
       data.name ||
       data.title ||
-      "Daily Accent Report",
+      "Daily Action Report",
     sections: Array.isArray(data.sections)
       ? data.sections.map((section: any, index: number) => ({
           ...section,
@@ -204,7 +204,7 @@ export function DailyAccentTemplateEditor() {
 
         if (!response.ok) {
           throw new Error(
-            "Failed to load Daily Accent Report template.",
+            "Failed to load Daily Action Report template.",
           );
         }
 
@@ -218,7 +218,7 @@ export function DailyAccentTemplateEditor() {
 
         if (!cancelled) {
           alert(
-            "Failed to load Daily Accent Report template. Check that its API route exists.",
+            "Failed to load Daily Action Report template. Check that its API route exists.",
           );
         }
       } finally {
@@ -423,7 +423,7 @@ export function DailyAccentTemplateEditor() {
     if (
       !template ||
       !confirm(
-        "Delete this field? It will no longer appear on new Daily Accent Reports.",
+        "Delete this field? It will no longer appear on new Daily Action Reports.",
       )
     ) {
       return;
@@ -520,7 +520,7 @@ export function DailyAccentTemplateEditor() {
       if (!response.ok) {
         const error = await response.text();
         console.error("Template save failed:", error);
-        throw new Error("Failed to save Daily Accent Report template.");
+        throw new Error("Failed to save Daily Action Report template.");
       }
 
       router.push("/admin/form-templates");
@@ -540,9 +540,9 @@ export function DailyAccentTemplateEditor() {
 
   if (loading) {
     return (
-      <AppShell user="A. Sen · Admin">
+      <AppShell >
         <main className="p-8 text-muted-foreground">
-          Loading Daily Accent Report template…
+          Loading Daily Action Report template…
         </main>
       </AppShell>
     );
@@ -550,13 +550,13 @@ export function DailyAccentTemplateEditor() {
 
   if (!template) {
     return (
-      <AppShell user="A. Sen · Admin">
+      <AppShell >
         <main className="mx-auto max-w-6xl px-5 py-8">
           <p className="text-lg font-semibold">
             Could not load the template.
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Confirm that {API} returns the Daily Accent Report template.
+            Confirm that {API} returns the Daily Action Report template.
           </p>
           <Button
             className="mt-4"
@@ -586,7 +586,7 @@ export function DailyAccentTemplateEditor() {
 
             <div className="mt-6 flex items-center gap-2 text-sm font-medium text-primary">
               <ClipboardList className="size-4" />
-              Daily Accent Report
+              Daily Action Report
             </div>
 
             <h1 className="mt-1 text-3xl font-bold">
@@ -996,7 +996,7 @@ export function DailyAccentTemplateEditor() {
             <CardHeader>
               <CardTitle>Employee Preview</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Preview of the Daily Accent Report fields.
+                Preview of the Daily Action Report fields.
               </p>
             </CardHeader>
 

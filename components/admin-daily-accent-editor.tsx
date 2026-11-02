@@ -77,7 +77,7 @@ export function AdminDailyAccentEditor({
     templateId: report?.templateId || "daily-accent-report",
     templateSnapshot: report?.templateSnapshot || {
       id: report?.templateId || "daily-accent-report",
-      title: "Daily Accent Report",
+      title: "Daily Action Report",
       sections: [],
     },
     formData:
@@ -375,8 +375,8 @@ export function AdminDailyAccentEditor({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Failed to save Daily Accent Report:", errorText);
-        alert("Failed to save Daily Accent Report.");
+        console.error("Failed to save Daily Action Report:", errorText);
+        alert("Failed to save Daily Action Report.");
         return;
       }
 
@@ -394,8 +394,8 @@ export function AdminDailyAccentEditor({
       setEditing(false);
       router.refresh();
     } catch (error) {
-      console.error("Daily Accent Report save error:", error);
-      alert("Failed to save Daily Accent Report.");
+      console.error("Daily Action Report save error:", error);
+      alert("Failed to save Daily Action Report.");
     } finally {
       setSaving(false);
     }
@@ -429,7 +429,7 @@ export function AdminDailyAccentEditor({
         <div>
           <p className="text-sm font-medium text-primary">Admin review</p>
           <h1 className="mt-1 text-3xl font-semibold">
-            {template.title || template.name || "Daily Accent Report"}
+            {template.title || template.name || "Daily Action Report"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Report ID: {value.id}
@@ -445,7 +445,7 @@ export function AdminDailyAccentEditor({
           <Button
             type="button"
             variant="outline"
-            onClick={() => generateReportPdf(value, "Daily Accent Report")}
+            onClick={() => generateReportPdf(value, "Daily Action Report")}
           >
             Generate PDF
           </Button>

@@ -269,7 +269,7 @@ export function DailyAccentReportDraft({ report }: Props) {
         });
 
         if (!response.ok) {
-          throw new Error("Unable to load the Daily Accent Report template.");
+          throw new Error("Unable to load the Daily Action Report template.");
         }
 
         const result = await response.json();
@@ -460,7 +460,7 @@ export function DailyAccentReportDraft({ report }: Props) {
 
   async function deleteDraft() {
     const confirmed = window.confirm(
-      "Delete this Daily Accent Report draft? This action cannot be undone.",
+      "Delete this Daily Action Report draft? This action cannot be undone.",
     );
 
     if (!confirmed) return;
@@ -497,7 +497,7 @@ export function DailyAccentReportDraft({ report }: Props) {
     }
 
     const confirmed = window.confirm(
-      "Submit this Daily Accent Report? After submission, you will not be able to edit it.",
+      "Submit this Daily Action Report? After submission, you will not be able to edit it.",
     );
 
     if (!confirmed) return;
@@ -865,7 +865,7 @@ export function DailyAccentReportDraft({ report }: Props) {
               <CardTitle className="text-2xl">
                 {template?.title ||
                   template?.name ||
-                  "Daily Accent Report Draft"}
+                  "Daily Action Report Draft"}
               </CardTitle>
               <p className="mt-2 text-sm text-muted-foreground">
                 Complete the required fields and evidence before submitting.
@@ -930,7 +930,7 @@ export function DailyAccentReportDraft({ report }: Props) {
             <div className="rounded-lg border border-dashed p-8 text-center">
               <p className="font-medium">No template fields are available.</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Check that the Daily Accent Report template exists and contains
+                Check that the Daily Action Report template exists and contains
                 sections with fields.
               </p>
             </div>

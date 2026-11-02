@@ -917,7 +917,7 @@ export default function Admin() {
       tone: "bg-amber-50 text-amber-700",
     },
     {
-      label: "Daily Accent Reports",
+      label: "Daily Action Reports",
       value: dailyAccentReports.length,
       icon: FileText,
       tone: "bg-violet-50 text-violet-700",
@@ -1023,7 +1023,7 @@ export default function Admin() {
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
               <input
-                aria-label="Search audits, service reports and Daily Accent Reports"
+                aria-label="Search audits, service reports and Daily Action Reports"
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -1231,8 +1231,8 @@ export default function Admin() {
         {/* COMPLETED DAILY ACCENT REPORTS */}
         <DataCard
           className="mt-6"
-          title="Completed Daily Accent Reports"
-          subtitle="Review submitted Daily Accent Reports across the organization"
+          title="Completed Daily Action Reports"
+          subtitle="Review submitted Daily Action Reports across the organization"
           headers={[
             "Report ID",
             "Employee",
@@ -1247,7 +1247,7 @@ export default function Admin() {
               colSpan={6}
               loading={reportsLoading}
               error={reportsError}
-              message="No completed Daily Accent Reports for the selected date and search."
+              message="No completed Daily Action Reports for the selected date and search."
             />
           ) : (
             completedDailyAccentReports.map((report) => {

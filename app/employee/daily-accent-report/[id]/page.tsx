@@ -47,7 +47,7 @@ export default async function Report({
 
   if (!response.ok) {
     throw new Error(
-      `Failed to load Daily Accent Report (${response.status})`,
+      `Failed to load Daily Action Report (${response.status})`,
     );
   }
 

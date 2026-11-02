@@ -47,7 +47,7 @@ const links = [
     icon: ClipboardCheck,
   },
   {
-    label: "Daily Accent Report",
+    label: "Daily Action Report",
     href: "/employee/daily-accent-report/new",
     icon: ClipboardCheck,
   },
@@ -151,7 +151,7 @@ const visibleLinks = isAdmin
       if (link.label === "Service Reports") {
         return currentUser?.canAccessServiceReport === true;
       }
-      if (link.label === "Daily Accent Report") {
+      if (link.label === "Daily Action Report") {
         return currentUser?.canAccessDailyAccentReport === true;
       }
 

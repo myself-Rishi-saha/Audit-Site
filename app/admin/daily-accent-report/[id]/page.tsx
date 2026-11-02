@@ -35,7 +35,7 @@ export default async function AdminDailyAccentReport({
 
   if (!response.ok) {
     throw new Error(
-      `Failed to load daily accent report ${id}: HTTP ${response.status} - ${await response.text()}`,
+      `Failed to load daily action report ${id}: HTTP ${response.status} - ${await response.text()}`,
     );
   }
 
