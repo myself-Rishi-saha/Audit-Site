@@ -306,6 +306,212 @@ function getFieldEvidence(
   return [];
 }
 
+// function getSignatureEntries(value: unknown): Array<{
+//   label: string;
+//   image: string;
+// }> {
+//   const results: Array<{ label: string; image: string }> = [];
+//   const seen = new Set<string>();
+
+//   function visit(item: unknown, key = "Signature"): void {
+//     if (!item) return;
+
+//     if (Array.isArray(item)) {
+//       item.forEach((child, index) =>
+//         visit(child, `${key} ${index + 1}`),
+//       );
+//       return;
+//     }
+
+//     if (typeof item === "string") {
+//       const image = item.trim();
+
+//       if (
+//         (image.startsWith("data:image/") ||
+//           /^https?:\/\//i.test(image)) &&
+//         !seen.has(image)
+//       ) {
+//         seen.add(image);
+//         results.push({ label: key, image });
+//       }
+
+//       return;
+//     }
+
+//     if (typeof item !== "object") return;
+
+//     const obj = item as Record<string, unknown>;
+
+//     // Handle common signature object formats.
+//     const image =
+//       obj.dataUrl ??
+//       obj.dataURL ??
+//       obj.signature ??
+//       obj.image ??
+//       obj.url ??
+//       obj.secure_url ??
+//       obj.value;
+
+//     if (typeof image === "string") {
+//       visit(
+//         image,
+//         String(obj.label ?? obj.fieldLabel ?? obj.name ?? key),
+//       );
+//     }
+
+//     // Also handle nested signature objects.
+//     for (const [childKey, childValue] of Object.entries(obj)) {
+//       if (
+//         ["dataUrl", "dataURL", "signature", "image", "url",
+//          "secure_url", "value", "label", "fieldLabel", "name"]
+//           .includes(childKey)
+//       ) {
+//         continue;
+//       }
+
+//       visit(childValue, childKey);
+//     }
+//   }
+
+//   visit(value);
+
+//   return results;
+// }
+
+function getSignatureEntries(value: unknown): Array<{
+  label: string;
+  image: string;
+  signedAt: string;
+}> {
+  const results: Array<{
+    label: string;
+    image: string;
+    signedAt: string;
+  }> = [];
+
+  const seen = new Set<string>();
+
+  function visit(item: unknown, key = "Signature"): void {
+    if (!item) return;
+
+    if (Array.isArray(item)) {
+      item.forEach((child, index) => {
+        visit(child, `${key} ${index + 1}`);
+      });
+      return;
+    }
+
+    if (typeof item === "string") {
+      const image = item.trim();
+
+      if (
+        (image.startsWith("data:image/") || /^https?:\/\//i.test(image)) &&
+        !seen.has(image)
+      ) {
+        seen.add(image);
+
+        results.push({
+          label: key,
+          image,
+          signedAt: "",
+        });
+      }
+
+      return;
+    }
+
+    if (typeof item !== "object") return;
+
+    const obj = item as Record<string, unknown>;
+
+    const image =
+      obj.dataUrl ??
+      obj.dataURL ??
+      obj.signature ??
+      obj.image ??
+      obj.url ??
+      obj.secure_url ??
+      obj.value;
+
+    const signedAt =
+      typeof obj.signedAt === "string"
+        ? obj.signedAt
+        : typeof obj.signed_at === "string"
+          ? obj.signed_at
+          : "";
+
+    const label = String(obj.label ?? obj.fieldLabel ?? obj.name ?? key);
+
+    if (typeof image === "string" && image.trim()) {
+      visit(image, label);
+
+      const lastEntry = results[results.length - 1];
+
+      if (lastEntry && lastEntry.image === image.trim()) {
+        lastEntry.signedAt = signedAt;
+      }
+    }
+
+    for (const [childKey, childValue] of Object.entries(obj)) {
+      if (
+        [
+          "dataUrl",
+          "dataURL",
+          "signature",
+          "image",
+          "url",
+          "secure_url",
+          "value",
+          "label",
+          "fieldLabel",
+          "name",
+          "signedAt",
+          "signed_at",
+        ].includes(childKey)
+      ) {
+        continue;
+      }
+
+      visit(childValue, childKey);
+    }
+  }
+
+  visit(value);
+
+  return results;
+}
+
+async function loadSignatureImage(source: string): Promise<string | null> {
+  try {
+    if (source.startsWith("data:image/")) {
+      return source;
+    }
+
+    if (!/^https?:\/\//i.test(source)) {
+      return null;
+    }
+
+    const response = await fetch(source);
+
+    if (!response.ok) return null;
+
+    const blob = await response.blob();
+
+    if (!blob.type.startsWith("image/")) return null;
+
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function formatFieldResponse(
   field: ReportField,
   formData: Record<string, unknown>,
@@ -509,7 +715,9 @@ export async function generateReportPdf(
       const response = formatFieldResponse(field, formData, report.evidence);
 
       const rowIndex = body.length;
-
+      if (/signature|signed.?at/i.test(key)) {
+        continue;
+      }
       body.push([label, response]);
 
       if (links.length > 0) {
@@ -595,7 +803,124 @@ export async function generateReportPdf(
       (pdf as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable
         .finalY + 8;
   }
+  // Signatures
+  const signatureEntries = [
+    ...getSignatureEntries(report.signatures),
+    ...getSignatureEntries(
+      Object.fromEntries(
+        Object.entries(formData).filter(([key]) =>
+          /signature|signed/i.test(key),
+        ),
+      ),
+    ),
+  ];
 
+  // Remove duplicate signature images.
+  const uniqueSignatures = Array.from(
+    new Map(signatureEntries.map((entry) => [entry.image, entry])).values(),
+  );
+
+  const loadedSignatures: Array<{
+    label: string;
+    image: string;
+    signedAt: string;
+  }> = [];
+
+  for (const entry of uniqueSignatures) {
+    const image = await loadSignatureImage(entry.image);
+
+    if (image) {
+      loadedSignatures.push({
+        label: entry.label,
+        image,
+        signedAt: entry.signedAt,
+      });
+    }
+  }
+
+  if (loadedSignatures.length > 0) {
+    const sectionHeight = 45;
+
+    if (y + sectionHeight > pageHeight - 20) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    pdf.setTextColor(...NAVY);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10.5);
+    pdf.text("Signatures", margin, y);
+
+    y += 5;
+
+    const boxWidth = 80;
+    const boxHeight = 25;
+    const gap = 10;
+
+    let x = margin;
+
+    for (const entry of loadedSignatures) {
+      if (x + boxWidth > pageWidth - margin) {
+        x = margin;
+        y += boxHeight + 15;
+
+        if (y + boxHeight + 10 > pageHeight - 20) {
+          pdf.addPage();
+          y = 20;
+        }
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(60, 60, 60);
+
+      pdf.text(entry.label, x, y);
+
+      const imageY = y + 2;
+
+      pdf.setDrawColor(190, 200, 205);
+      pdf.rect(x, imageY, boxWidth, boxHeight);
+
+      try {
+        const imageFormat = entry.image.startsWith("data:image/png")
+          ? "PNG"
+          : entry.image.startsWith("data:image/webp")
+            ? "WEBP"
+            : "JPEG";
+
+        pdf.addImage(
+          entry.image,
+          imageFormat,
+          x + 2,
+          imageY + 2,
+          boxWidth - 4,
+          boxHeight - 4,
+          undefined,
+          "FAST",
+        );
+      } catch (error) {
+        console.error(
+          `Could not add signature "${entry.label}" to PDF:`,
+          error,
+        );
+      }
+
+      // Display the signing timestamp beneath the signature image.
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(80, 80, 80);
+
+      const signedTime = entry.signedAt
+        ? `Signed on: ${formatDate(entry.signedAt)}`
+        : "Signing time unavailable";
+
+      pdf.text(signedTime, x, imageY + boxHeight + 5);
+
+      x += boxWidth + gap;
+    }
+
+    y += boxHeight + 12;
+  }
   // Footer on every page
   addFooter(pdf);
 
