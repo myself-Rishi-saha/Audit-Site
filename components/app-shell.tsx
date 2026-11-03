@@ -1,3 +1,367 @@
+// "use client";
+
+// import { useEffect, useState } from "react";
+// import { useRouter, usePathname } from "next/navigation";
+// import {
+//   Bell,
+//   ClipboardCheck,
+//   LayoutDashboard,
+//   LogOut,
+//   Menu,
+//   Settings,
+//   SlidersHorizontal,
+//   UserRound,
+//   Wrench,
+//   X,
+// } from "lucide-react";
+
+// import { Button } from "@/components/ui/button";
+// import { Badge } from "@/components/ui/badge";
+
+// // type CurrentUser = {
+// //   id: string;
+// //   name: string;
+// //   username: string;
+// //   role: "admin" | "auditor";
+// // };
+
+// type CurrentUser = {
+//   id: string;
+//   name: string;
+//   username: string;
+//   role: "admin" | "auditor";
+//   canAccessAudit?: boolean;
+//   canAccessServiceReport?: boolean;
+//     canAccessDailyAccentReport?: boolean;
+// };
+
+// const links = [
+//   {
+//     label: "Dashboard",
+//     href: "/employee",
+//     icon: LayoutDashboard,
+//   },
+//   {
+//     label: "Audits",
+//     href: "/employee/audits/new",
+//     icon: ClipboardCheck,
+//   },
+//   {
+//     label: "Daily Action Report",
+//     href: "/employee/daily-accent-report/new",
+//     icon: ClipboardCheck,
+//   },
+//   {
+//     label: "Add Employee",
+//     href: "/admin/add-employee",
+//     icon: UserRound,
+//   },
+//   {
+//     label: "Add Customer",
+//     href: "/admin/add-customer",
+//     icon: UserRound,
+//   },
+//   {
+//     label: "Service Reports",
+//     href: "/employee/service-reports/new",
+//     icon: Wrench,
+//   },
+//   {
+//     label: "Form Templates",
+//     href: "/admin/form-templates",
+//     icon: SlidersHorizontal,
+//   },
+// ];
+
+// export function AppShell({
+//   children,
+//   title = "AuditDesk",
+// }: {
+//   children: React.ReactNode;
+//   title?: string;
+// }) {
+//   const router = useRouter();
+//   const pathname = usePathname();
+
+//   const [open, setOpen] = useState(false);
+//   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+//   const [loadingUser, setLoadingUser] = useState(true);
+
+//   useEffect(() => {
+//     async function loadCurrentUser() {
+//       try {
+//         const response = await fetch("/api/auth/me", {
+//           cache: "no-store",
+//         });
+
+//         if (!response.ok) {
+//           setCurrentUser(null);
+//           return;
+//         }
+
+//         const data = await response.json();
+
+//         setCurrentUser(data);
+//       } catch (error) {
+//         console.error("Failed to load current user:", error);
+
+//         setCurrentUser(null);
+//       } finally {
+//         setLoadingUser(false);
+//       }
+//     }
+
+//     loadCurrentUser();
+//   }, []);
+
+//   const isAdmin = currentUser?.role === "admin";
+
+//   const displayName = currentUser?.name || currentUser?.username || "User";
+
+//   // const visibleLinks = isAdmin
+//   //   ? links.filter(
+//   //       (link) =>
+//   //         link.label === "Dashboard" ||
+//   //         link.label === "Form Templates" ||
+//   //         link.label === "Add Employee" ||
+//   //         link.label === "Add Customer",
+//   //     )
+//   //   : links.filter(
+//   //       (link) =>
+//   //         link.label === "Dashboard" ||
+//   //         link.label === "Audits" ||
+//   //         link.label === "Service Reports",
+//   //     );
+
+// const visibleLinks = isAdmin
+//   ? links.filter(
+//       (link) =>
+//         link.label === "Dashboard" ||
+//         link.label === "Form Templates" ||
+//         link.label === "Add Employee" ||
+//         link.label === "Add Customer",
+//     )
+//   : links.filter((link) => {
+//       if (link.label === "Dashboard") return true;
+
+//       if (link.label === "Audits") {
+//         return currentUser?.canAccessAudit === true;
+//       }
+
+//       if (link.label === "Service Reports") {
+//         return currentUser?.canAccessServiceReport === true;
+//       }
+//       if (link.label === "Daily Action Report") {
+//         return currentUser?.canAccessDailyAccentReport === true;
+//       }
+
+//       return false;
+//     });
+
+//   // async function signOut() {
+
+//   //   // if(currentUser?.role === "admin") {
+//   //   //   await fetch("/api/auth/logout/admin", {
+//   //   //     method: "POST",
+//   //   //   });
+//   //   // } else {
+//   //   //   await fetch("/api/auth/logout", {
+//   //   //     method: "POST",
+//   //   //   });
+//   //   // }
+//   //   try {
+//   //     await fetch("/api/auth/logout", {
+//   //       method: "POST",
+//   //     });
+//   //   } finally {
+//   //     router.push("/login");
+//   //     router.refresh();
+//   //   }
+//   // }
+//   async function signOut() {
+//     try {
+//       if (currentUser?.role === "admin") {
+//         await fetch("/api/auth/logout/admin", {
+//           method: "POST",
+//         });
+//       } else {
+//         await fetch("/api/auth/logout", {
+//           method: "POST",
+//         });
+//       }
+//     } finally {
+//       if (currentUser?.role === "admin") {
+//         router.push("/admin/login");
+//       } else {
+//         router.push("/login");
+//       }
+
+//       router.refresh();
+//     }
+//   }
+//   return (
+//     <div className="min-h-screen bg-background">
+//       {/* SIDEBAR */}
+//       <aside
+//         className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar px-4 py-5 text-sidebar-foreground transition-transform lg:translate-x-0 ${
+//           open ? "translate-x-0" : "-translate-x-full"
+//         }`}
+//       >
+//         {/* LOGO */}
+//         <div className="flex items-center justify-between px-2">
+//           <button
+//             onClick={() => router.push(isAdmin ? "/admin" : "/employee")}
+//             className="flex items-center gap-3 text-left font-semibold tracking-tight"
+//           >
+//             <span className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
+//               <ClipboardCheck />
+//             </span>
+
+//             <span className="text-lg">{title}</span>
+//           </button>
+
+//           <Button
+//             variant="ghost"
+//             size="icon"
+//             className="text-sidebar-foreground hover:bg-sidebar-accent lg:hidden"
+//             onClick={() => setOpen(false)}
+//           >
+//             <X />
+//           </Button>
+//         </div>
+
+//         {/* WORKSPACE */}
+//         <p className="mt-10 px-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/55">
+//           Workspace
+//         </p>
+
+//         <nav className="mt-3 flex flex-col gap-1">
+//           {visibleLinks.map(({ label, href, icon: Icon }) => {
+//             const active =
+//               pathname === href ||
+//               (href !== "/employee" &&
+//                 pathname.startsWith(href.split("/new")[0]));
+
+//             return (
+//               <button
+//                 key={label}
+//                 onClick={() => {
+//                   router.push(
+//                     isAdmin && label === "Dashboard" ? "/admin" : href,
+//                   );
+
+//                   setOpen(false);
+//                 }}
+//                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+//                   active
+//                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
+//                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+//                 }`}
+//               >
+//                 <Icon className={active ? "text-sidebar-primary" : ""} />
+
+//                 {label}
+//               </button>
+//             );
+//           })}
+//         </nav>
+
+//         {/* BOTTOM */}
+//         <div className="mt-auto border-t border-sidebar-border pt-4">
+//           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent">
+//             <Settings />
+//             Settings
+//           </button>
+
+//           <button
+//             onClick={signOut}
+//             className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent"
+//           >
+//             <LogOut />
+//             Sign out
+//           </button>
+//         </div>
+//       </aside>
+
+//       {/* MOBILE OVERLAY */}
+//       {open && (
+//         <button
+//           aria-label="Close navigation"
+//           className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden"
+//           onClick={() => setOpen(false)}
+//         />
+//       )}
+
+//       {/* MAIN */}
+//       <div className="min-h-screen lg:pl-64">
+//         {/* HEADER */}
+//         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/70 bg-background/95 px-5 backdrop-blur sm:px-8">
+//           <div className="flex items-center gap-3">
+//             <Button
+//               variant="ghost"
+//               size="icon"
+//               className="lg:hidden"
+//               onClick={() => setOpen(true)}
+//             >
+//               <Menu />
+//             </Button>
+
+//             <div>
+//               <p className="text-sm font-semibold">
+//                 {pathname === "/employee" || pathname === "/admin"
+//                   ? "Dashboard"
+//                   : "AuditDesk"}
+//               </p>
+
+//               <p className="hidden text-xs text-muted-foreground sm:block">
+//                 Inspection operations workspace
+//               </p>
+//             </div>
+//           </div>
+
+//           {/* USER */}
+//           <div className="flex items-center gap-3">
+//             <Button
+//               variant="ghost"
+//               size="icon"
+//               className="text-muted-foreground"
+//             >
+//               <Bell />
+//             </Button>
+
+//             <div className="hidden h-7 w-px bg-border sm:block" />
+
+//             <div className="flex items-center gap-2">
+//               <span className="flex size-9 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
+//                 {displayName
+//                   .split(" ")
+//                   .map((part) => part[0])
+//                   .join("")
+//                   .slice(0, 2)
+//                   .toUpperCase()}
+//               </span>
+
+//               <div className="hidden sm:block">
+//                 <p className="text-sm font-medium leading-none">
+//                   {loadingUser ? "Loading..." : displayName}
+//                 </p>
+
+//                 <Badge variant="secondary" className="mt-1 text-[10px]">
+//                   {currentUser?.role === "admin" ? "Admin" : "Auditor"}
+//                 </Badge>
+//               </div>
+
+//               <UserRound className="hidden text-muted-foreground sm:block" />
+//             </div>
+//           </div>
+//         </header>
+
+//         {children}
+//       </div>
+//     </div>
+//   );
+// }
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,6 +369,7 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   Bell,
   ClipboardCheck,
+  FileCheck,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -18,13 +383,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-// type CurrentUser = {
-//   id: string;
-//   name: string;
-//   username: string;
-//   role: "admin" | "auditor";
-// };
-
 type CurrentUser = {
   id: string;
   name: string;
@@ -32,7 +390,8 @@ type CurrentUser = {
   role: "admin" | "auditor";
   canAccessAudit?: boolean;
   canAccessServiceReport?: boolean;
-    canAccessDailyAccentReport?: boolean;
+  canAccessDailyAccentReport?: boolean;
+  canAccessHandoverCertificate?: boolean;
 };
 
 const links = [
@@ -45,11 +404,25 @@ const links = [
     label: "Audits",
     href: "/employee/audits/new",
     icon: ClipboardCheck,
+    permission: "canAccessAudit",
   },
   {
     label: "Daily Action Report",
     href: "/employee/daily-accent-report/new",
     icon: ClipboardCheck,
+    permission: "canAccessDailyAccentReport",
+  },
+  {
+    label: "Service Reports",
+    href: "/employee/service-reports/new",
+    icon: Wrench,
+    permission: "canAccessServiceReport",
+  },
+  {
+    label: "Handover Certificates",
+    href: "/employee/handover-certificates/new",
+    icon: FileCheck,
+    permission: "canAccessHandoverCertificate",
   },
   {
     label: "Add Employee",
@@ -60,11 +433,6 @@ const links = [
     label: "Add Customer",
     href: "/admin/add-customer",
     icon: UserRound,
-  },
-  {
-    label: "Service Reports",
-    href: "/employee/service-reports/new",
-    icon: Wrench,
   },
   {
     label: "Form Templates",
@@ -88,6 +456,8 @@ export function AppShell({
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     async function loadCurrentUser() {
       try {
         const response = await fetch("/api/auth/me", {
@@ -95,89 +465,64 @@ export function AppShell({
         });
 
         if (!response.ok) {
-          setCurrentUser(null);
+          if (active) setCurrentUser(null);
           return;
         }
 
         const data = await response.json();
 
-        setCurrentUser(data);
+        if (active) {
+          setCurrentUser({
+            ...data,
+            canAccessAudit: Boolean(data.canAccessAudit),
+            canAccessServiceReport: Boolean(data.canAccessServiceReport),
+            canAccessDailyAccentReport: Boolean(
+              data.canAccessDailyAccentReport,
+            ),
+            canAccessHandoverCertificate: Boolean(
+              data.canAccessHandoverCertificate,
+            ),
+          });
+        }
       } catch (error) {
         console.error("Failed to load current user:", error);
 
-        setCurrentUser(null);
+        if (active) setCurrentUser(null);
       } finally {
-        setLoadingUser(false);
+        if (active) setLoadingUser(false);
       }
     }
 
-    loadCurrentUser();
+    void loadCurrentUser();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const isAdmin = currentUser?.role === "admin";
 
-  const displayName = currentUser?.name || currentUser?.username || "User";
+  const displayName =
+    currentUser?.name || currentUser?.username || "User";
 
-  // const visibleLinks = isAdmin
-  //   ? links.filter(
-  //       (link) =>
-  //         link.label === "Dashboard" ||
-  //         link.label === "Form Templates" ||
-  //         link.label === "Add Employee" ||
-  //         link.label === "Add Customer",
-  //     )
-  //   : links.filter(
-  //       (link) =>
-  //         link.label === "Dashboard" ||
-  //         link.label === "Audits" ||
-  //         link.label === "Service Reports",
-  //     );
+  const visibleLinks = isAdmin
+    ? links.filter(
+        (link) =>
+          link.label === "Dashboard" ||
+          link.label === "Form Templates" ||
+          link.label === "Add Employee" ||
+          link.label === "Add Customer",
+      )
+    : links.filter((link) => {
+        if (link.label === "Dashboard") return true;
 
-const visibleLinks = isAdmin
-  ? links.filter(
-      (link) =>
-        link.label === "Dashboard" ||
-        link.label === "Form Templates" ||
-        link.label === "Add Employee" ||
-        link.label === "Add Customer",
-    )
-  : links.filter((link) => {
-      if (link.label === "Dashboard") return true;
+        if (link.permission) {
+          return currentUser?.[link.permission as keyof CurrentUser] === true;
+        }
 
-      if (link.label === "Audits") {
-        return currentUser?.canAccessAudit === true;
-      }
+        return false;
+      });
 
-      if (link.label === "Service Reports") {
-        return currentUser?.canAccessServiceReport === true;
-      }
-      if (link.label === "Daily Action Report") {
-        return currentUser?.canAccessDailyAccentReport === true;
-      }
-
-      return false;
-    });
-
-  // async function signOut() {
-
-  //   // if(currentUser?.role === "admin") {
-  //   //   await fetch("/api/auth/logout/admin", {
-  //   //     method: "POST",
-  //   //   });
-  //   // } else {
-  //   //   await fetch("/api/auth/logout", {
-  //   //     method: "POST",
-  //   //   });
-  //   // }
-  //   try {
-  //     await fetch("/api/auth/logout", {
-  //       method: "POST",
-  //     });
-  //   } finally {
-  //     router.push("/login");
-  //     router.refresh();
-  //   }
-  // }
   async function signOut() {
     try {
       if (currentUser?.role === "admin") {
@@ -189,16 +534,22 @@ const visibleLinks = isAdmin
           method: "POST",
         });
       }
+    } catch (error) {
+      console.error("Sign out error:", error);
     } finally {
-      if (currentUser?.role === "admin") {
-        router.push("/admin/login");
-      } else {
-        router.push("/login");
-      }
+      router.push(
+        currentUser?.role === "admin" ? "/admin/login" : "/login",
+      );
 
       router.refresh();
     }
   }
+
+  function navigate(href: string) {
+    router.push(href);
+    setOpen(false);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* SIDEBAR */}
@@ -210,7 +561,8 @@ const visibleLinks = isAdmin
         {/* LOGO */}
         <div className="flex items-center justify-between px-2">
           <button
-            onClick={() => router.push(isAdmin ? "/admin" : "/employee")}
+            type="button"
+            onClick={() => navigate(isAdmin ? "/admin" : "/employee")}
             className="flex items-center gap-3 text-left font-semibold tracking-tight"
           >
             <span className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
@@ -237,21 +589,23 @@ const visibleLinks = isAdmin
 
         <nav className="mt-3 flex flex-col gap-1">
           {visibleLinks.map(({ label, href, icon: Icon }) => {
+            const baseHref = href.replace(/\/new$/, "");
+
             const active =
               pathname === href ||
-              (href !== "/employee" &&
-                pathname.startsWith(href.split("/new")[0]));
+              pathname === baseHref ||
+              (baseHref !== "/employee" &&
+                pathname.startsWith(`${baseHref}/`));
 
             return (
               <button
                 key={label}
-                onClick={() => {
-                  router.push(
+                type="button"
+                onClick={() =>
+                  navigate(
                     isAdmin && label === "Dashboard" ? "/admin" : href,
-                  );
-
-                  setOpen(false);
-                }}
+                  )
+                }
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -259,7 +613,6 @@ const visibleLinks = isAdmin
                 }`}
               >
                 <Icon className={active ? "text-sidebar-primary" : ""} />
-
                 {label}
               </button>
             );
@@ -268,12 +621,16 @@ const visibleLinks = isAdmin
 
         {/* BOTTOM */}
         <div className="mt-auto border-t border-sidebar-border pt-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent">
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent"
+          >
             <Settings />
             Settings
           </button>
 
           <button
+            type="button"
             onClick={signOut}
             className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent"
           >
@@ -286,6 +643,7 @@ const visibleLinks = isAdmin
       {/* MOBILE OVERLAY */}
       {open && (
         <button
+          type="button"
           aria-label="Close navigation"
           className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden"
           onClick={() => setOpen(false)}

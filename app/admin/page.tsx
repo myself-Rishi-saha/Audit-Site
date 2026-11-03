@@ -1,6 +1,7 @@
 // "use client";
 
 // import { useEffect, useRef, useState } from "react";
+// import type { ReactNode } from "react";
 // import { useRouter } from "next/navigation";
 // import {
 //   ArrowUpRight,
@@ -18,7 +19,12 @@
 // import { AppShell } from "@/components/app-shell";
 // import { Badge } from "@/components/ui/badge";
 // import { Button } from "@/components/ui/button";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import {
+//   Card,
+//   CardContent,
+//   CardHeader,
+//   CardTitle,
+// } from "@/components/ui/card";
 
 // function getLocalDateKey(date: Date): string {
 //   const year = date.getFullYear();
@@ -57,6 +63,7 @@
 //     report.engineer_name ||
 //     report.employee ||
 //     formData["engineer-name"] ||
+//     formData["employee-name"] ||
 //     "—"
 //   );
 // }
@@ -74,13 +81,17 @@
 //   );
 // }
 
-// function getAuditDate(audit: any): unknown {
-//   return audit.submittedAt ?? audit.submitted_at;
+// function getAuditDate(report: any): unknown {
+//   return report.submittedAt ?? report.submitted_at;
 // }
+
 // function getServiceDate(report: any): unknown {
 //   return report.submittedAt ?? report.submitted_at;
 // }
 
+// function getDailyAccentDate(report: any): unknown {
+//   return report.submittedAt ?? report.submitted_at;
+// }
 
 // function formatDate(value: unknown): string {
 //   if (!value) return "—";
@@ -100,11 +111,15 @@
 //   });
 // }
 
+// function isCompleted(report: any): boolean {
+//   return String(report.status || "").toUpperCase() === "COMPLETED";
+// }
+
 // export default function Admin() {
 //   const [audits, setAudits] = useState<any[]>([]);
 //   const [services, setServices] = useState<any[]>([]);
+//   const [dailyAccentReports, setDailyAccentReports] = useState<any[]>([]);
 
-//   // Shared filters displayed in both report card headers.
 //   const [selectedDate, setSelectedDate] = useState("");
 //   const [search, setSearch] = useState("");
 
@@ -120,7 +135,7 @@
 //     setSelectedDate(getLocalDateKey(new Date()));
 //   }, []);
 
-//   // Fetch reports whenever the date or search changes.
+//   // Fetch all three report types using the same date and search filters.
 //   useEffect(() => {
 //     if (!selectedDate) return;
 
@@ -141,29 +156,46 @@
 
 //         const query = params.toString();
 
-//         const [auditResponse, serviceResponse] = await Promise.all([
+//         const [
+//           auditResponse,
+//           serviceResponse,
+//           dailyAccentResponse,
+//         ] = await Promise.all([
 //           fetch(`/api/audits?${query}`, {
 //             cache: "no-store",
 //           }),
 //           fetch(`/api/service-reports?${query}`, {
 //             cache: "no-store",
 //           }),
+//           fetch(`/api/daily-accent-report?${query}`, {
+//             cache: "no-store",
+//           }),
 //         ]);
 
-//         if (!auditResponse.ok || !serviceResponse.ok) {
+//         if (
+//           !auditResponse.ok ||
+//           !serviceResponse.ok ||
+//           !dailyAccentResponse.ok
+//         ) {
 //           throw new Error("Failed to fetch reports.");
 //         }
 
-//         const [auditData, serviceData] = await Promise.all([
+//         const [
+//           auditData,
+//           serviceData,
+//           dailyAccentData,
+//         ] = await Promise.all([
 //           auditResponse.json(),
 //           serviceResponse.json(),
+//           dailyAccentResponse.json(),
 //         ]);
-//         //console.log("Audit API response:", auditData);
-//         //console.log("Service API response:", serviceData);
 
 //         if (!cancelled) {
 //           setAudits(Array.isArray(auditData) ? auditData : []);
 //           setServices(Array.isArray(serviceData) ? serviceData : []);
+//           setDailyAccentReports(
+//             Array.isArray(dailyAccentData) ? dailyAccentData : [],
+//           );
 //         }
 //       } catch (error) {
 //         if (!cancelled) {
@@ -181,7 +213,6 @@
 //       clearTimeout(searchTimeout.current);
 //     }
 
-//     // Debounce search requests; date changes trigger an immediate request.
 //     searchTimeout.current = setTimeout(
 //       () => void loadData(),
 //       search.trim() ? 300 : 0,
@@ -197,23 +228,24 @@
 //   }, [selectedDate, search]);
 
 //   // Only completed reports appear in the tables.
-//   const completed = audits.filter(
-//     (audit) => String(audit.status || "").toUpperCase() === "COMPLETED",
-//   );
+//   const completed = audits.filter(isCompleted);
+//   const completedServices = services.filter(isCompleted);
+//   const completedDailyAccentReports = dailyAccentReports.filter(isCompleted);
 
-//   const completedServices = services.filter(
-//     (report) => String(report.status || "").toUpperCase() === "COMPLETED",
-//   );
-
-//   // These statistics reflect the currently returned audit results.
-//   // For organization-wide statistics independent of filters, use a
-//   // separate summary endpoint or unfiltered statistics request.
+//   // Statistics reflect the currently returned reports.
 //   const average = completed.length
 //     ? Math.round(
-//         completed.reduce((sum, audit) => sum + Number(audit.score || 0), 0) /
-//           completed.length,
+//         completed.reduce(
+//           (sum, audit) => sum + Number(audit.score || 0),
+//           0,
+//         ) / completed.length,
 //       )
 //     : 0;
+
+//   const totalCompleted =
+//     completed.length +
+//     completedServices.length +
+//     completedDailyAccentReports.length;
 
 //   const stats = [
 //     {
@@ -224,7 +256,7 @@
 //     },
 //     {
 //       label: "Total completed",
-//       value: completed.length + completedServices.length,
+//       value: totalCompleted,
 //       icon: FileText,
 //       tone: "bg-emerald-50 text-emerald-700",
 //     },
@@ -233,6 +265,12 @@
 //       value: services.length,
 //       icon: Wrench,
 //       tone: "bg-amber-50 text-amber-700",
+//     },
+//     {
+//       label: "Daily Action Reports",
+//       value: dailyAccentReports.length,
+//       icon: FileText,
+//       tone: "bg-violet-50 text-violet-700",
 //     },
 //     {
 //       label: "Avg. compliance",
@@ -253,7 +291,9 @@
 //         {/* HEADER */}
 //         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
 //           <div>
-//             <p className="text-sm font-semibold text-primary">Administration</p>
+//             <p className="text-sm font-semibold text-primary">
+//               Administration
+//             </p>
 
 //             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
 //               Good morning, Admin
@@ -296,7 +336,7 @@
 //         </div>
 
 //         {/* STATISTICS */}
-//         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+//         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
 //           {stats.map(({ label, value, icon: Icon, tone }) => (
 //             <Card key={label} className="shadow-sm">
 //               <CardContent className="p-5">
@@ -319,6 +359,7 @@
 //           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
 //             <div className="flex items-center gap-2">
 //               <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+
 //               <input
 //                 aria-label="Filter reports by date"
 //                 type="date"
@@ -332,11 +373,11 @@
 //               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
 //               <input
-//                 aria-label="Search audits and service reports"
+//                 aria-label="Search audits, service reports and Daily Action Reports"
 //                 type="search"
 //                 value={search}
 //                 onChange={(event) => setSearch(event.target.value)}
-//                 placeholder="Search by audit ID, service ID, employee or customer..."
+//                 placeholder="Search by report ID, employee or customer..."
 //                 className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
 //               />
 
@@ -363,6 +404,40 @@
 //           </CardContent>
 //         </Card>
 
+//         {/* LOADING AND ERROR FEEDBACK */}
+//         {reportsLoading && (
+//           <div
+//             role="status"
+//             className="mt-4 flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground"
+//           >
+//             <span className="size-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+//             Updating reports...
+//           </div>
+//         )}
+
+//         {reportsError && (
+//           <div
+//             role="alert"
+//             className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+//           >
+//             <p className="text-sm text-destructive">{reportsError}</p>
+
+//             <Button
+//               variant="outline"
+//               size="sm"
+//               onClick={() => {
+//                 setSelectedDate("");
+//                 setTimeout(
+//                   () => setSelectedDate(getLocalDateKey(new Date())),
+//                   0,
+//                 );
+//               }}
+//             >
+//               Try again
+//             </Button>
+//           </div>
+//         )}
+
 //         {/* COMPLETED AUDITS */}
 //         <DataCard
 //           className="mt-8"
@@ -377,81 +452,65 @@
 //             "Status",
 //             "",
 //           ]}
-//           // selectedDate={selectedDate}
-//           // search={search}
-//           // onDateChange={setSelectedDate}
-//           // onSearchChange={setSearch}
-//           // onReset={resetFilters}
 //         >
-//           <>
-//             {completed.length === 0 ? (
-//               <tr>
-//                 <td
-//                   colSpan={7}
-//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
+//           {completed.length === 0 ? (
+//             <EmptyRow
+//               colSpan={7}
+//               loading={reportsLoading}
+//               error={Boolean(reportsError)}
+//               message="No completed audits for the selected date and search."
+//             />
+//           ) : (
+//             completed.map((audit) => {
+//               const employee = getEmployeeName(audit);
+//               const customer = getCustomerName(audit);
+
+//               const location =
+//                 audit.customerAddress ||
+//                 audit.customer_address ||
+//                 audit.address ||
+//                 "—";
+
+//               const date = formatDate(getAuditDate(audit));
+//               const status = String(audit.status || "COMPLETED").toUpperCase();
+
+//               return (
+//                 <tr
+//                   key={audit.id}
+//                   className="border-b transition last:border-0 hover:bg-muted/40"
 //                 >
-//                   {reportsLoading
-//                     ? "Loading audit reports..."
-//                     : reportsError
-//                       ? "Audit reports could not be loaded."
-//                       : "No completed audits for the selected date and search."}
-//                 </td>
-//               </tr>
-//             ) : (
-//               completed.map((audit) => {
-//                 const employee = getEmployeeName(audit);
-//                 const customer = getCustomerName(audit);
+//                   <td className="px-3 py-4 font-semibold text-primary">
+//                     {audit.id}
+//                   </td>
 
-//                 const location =
-//                   audit.customerAddress ||
-//                   audit.customer_address ||
-//                   audit.address ||
-//                   "—";
+//                   <td className="px-3 py-4">{employee}</td>
 
-//                 const date = formatDate(getAuditDate(audit));
+//                   <td className="px-3 py-4 font-medium">{customer}</td>
 
-//                 const status = String(
-//                   audit.status || "COMPLETED",
-//                 ).toUpperCase();
+//                   <td className="px-3 py-4 text-muted-foreground">
+//                     {location}
+//                   </td>
 
-//                 return (
-//                   <tr
-//                     key={audit.id}
-//                     className="border-b transition last:border-0 hover:bg-muted/40"
-//                   >
-//                     <td className="px-3 py-4 font-semibold text-primary">
-//                       {audit.id}
-//                     </td>
+//                   <td className="px-3 py-4 text-muted-foreground">{date}</td>
 
-//                     <td className="px-3 py-4">{employee}</td>
+//                   <td className="px-3 py-4">
+//                     <Badge variant="default">{status}</Badge>
+//                   </td>
 
-//                     <td className="px-3 py-4 font-medium">{customer}</td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">
-//                       {location}
-//                     </td>
-
-//                     <td className="px-3 py-4 text-muted-foreground">{date}</td>
-
-//                     <td className="px-3 py-4">
-//                       <Badge variant="default">{status}</Badge>
-//                     </td>
-
-//                     <td className="px-3 py-4 text-right">
-//                       <Button
-//                         size="sm"
-//                         variant="ghost"
-//                         onClick={() => router.push(`/admin/audits/${audit.id}`)}
-//                       >
-//                         View
-//                         <ArrowUpRight data-icon="inline-end" />
-//                       </Button>
-//                     </td>
-//                   </tr>
-//                 );
-//               })
-//             )}
-//           </>
+//                   <td className="px-3 py-4 text-right">
+//                     <Button
+//                       size="sm"
+//                       variant="ghost"
+//                       onClick={() => router.push(`/admin/audits/${audit.id}`)}
+//                     >
+//                       View
+//                       <ArrowUpRight data-icon="inline-end" />
+//                     </Button>
+//                   </td>
+//                 </tr>
+//               );
+//             })
+//           )}
 //         </DataCard>
 
 //         {/* COMPLETED SERVICE REPORTS */}
@@ -459,84 +518,163 @@
 //           className="mt-6"
 //           title="Completed service reports"
 //           subtitle="Review completed field service records"
-//           headers={["Report ID", "Customer", "Engineer", "Date", "Status", ""]}
-//           selectedDate={selectedDate}
-//           search={search}
-//           onDateChange={setSelectedDate}
-//           onSearchChange={setSearch}
-//           onReset={resetFilters}
+//           headers={[
+//             "Report ID",
+//             "Customer",
+//             "Engineer",
+//             "Date",
+//             "Status",
+//             "",
+//           ]}
 //         >
-//           <>
-//             {completedServices.length === 0 ? (
-//               <tr>
-//                 <td
-//                   colSpan={7}
-//                   className="px-3 py-10 text-center text-sm text-muted-foreground"
+//           {completedServices.length === 0 ? (
+//             <EmptyRow
+//               colSpan={6}
+//               loading={reportsLoading}
+//               error={reportsError}
+//               message="No completed service reports for the selected date and search."
+//             />
+//           ) : (
+//             completedServices.map((report) => {
+//               const customer = getCustomerName(report);
+//               const engineer = getEmployeeName(report);
+//               const date = formatDate(getServiceDate(report));
+//               const status = String(
+//                 report.status || "COMPLETED",
+//               ).toUpperCase();
+
+//               return (
+//                 <tr
+//                   key={report.id}
+//                   className="border-b transition last:border-0 hover:bg-muted/40"
 //                 >
-//                   {reportsLoading
-//                     ? "Loading service reports..."
-//                     : reportsError
-//                       ? "Service reports could not be loaded."
-//                       : "No completed service reports for the selected date and search."}
-//                 </td>
-//               </tr>
-//             ) : (
-//               completedServices.map((report) => {
-//                 const formData = getFormData(report);
+//                   <td className="px-3 py-4 font-semibold text-primary">
+//                     {report.id}
+//                   </td>
 
-//                 const customer = getCustomerName(report);
-//                 const engineer = getEmployeeName(report);
+//                   <td className="px-3 py-4 font-medium">{customer}</td>
 
-//                 const equipment =
-//                   formData["equipment"] || report.equipment || "—";
+//                   <td className="px-3 py-4">{engineer}</td>
 
-//                 const date = formatDate(getServiceDate(report));
+//                   <td className="px-3 py-4 text-muted-foreground">{date}</td>
 
-//                 const status = String(
-//                   report.status || "COMPLETED",
-//                 ).toUpperCase();
+//                   <td className="px-3 py-4">
+//                     <Badge variant="default">{status}</Badge>
+//                   </td>
 
-//                 return (
-//                   <tr
-//                     key={report.id}
-//                     className="border-b transition last:border-0 hover:bg-muted/40"
-//                   >
-//                     <td className="px-3 py-4 font-semibold text-primary">
-//                       {report.id}
-//                     </td>
+//                   <td className="px-3 py-4 text-right">
+//                     <Button
+//                       size="sm"
+//                       onClick={() =>
+//                         router.push(`/admin/service-reports/${report.id}`)
+//                       }
+//                     >
+//                       View &amp; Edit
+//                     </Button>
+//                   </td>
+//                 </tr>
+//               );
+//             })
+//           )}
+//         </DataCard>
 
-//                     <td className="px-3 py-4 font-medium">{customer}</td>
+//         {/* COMPLETED DAILY ACCENT REPORTS */}
+//         <DataCard
+//           className="mt-6"
+//           title="Completed Daily Action Reports"
+//           subtitle="Review submitted Daily Action Reports across the organization"
+//           headers={[
+//             "Report ID",
+//             "Employee",
+//             "Customer",
+//             "Date",
+//             "Status",
+//             "",
+//           ]}
+//         >
+//           {completedDailyAccentReports.length === 0 ? (
+//             <EmptyRow
+//               colSpan={6}
+//               loading={reportsLoading}
+//               error={reportsError}
+//               message="No completed Daily Action Reports for the selected date and search."
+//             />
+//           ) : (
+//             completedDailyAccentReports.map((report) => {
+//               const employee = getEmployeeName(report);
+//               const customer = getCustomerName(report);
+//               const date = formatDate(getDailyAccentDate(report));
+//               const status = String(
+//                 report.status || "COMPLETED",
+//               ).toUpperCase();
 
-//                     <td className="px-3 py-4">{engineer}</td>
+//               return (
+//                 <tr
+//                   key={report.id}
+//                   className="border-b transition last:border-0 hover:bg-muted/40"
+//                 >
+//                   <td className="px-3 py-4 font-semibold text-primary">
+//                     {report.id}
+//                   </td>
 
-//                     {/* <td className="px-3 py-4 text-muted-foreground">
-//                       {equipment}
-//                     </td> */}
+//                   <td className="px-3 py-4">{employee}</td>
 
-//                     <td className="px-3 py-4 text-muted-foreground">{date}</td>
+//                   <td className="px-3 py-4 font-medium">{customer}</td>
 
-//                     <td className="px-3 py-4">
-//                       <Badge variant="default">{status}</Badge>
-//                     </td>
+//                   <td className="px-3 py-4 text-muted-foreground">{date}</td>
 
-//                     <td className="px-3 py-4 text-right">
-//                       <Button
-//                         size="sm"
-//                         onClick={() =>
-//                           router.push(`/admin/service-reports/${report.id}`)
-//                         }
-//                       >
-//                         View &amp; Edit
-//                       </Button>
-//                     </td>
-//                   </tr>
-//                 );
-//               })
-//             )}
-//           </>
+//                   <td className="px-3 py-4">
+//                     <Badge variant="default">{status}</Badge>
+//                   </td>
+
+//                   <td className="px-3 py-4 text-right">
+//                     <Button
+//                       size="sm"
+//                       variant="ghost"
+//                       onClick={() =>
+//                         router.push(
+//                           `/admin/daily-accent-report/${report.id}`,
+//                         )
+//                       }
+//                     >
+//                       View
+//                       <ArrowUpRight data-icon="inline-end" />
+//                     </Button>
+//                   </td>
+//                 </tr>
+//               );
+//             })
+//           )}
 //         </DataCard>
 //       </main>
 //     </AppShell>
+//   );
+// }
+
+// function EmptyRow({
+//   colSpan,
+//   loading,
+//   error,
+//   message,
+// }: {
+//   colSpan: number;
+//   loading: boolean;
+//   error: boolean;
+//   message: string;
+// }) {
+//   return (
+//     <tr>
+//       <td
+//         colSpan={colSpan}
+//         className="px-3 py-10 text-center text-sm text-muted-foreground"
+//       >
+//         {loading
+//           ? "Loading reports..."
+//           : error
+//             ? "Reports could not be loaded."
+//             : message}
+//       </td>
+//     </tr>
 //   );
 // }
 
@@ -546,81 +684,19 @@
 //   headers,
 //   children,
 //   className = "",
-//   selectedDate,
-//   search,
-//   onDateChange,
-//   onSearchChange,
-//   onReset,
 // }: {
 //   title: string;
 //   subtitle: string;
 //   headers: string[];
 //   children: React.ReactNode;
 //   className?: string;
-//   selectedDate: string;
-//   search: string;
-//   onDateChange: (value: string) => void;
-//   onSearchChange: (value: string) => void;
-//   onReset: () => void;
 // }) {
 //   return (
 //     <Card className={`shadow-sm ${className}`}>
 //       <CardHeader>
-//         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
-//           <div>
-//             <CardTitle>{title}</CardTitle>
-
-//             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-//           </div>
-
-//           {/* FILTERS INLINE WITH THE EXISTING CARD HEADER */}
-//           {/* <div className="flex flex-wrap items-center gap-2">
-//             <div className="relative">
-//               <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-
-//               <input
-//                 aria-label="Filter reports by date"
-//                 type="date"
-//                 value={selectedDate}
-//                 onChange={(event) => onDateChange(event.target.value)}
-//                 className="h-9 w-[155px] rounded-md border border-input bg-background pl-9 pr-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-//               />
-//             </div>
-
-//             <div className="relative">
-//               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-
-//               <input
-//                 aria-label="Search employee or customer"
-//                 type="search"
-//                 value={search}
-//                 onChange={(event) => onSearchChange(event.target.value)}
-//                 placeholder="Employee or customer"
-//                 className="h-9 w-[190px] rounded-md border border-input bg-background pl-9 pr-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-//               />
-
-//               {search && (
-//                 <button
-//                   type="button"
-//                   aria-label="Clear search"
-//                   onClick={() => onSearchChange("")}
-//                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-//                 >
-//                   <X className="size-4" />
-//                 </button>
-//               )}
-//             </div>
-
-//             <Button
-//               type="button"
-//               variant="ghost"
-//               size="sm"
-//               onClick={onReset}
-//               className="h-9 px-2"
-//             >
-//               Reset
-//             </Button>
-//           </div> */}
+//         <div>
+//           <CardTitle>{title}</CardTitle>
+//           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
 //         </div>
 //       </CardHeader>
 
@@ -651,12 +727,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CalendarDays,
   ClipboardCheck,
+  FileCheck,
   FileText,
   LayoutTemplate,
   Plus,
@@ -743,6 +819,15 @@ function getDailyAccentDate(report: any): unknown {
   return report.submittedAt ?? report.submitted_at;
 }
 
+function getHandoverDate(report: any): unknown {
+  return (
+    report.submittedAt ??
+    report.submitted_at ??
+    report.createdAt ??
+    report.created_at
+  );
+}
+
 function formatDate(value: unknown): string {
   if (!value) return "—";
 
@@ -769,6 +854,7 @@ export default function Admin() {
   const [audits, setAudits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [dailyAccentReports, setDailyAccentReports] = useState<any[]>([]);
+  const [handoverCertificates, setHandoverCertificates] = useState<any[]>([]);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [search, setSearch] = useState("");
@@ -785,7 +871,7 @@ export default function Admin() {
     setSelectedDate(getLocalDateKey(new Date()));
   }, []);
 
-  // Fetch all three report types using the same date and search filters.
+  // Fetch all four report types using the same date and search filters.
   useEffect(() => {
     if (!selectedDate) return;
 
@@ -810,6 +896,7 @@ export default function Admin() {
           auditResponse,
           serviceResponse,
           dailyAccentResponse,
+          handoverResponse,
         ] = await Promise.all([
           fetch(`/api/audits?${query}`, {
             cache: "no-store",
@@ -820,12 +907,16 @@ export default function Admin() {
           fetch(`/api/daily-accent-report?${query}`, {
             cache: "no-store",
           }),
+          fetch(`/api/handover-certificates?${query}`, {
+            cache: "no-store",
+          }),
         ]);
 
         if (
           !auditResponse.ok ||
           !serviceResponse.ok ||
-          !dailyAccentResponse.ok
+          !dailyAccentResponse.ok ||
+          !handoverResponse.ok
         ) {
           throw new Error("Failed to fetch reports.");
         }
@@ -834,10 +925,12 @@ export default function Admin() {
           auditData,
           serviceData,
           dailyAccentData,
+          handoverData,
         ] = await Promise.all([
           auditResponse.json(),
           serviceResponse.json(),
           dailyAccentResponse.json(),
+          handoverResponse.json(),
         ]);
 
         if (!cancelled) {
@@ -845,6 +938,9 @@ export default function Admin() {
           setServices(Array.isArray(serviceData) ? serviceData : []);
           setDailyAccentReports(
             Array.isArray(dailyAccentData) ? dailyAccentData : [],
+          );
+          setHandoverCertificates(
+            Array.isArray(handoverData) ? handoverData : [],
           );
         }
       } catch (error) {
@@ -881,6 +977,8 @@ export default function Admin() {
   const completed = audits.filter(isCompleted);
   const completedServices = services.filter(isCompleted);
   const completedDailyAccentReports = dailyAccentReports.filter(isCompleted);
+  const completedHandoverCertificates =
+    handoverCertificates.filter(isCompleted);
 
   // Statistics reflect the currently returned reports.
   const average = completed.length
@@ -895,7 +993,8 @@ export default function Admin() {
   const totalCompleted =
     completed.length +
     completedServices.length +
-    completedDailyAccentReports.length;
+    completedDailyAccentReports.length +
+    completedHandoverCertificates.length;
 
   const stats = [
     {
@@ -921,6 +1020,12 @@ export default function Admin() {
       value: dailyAccentReports.length,
       icon: FileText,
       tone: "bg-violet-50 text-violet-700",
+    },
+    {
+      label: "Handover Certificates",
+      value: handoverCertificates.length,
+      icon: FileCheck,
+      tone: "bg-blue-50 text-blue-700",
     },
     {
       label: "Avg. compliance",
@@ -950,7 +1055,7 @@ export default function Admin() {
             </h1>
 
             <p className="mt-2 text-muted-foreground">
-              Overview of inspections and service activity.
+              Overview of inspections, service activity and handover certificates.
             </p>
           </div>
 
@@ -986,7 +1091,7 @@ export default function Admin() {
         </div>
 
         {/* STATISTICS */}
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
           {stats.map(({ label, value, icon: Icon, tone }) => (
             <Card key={label} className="shadow-sm">
               <CardContent className="p-5">
@@ -1023,7 +1128,7 @@ export default function Admin() {
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
               <input
-                aria-label="Search audits, service reports and Daily Action Reports"
+                aria-label="Search audits, service reports, Daily Action Reports and handover certificates"
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -1181,7 +1286,7 @@ export default function Admin() {
             <EmptyRow
               colSpan={6}
               loading={reportsLoading}
-              error={reportsError}
+              error={Boolean(reportsError)}
               message="No completed service reports for the selected date and search."
             />
           ) : (
@@ -1228,7 +1333,7 @@ export default function Admin() {
           )}
         </DataCard>
 
-        {/* COMPLETED DAILY ACCENT REPORTS */}
+        {/* COMPLETED DAILY ACTION REPORTS */}
         <DataCard
           className="mt-6"
           title="Completed Daily Action Reports"
@@ -1289,6 +1394,73 @@ export default function Admin() {
                     >
                       View
                       <ArrowUpRight data-icon="inline-end" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </DataCard>
+
+        {/* COMPLETED HANDOVER CERTIFICATES */}
+        <DataCard
+          className="mt-6"
+          title="Completed Handover Certificates"
+          subtitle="Review submitted handover certificates across the organization"
+          headers={[
+            "Certificate ID",
+            "Customer",
+            "Engineer",
+            "Date",
+            "Status",
+            "",
+          ]}
+        >
+          {completedHandoverCertificates.length === 0 ? (
+            <EmptyRow
+              colSpan={6}
+              loading={reportsLoading}
+              error={reportsError}
+              message="No completed handover certificates for the selected date and search."
+            />
+          ) : (
+            completedHandoverCertificates.map((certificate) => {
+              const customer = getCustomerName(certificate);
+              const engineer = getEmployeeName(certificate);
+              const date = formatDate(getHandoverDate(certificate));
+              const status = String(
+                certificate.status || "COMPLETED",
+              ).toUpperCase();
+
+              return (
+                <tr
+                  key={certificate.id}
+                  className="border-b transition last:border-0 hover:bg-muted/40"
+                >
+                  <td className="px-3 py-4 font-semibold text-primary">
+                    {certificate.id}
+                  </td>
+
+                  <td className="px-3 py-4 font-medium">{customer}</td>
+
+                  <td className="px-3 py-4">{engineer}</td>
+
+                  <td className="px-3 py-4 text-muted-foreground">{date}</td>
+
+                  <td className="px-3 py-4">
+                    <Badge variant="default">{status}</Badge>
+                  </td>
+
+                  <td className="px-3 py-4 text-right">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        router.push(
+                          `/admin/handover-certificates/${certificate.id}`,
+                        )
+                      }
+                    >
+                      View &amp; Edit
                     </Button>
                   </td>
                 </tr>

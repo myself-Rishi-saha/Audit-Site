@@ -1,6 +1,9 @@
 
-// import { neon } from "@neondatabase/serverless";
+
 // import bcrypt from "bcryptjs";
+// import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+
+// import { getDatabase } from "@/lib/db";
 
 // export type Employee = {
 //   id: string;
@@ -27,48 +30,72 @@
 //   canAccessDailyAccentReport: boolean;
 // };
 
-// function getDatabase() {
-//   const url = process.env.DATABASE_URL;
+// type EmployeeRow = RowDataPacket & {
+//   id: string;
+//   name: string;
+//   email: string;
+//   username: string;
+//   is_active: number | boolean | string;
+//   role: string;
+//   can_access_audit: number | boolean | string;
+//   can_access_service_report: number | boolean | string;
+//   can_access_daily_accent_report: number | boolean | string;
+//   created_at: string | Date;
+//   updated_at: string | Date;
+// };
 
-//   if (!url) {
-//     throw new Error("DATABASE_URL is not configured");
-//   }
-
-//   return neon(url);
+// function toBoolean(value: number | boolean | string): boolean {
+//   return value === true || value === 1 || value === "1";
 // }
 
-// function mapEmployee(row: any): Employee {
+// function toIsoString(value: string | Date): string {
+//   if (value instanceof Date) {
+//     return value.toISOString();
+//   }
+
+//   // MySQL DATETIME strings do not include a timezone.
+//   const normalized =
+//     /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(value)
+//       ? `${value.replace(" ", "T")}Z`
+//       : value;
+
+//   const date = new Date(normalized);
+
+//   if (Number.isNaN(date.getTime())) {
+//     throw new Error("Invalid employee timestamp");
+//   }
+
+//   return date.toISOString();
+// }
+
+// function mapEmployee(row: EmployeeRow): Employee {
 //   return {
 //     id: String(row.id),
 //     name: String(row.name),
 //     email: String(row.email),
 //     username: String(row.username),
-//     isActive: Boolean(row.is_active),
+//     isActive: toBoolean(row.is_active),
 //     role: "auditor",
-//     canAccessAudit: Boolean(row.can_access_audit),
-//     canAccessServiceReport: Boolean(
+//     canAccessAudit: toBoolean(row.can_access_audit),
+//     canAccessServiceReport: toBoolean(
 //       row.can_access_service_report,
 //     ),
-//     canAccessDailyAccentReport: Boolean(
+//     canAccessDailyAccentReport: toBoolean(
 //       row.can_access_daily_accent_report,
 //     ),
-//     createdAt:
-//       row.created_at?.toISOString?.() ??
-//       String(row.created_at),
-//     updatedAt:
-//       row.updated_at?.toISOString?.() ??
-//       String(row.updated_at),
+//     createdAt: toIsoString(row.created_at),
+//     updatedAt: toIsoString(row.updated_at),
 //   };
 // }
 
 // /**
-//  * Get all employees, including report permissions.
+//  * Returns employees and report permissions.
 //  * Password hashes are never selected or returned.
 //  */
 // export async function readEmployees(): Promise<Employee[]> {
-//   const sql = getDatabase();
+//   const db = getDatabase();
 
-//   const rows = await sql`
+//   const [rows] = await db.query<EmployeeRow[]>(`
 //     SELECT
 //       id,
 //       name,
@@ -83,52 +110,70 @@
 //       updated_at
 //     FROM employees
 //     ORDER BY created_at DESC
-//   `;
+//   `);
 
 //   return rows.map(mapEmployee);
 // }
 
 // /**
-//  * Generate the next employee ID.
-//  *
-//  * Example: EMP001, EMP002, EMP003
+//  * Generate an employee ID using the shared counter table.
+//  * The counter row is locked to prevent duplicate IDs during
+//  * concurrent employee creation.
 //  */
-// // export async function generateEmployeeId(): Promise<string> {
-// //   const sql = getDatabase();
 
-// //   const rows = await sql`
-// //     SELECT
-// //       COALESCE(
-// //         MAX(
-// //           CAST(
-// //             NULLIF(SUBSTRING(id FROM 4), '') AS INTEGER
-// //           )
-// //         ),
-// //         0
-// //       ) + 1 AS next_number
-// //     FROM employees
-// //     WHERE id ~ '^EMP[0-9]+$'
-// //   `;
+// async function generateEmployeeId(): Promise<string> {
+//   const db = getDatabase();
+//   const connection = await db.getConnection();
 
-// //   const nextNumber = Number(rows[0]?.next_number || 1);
+//   try {
+//     await connection.beginTransaction();
 
-// //   return `EMP${String(nextNumber).padStart(3, "0")}`;
-// // }
-// export async function generateEmployeeId(): Promise<string> {
-//   const sql = getDatabase();
+//     // Create the EMP counter if it doesn't exist.
+//     await connection.execute(
+//       `INSERT IGNORE INTO report_id_counters
+//          (report_type, next_number)
+//        VALUES ('EMP', 1)`,
+//     );
 
-//   const rows = await sql`
-//     SELECT nextval('employee_id_seq') AS next_number
-//   `;
+//     // Lock the EMP counter so concurrent requests cannot
+//     // allocate the same employee ID.
+//     const [rows] = await connection.execute<
+//       (RowDataPacket & { next_number: number })[]
+//     >(
+//       `SELECT next_number
+//        FROM report_id_counters
+//        WHERE report_type = 'EMP'
+//        FOR UPDATE`,
+//     );
 
-//   const nextNumber = Number(rows[0].next_number);
+//     if (rows.length === 0) {
+//       throw new Error("Failed to initialize EMP ID counter");
+//     }
 
-//   return `EMP${String(nextNumber).padStart(3, "0")}`;
+//     const nextNumber = Number(rows[0].next_number);
+
+//     await connection.execute(
+//       `UPDATE report_id_counters
+//        SET next_number = ?
+//        WHERE report_type = 'EMP'`,
+//       [nextNumber + 1],
+//     );
+
+//     await connection.commit();
+
+//     return `EMP${String(nextNumber).padStart(3, "0")}`;
+//   } catch (error) {
+//     await connection.rollback();
+//     throw error;
+//   } finally {
+//     connection.release();
+//   }
 // }
+
 
 // /**
 //  * Create an employee with selected report permissions.
-//  * Only the bcrypt password hash is stored.
+//  * Only a bcrypt password hash is stored.
 //  */
 // export async function createEmployee(
 //   input: CreateEmployeeInput,
@@ -138,24 +183,17 @@
 //     !input.canAccessServiceReport &&
 //     !input.canAccessDailyAccentReport
 //   ) {
-//     throw new Error(
-//       "At least one report permission is required",
-//     );
+//     throw new Error("At least one report permission is required");
 //   }
 
-//   const sql = getDatabase();
+//   const db = getDatabase();
 
-//   const passwordHash = await bcrypt.hash(
-//     input.password,
-//     10,
-//   );
-
+//   const passwordHash = await bcrypt.hash(input.password, 10);
 //   const id = await generateEmployeeId();
-//   const now = new Date().toISOString();
 //   const isActive = input.isActive ?? true;
 
-//   const rows = await sql`
-//     INSERT INTO employees (
+//   await db.execute(
+//     `INSERT INTO employees (
 //       id,
 //       name,
 //       email,
@@ -169,21 +207,22 @@
 //       created_at,
 //       updated_at
 //     )
-//     VALUES (
-//       ${id},
-//       ${input.name},
-//       ${input.email},
-//       ${input.username},
-//       ${passwordHash},
-//       ${isActive},
-//       'auditor',
-//       ${input.canAccessAudit},
-//       ${input.canAccessServiceReport},
-//       ${input.canAccessDailyAccentReport},
-//       ${now},
-//       ${now}
-//     )
-//     RETURNING
+//     VALUES (?, ?, ?, ?, ?, ?, 'auditor', ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
+//     [
+//       id,
+//       input.name,
+//       input.email,
+//       input.username,
+//       passwordHash,
+//       isActive ? 1 : 0,
+//       input.canAccessAudit ? 1 : 0,
+//       input.canAccessServiceReport ? 1 : 0,
+//       input.canAccessDailyAccentReport ? 1 : 0,
+//     ],
+//   );
+
+//   const [rows] = await db.execute<EmployeeRow[]>(
+//     `SELECT
 //       id,
 //       name,
 //       email,
@@ -195,7 +234,15 @@
 //       can_access_daily_accent_report,
 //       created_at,
 //       updated_at
-//   `;
+//     FROM employees
+//     WHERE id = ?
+//     LIMIT 1`,
+//     [id],
+//   );
+
+//   if (rows.length === 0) {
+//     throw new Error("Employee was created but could not be retrieved");
+//   }
 
 //   return mapEmployee(rows[0]);
 // }
@@ -206,25 +253,29 @@
 // export async function findEmployeeByUsernameOrEmail(
 //   username: string,
 //   email: string,
-// ) {
-//   const sql = getDatabase();
+// ): Promise<{ id: string; username: string; email: string } | null> {
+//   const db = getDatabase();
 
-//   const rows = await sql`
-//     SELECT
-//       id,
-//       username,
-//       email
-//     FROM employees
-//     WHERE LOWER(username) = LOWER(${username})
-//        OR LOWER(email) = LOWER(${email})
-//     LIMIT 1
-//   `;
+//   const [rows] = await db.execute<
+//     (RowDataPacket & {
+//       id: string;
+//       username: string;
+//       email: string;
+//     })[]
+//   >(
+//     `SELECT id, username, email
+//      FROM employees
+//      WHERE LOWER(username) = LOWER(?)
+//         OR LOWER(email) = LOWER(?)
+//      LIMIT 1`,
+//     [username, email],
+//   );
 
-//   return rows[0] || null;
+//   return rows[0] ?? null;
 // }
 
 import bcrypt from "bcryptjs";
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "mysql2/promise";
 
 import { getDatabase } from "@/lib/db";
 
@@ -238,6 +289,7 @@ export type Employee = {
   canAccessAudit: boolean;
   canAccessServiceReport: boolean;
   canAccessDailyAccentReport: boolean;
+  canAccessHandoverCertificate: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -251,6 +303,7 @@ export type CreateEmployeeInput = {
   canAccessAudit: boolean;
   canAccessServiceReport: boolean;
   canAccessDailyAccentReport: boolean;
+  canAccessHandoverCertificate: boolean;
 };
 
 type EmployeeRow = RowDataPacket & {
@@ -263,6 +316,7 @@ type EmployeeRow = RowDataPacket & {
   can_access_audit: number | boolean | string;
   can_access_service_report: number | boolean | string;
   can_access_daily_accent_report: number | boolean | string;
+  can_access_handover_certificate: number | boolean | string;
   created_at: string | Date;
   updated_at: string | Date;
 };
@@ -306,6 +360,9 @@ function mapEmployee(row: EmployeeRow): Employee {
     canAccessDailyAccentReport: toBoolean(
       row.can_access_daily_accent_report,
     ),
+    canAccessHandoverCertificate: toBoolean(
+      row.can_access_handover_certificate,
+    ),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -329,6 +386,7 @@ export async function readEmployees(): Promise<Employee[]> {
       can_access_audit,
       can_access_service_report,
       can_access_daily_accent_report,
+      can_access_handover_certificate,
       created_at,
       updated_at
     FROM employees
@@ -343,7 +401,6 @@ export async function readEmployees(): Promise<Employee[]> {
  * The counter row is locked to prevent duplicate IDs during
  * concurrent employee creation.
  */
-
 async function generateEmployeeId(): Promise<string> {
   const db = getDatabase();
   const connection = await db.getConnection();
@@ -351,15 +408,12 @@ async function generateEmployeeId(): Promise<string> {
   try {
     await connection.beginTransaction();
 
-    // Create the EMP counter if it doesn't exist.
     await connection.execute(
       `INSERT IGNORE INTO report_id_counters
          (report_type, next_number)
        VALUES ('EMP', 1)`,
     );
 
-    // Lock the EMP counter so concurrent requests cannot
-    // allocate the same employee ID.
     const [rows] = await connection.execute<
       (RowDataPacket & { next_number: number })[]
     >(
@@ -393,7 +447,6 @@ async function generateEmployeeId(): Promise<string> {
   }
 }
 
-
 /**
  * Create an employee with selected report permissions.
  * Only a bcrypt password hash is stored.
@@ -404,7 +457,8 @@ export async function createEmployee(
   if (
     !input.canAccessAudit &&
     !input.canAccessServiceReport &&
-    !input.canAccessDailyAccentReport
+    !input.canAccessDailyAccentReport &&
+    !input.canAccessHandoverCertificate
   ) {
     throw new Error("At least one report permission is required");
   }
@@ -427,10 +481,11 @@ export async function createEmployee(
       can_access_audit,
       can_access_service_report,
       can_access_daily_accent_report,
+      can_access_handover_certificate,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, 'auditor', ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
+    VALUES (?, ?, ?, ?, ?, ?, 'auditor', ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
     [
       id,
       input.name,
@@ -441,6 +496,7 @@ export async function createEmployee(
       input.canAccessAudit ? 1 : 0,
       input.canAccessServiceReport ? 1 : 0,
       input.canAccessDailyAccentReport ? 1 : 0,
+      input.canAccessHandoverCertificate ? 1 : 0,
     ],
   );
 
@@ -455,6 +511,7 @@ export async function createEmployee(
       can_access_audit,
       can_access_service_report,
       can_access_daily_accent_report,
+      can_access_handover_certificate,
       created_at,
       updated_at
     FROM employees

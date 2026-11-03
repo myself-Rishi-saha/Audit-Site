@@ -1,9 +1,23 @@
 
 // import { NextRequest, NextResponse } from "next/server";
 // import { jwtVerify } from "jose";
-// import { neon } from "@neondatabase/serverless";
+// import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+
+// import { getDatabase } from "@/lib/db";
 
 // const ADMIN_COOKIE = "auditdesk_admin_session";
+
+// interface EmployeeRow extends RowDataPacket {
+//   id: string;
+//   name: string;
+//   email: string | null;
+//   username: string;
+//   is_active: boolean | number | string;
+//   can_access_audit: boolean | number | string;
+//   can_access_service_report: boolean | number | string;
+//   can_access_daily_accent_report: boolean | number | string;
+//   updated_at: string | Date | null;
+// }
 
 // function getAuthSecret() {
 //   const secret = process.env.AUTH_SECRET;
@@ -28,6 +42,27 @@
 //   } catch {
 //     return false;
 //   }
+// }
+
+// function toBoolean(value: boolean | number | string | null | undefined) {
+//   return value === true || value === 1 || value === "1";
+// }
+
+// function toIsoString(value: string | Date | null) {
+//   if (!value) return null;
+
+//   // MariaDB date strings may be returned without a timezone.
+//   // Treat database timestamps as UTC, consistent with this app's storage convention.
+//   const date =
+//     value instanceof Date
+//       ? value
+//       : new Date(
+//           /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value)
+//             ? `${value.replace(" ", "T")}Z`
+//             : value,
+//         );
+
+//   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 // }
 
 // export async function PATCH(
@@ -93,49 +128,70 @@
 //       );
 //     }
 
-//     // 4. Connect to Neon PostgreSQL.
-//     const databaseUrl = process.env.DATABASE_URL;
-
-//     if (!databaseUrl) {
-//       return NextResponse.json(
-//         { error: "DATABASE_URL is not configured" },
-//         { status: 500 },
-//       );
-//     }
-
-//     const sql = neon(databaseUrl);
+//     // 4. Connect to MariaDB.
+//     const db = getDatabase();
 
 //     // 5. Update employee permissions.
-//     const updatedEmployees = await sql`
-//       UPDATE employees
-//       SET
-//         can_access_audit = ${canAccessAudit},
-//         can_access_service_report = ${canAccessServiceReport},
-//         can_access_daily_accent_report = ${canAccessDailyAccentReport},
-//         updated_at = NOW()
-//       WHERE id = ${id}
-//       RETURNING
+//     const [result] = await db.execute<ResultSetHeader>(
+//       `UPDATE employees
+//        SET
+//          can_access_audit = ?,
+//          can_access_service_report = ?,
+//          can_access_daily_accent_report = ?,
+//          updated_at = UTC_TIMESTAMP(3)
+//        WHERE id = ?`,
+//       [
+//         canAccessAudit ? 1 : 0,
+//         canAccessServiceReport ? 1 : 0,
+//         canAccessDailyAccentReport ? 1 : 0,
 //         id,
-//         name,
-//         email,
-//         username,
-//         is_active,
-//         can_access_audit,
-//         can_access_service_report,
-//         can_access_daily_accent_report,
-//         updated_at
-//     `;
+//       ],
+//     );
 
-//     if (updatedEmployees.length === 0) {
+//     if (result.affectedRows === 0) {
+//       // affectedRows can be zero when the employee exists but values
+//       // were already identical, so verify existence before returning 404.
+//       const [existing] = await db.execute<RowDataPacket[]>(
+//         "SELECT id FROM employees WHERE id = ? LIMIT 1",
+//         [id],
+//       );
+
+//       if (existing.length === 0) {
+//         return NextResponse.json(
+//           { error: "Employee not found" },
+//           { status: 404 },
+//         );
+//       }
+//     }
+
+//     // 6. Read the saved employee record.
+//     const [rows] = await db.execute<EmployeeRow[]>(
+//       `SELECT
+//          id,
+//          name,
+//          email,
+//          username,
+//          is_active,
+//          can_access_audit,
+//          can_access_service_report,
+//          can_access_daily_accent_report,
+//          updated_at
+//        FROM employees
+//        WHERE id = ?
+//        LIMIT 1`,
+//       [id],
+//     );
+
+//     if (rows.length === 0) {
 //       return NextResponse.json(
 //         { error: "Employee not found" },
 //         { status: 404 },
 //       );
 //     }
 
-//     const employee = updatedEmployees[0];
+//     const employee = rows[0];
 
-//     // 6. Return updated employee.
+//     // 7. Return the updated employee using the existing API shape.
 //     return NextResponse.json({
 //       message: "Employee report access updated successfully",
 //       employee: {
@@ -143,13 +199,15 @@
 //         name: employee.name,
 //         email: employee.email,
 //         username: employee.username,
-//         isActive: employee.is_active,
-//         canAccessAudit: employee.can_access_audit,
-//         canAccessServiceReport:
+//         isActive: toBoolean(employee.is_active),
+//         canAccessAudit: toBoolean(employee.can_access_audit),
+//         canAccessServiceReport: toBoolean(
 //           employee.can_access_service_report,
-//         canAccessDailyAccentReport:
+//         ),
+//         canAccessDailyAccentReport: toBoolean(
 //           employee.can_access_daily_accent_report,
-//         updatedAt: employee.updated_at,
+//         ),
+//         updatedAt: toIsoString(employee.updated_at),
 //       },
 //     });
 //   } catch (error) {
@@ -161,6 +219,7 @@
 //     );
 //   }
 // }
+
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
@@ -178,6 +237,7 @@ interface EmployeeRow extends RowDataPacket {
   can_access_audit: boolean | number | string;
   can_access_service_report: boolean | number | string;
   can_access_daily_accent_report: boolean | number | string;
+  can_access_handover_certificate: boolean | number | string;
   updated_at: string | Date | null;
 }
 
@@ -206,15 +266,15 @@ async function verifyAdmin(request: NextRequest) {
   }
 }
 
-function toBoolean(value: boolean | number | string | null | undefined) {
+function toBoolean(
+  value: boolean | number | string | null | undefined,
+) {
   return value === true || value === 1 || value === "1";
 }
 
 function toIsoString(value: string | Date | null) {
   if (!value) return null;
 
-  // MariaDB date strings may be returned without a timezone.
-  // Treat database timestamps as UTC, consistent with this app's storage convention.
   const date =
     value instanceof Date
       ? value
@@ -259,17 +319,19 @@ export async function PATCH(
       canAccessAudit,
       canAccessServiceReport,
       canAccessDailyAccentReport,
+      canAccessHandoverCertificate,
     } = body;
 
     if (
       typeof canAccessAudit !== "boolean" ||
       typeof canAccessServiceReport !== "boolean" ||
-      typeof canAccessDailyAccentReport !== "boolean"
+      typeof canAccessDailyAccentReport !== "boolean" ||
+      typeof canAccessHandoverCertificate !== "boolean"
     ) {
       return NextResponse.json(
         {
           error:
-            "canAccessAudit, canAccessServiceReport, and canAccessDailyAccentReport must be boolean values",
+            "All four report permissions must be boolean values.",
         },
         { status: 400 },
       );
@@ -279,12 +341,13 @@ export async function PATCH(
     if (
       !canAccessAudit &&
       !canAccessServiceReport &&
-      !canAccessDailyAccentReport
+      !canAccessDailyAccentReport &&
+      !canAccessHandoverCertificate
     ) {
       return NextResponse.json(
         {
           error:
-            "Enable at least one permission: Audit Report, Service Report, or Daily Accent Report",
+            "Enable at least one permission: Audit Report, Service Report, Daily Accent Report, or Handover Certificate.",
         },
         { status: 400 },
       );
@@ -293,26 +356,26 @@ export async function PATCH(
     // 4. Connect to MariaDB.
     const db = getDatabase();
 
-    // 5. Update employee permissions.
+    // 5. Update all four employee permissions.
     const [result] = await db.execute<ResultSetHeader>(
       `UPDATE employees
        SET
          can_access_audit = ?,
          can_access_service_report = ?,
          can_access_daily_accent_report = ?,
+         can_access_handover_certificate = ?,
          updated_at = UTC_TIMESTAMP(3)
        WHERE id = ?`,
       [
         canAccessAudit ? 1 : 0,
         canAccessServiceReport ? 1 : 0,
         canAccessDailyAccentReport ? 1 : 0,
+        canAccessHandoverCertificate ? 1 : 0,
         id,
       ],
     );
 
     if (result.affectedRows === 0) {
-      // affectedRows can be zero when the employee exists but values
-      // were already identical, so verify existence before returning 404.
       const [existing] = await db.execute<RowDataPacket[]>(
         "SELECT id FROM employees WHERE id = ? LIMIT 1",
         [id],
@@ -337,6 +400,7 @@ export async function PATCH(
          can_access_audit,
          can_access_service_report,
          can_access_daily_accent_report,
+         can_access_handover_certificate,
          updated_at
        FROM employees
        WHERE id = ?
@@ -353,7 +417,7 @@ export async function PATCH(
 
     const employee = rows[0];
 
-    // 7. Return the updated employee using the existing API shape.
+    // 7. Return the updated employee.
     return NextResponse.json({
       message: "Employee report access updated successfully",
       employee: {
@@ -368,6 +432,9 @@ export async function PATCH(
         ),
         canAccessDailyAccentReport: toBoolean(
           employee.can_access_daily_accent_report,
+        ),
+        canAccessHandoverCertificate: toBoolean(
+          employee.can_access_handover_certificate,
         ),
         updatedAt: toIsoString(employee.updated_at),
       },
