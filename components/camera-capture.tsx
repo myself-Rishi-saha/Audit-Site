@@ -419,19 +419,42 @@ export function CameraCapture({
 
       const isPhoto = mode === "photo";
 
-      const fileName = isPhoto
-        ? `capture-${Date.now()}.jpg`
-        : `capture-${Date.now()}.webm`;
+      // Use the actual browser-recorded MIME type.
+      // const mimeType =
+      //   blob.type ||
+      //   (isPhoto ? "image/jpeg" : "video/webm");
+      const rawMimeType = blob.type || (isPhoto ? "image/jpeg" : "video/webm");
 
-      const file = new File([blob], fileName, {
-        type: blob.type || (isPhoto ? "image/jpeg" : "video/webm"),
+      const extensionMap: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "video/webm": "webm",
+        "video/mp4": "mp4",
+        "video/quicktime": "mov",
+      };
+
+      // Remove codec parameters, e.g.
+      // video/webm;codecs=vp8,opus -> video/webm
+      const mimeType = rawMimeType.split(";")[0].trim().toLowerCase();
+
+      const extension = extensionMap[mimeType];
+
+      if (!extension) {
+        throw new Error(
+          `Unsupported recording format: ${mimeType || "unknown"}`,
+        );
+      }
+
+      const file = new File([blob], `capture-${Date.now()}.${extension}`, {
+        type: mimeType,
       });
 
       const formData = new FormData();
-
       formData.append("file", file);
       formData.append("reportId", reportId);
-      formData.append("type", mode);
+      formData.append("type", isPhoto ? "image" : "video");
 
       console.log("Uploading media:", {
         name: file.name,
@@ -446,13 +469,7 @@ export function CameraCapture({
         body: formData,
       });
 
-      let result: any = null;
-
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error("Upload API returned an invalid response.");
-      }
+      const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result?.error || "Upload failed.");
@@ -460,23 +477,92 @@ export function CameraCapture({
 
       console.log("UPLOAD SUCCESS:", result);
 
-      // Normalize response so AuditForm always receives
-      // either "image" or "video".
-      const evidenceItem = {
+      onUse({
         ...result,
-        type: mode === "video" ? "video" : "image",
-      };
-
-      // Give uploaded evidence back to AuditForm
-      onUse(evidenceItem);
+        type: isPhoto ? "image" : "video",
+      });
     } catch (err) {
       console.error("UPLOAD ERROR:", err);
-
       setError(err instanceof Error ? err.message : "Failed to upload media.");
     } finally {
       setUploading(false);
     }
   }
+
+  // async function useMedia() {
+  //   if (!blob) {
+  //     setError("No media is available.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setUploading(true);
+  //     setError("");
+
+  //     const isPhoto = mode === "photo";
+
+  //     const fileName = isPhoto
+  //       ? `capture-${Date.now()}.jpg`
+  //       : `capture-${Date.now()}.webm`;
+
+  //     const file = new File([blob], fileName, {
+  //       type: blob.type || (isPhoto ? "image/jpeg" : "video/webm"),
+  //     });
+
+  //     const formData = new FormData();
+
+  //     formData.append("file", file);
+  //     formData.append("reportId", reportId);
+  //     formData.append("type", mode);
+
+  //     console.log("Uploading media:", {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //       reportId,
+  //       mode,
+  //     });
+  //     console.log("UPLOAD FILE:", {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //     });
+  //     const response = await fetch("/api/upload", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
+
+  //     let result: any = null;
+
+  //     try {
+  //       result = await response.json();
+  //     } catch {
+  //       throw new Error("Upload API returned an invalid response.");
+  //     }
+
+  //     if (!response.ok) {
+  //       throw new Error(result?.error || "Upload failed.");
+  //     }
+
+  //     console.log("UPLOAD SUCCESS:", result);
+
+  //     // Normalize response so AuditForm always receives
+  //     // either "image" or "video".
+  //     const evidenceItem = {
+  //       ...result,
+  //       type: mode === "video" ? "video" : "image",
+  //     };
+
+  //     // Give uploaded evidence back to AuditForm
+  //     onUse(evidenceItem);
+  //   } catch (err) {
+  //     console.error("UPLOAD ERROR:", err);
+
+  //     setError(err instanceof Error ? err.message : "Failed to upload media.");
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // }
 
   // --------------------------------------------------
   // Cancel
@@ -746,4 +832,3 @@ export function CameraCapture({
     </div>
   );
 }
-

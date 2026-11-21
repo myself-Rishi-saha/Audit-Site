@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { RowDataPacket } from "mysql2/promise";
-
+import { attachEvidenceFiles } from "@/lib/report-files";
 import { getDatabase } from "@/lib/db";
 
 const ADMIN_COOKIE = "auditdesk_admin_session";
@@ -109,9 +109,7 @@ async function getSession(
   }
 }
 
-async function getEmployee(
-  employeeId: string,
-): Promise<EmployeeRow | null> {
+async function getEmployee(employeeId: string): Promise<EmployeeRow | null> {
   const db = getDatabase();
 
   const [rows] = await db.execute<EmployeeRow[]>(
@@ -131,17 +129,11 @@ async function getEmployee(
 }
 
 function unauthorized() {
-  return NextResponse.json(
-    { error: "Unauthorized" },
-    { status: 401 },
-  );
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 function forbidden(message: string) {
-  return NextResponse.json(
-    { error: message },
-    { status: 403 },
-  );
+  return NextResponse.json({ error: message }, { status: 403 });
 }
 
 // ----------------------------------------------------
@@ -156,8 +148,7 @@ function isValidDate(value: string): boolean {
   const date = new Date(`${value}T00:00:00.000Z`);
 
   return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === value
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 }
 
@@ -171,9 +162,7 @@ function getIndiaDateRange(date: string): [string, string] {
   return [toMysqlUtc(start), toMysqlUtc(end)];
 }
 
-function toIsoString(
-  value: string | Date | null | undefined,
-): string | null {
+function toIsoString(value: string | Date | null | undefined): string | null {
   if (value == null) {
     return null;
   }
@@ -187,9 +176,7 @@ function toIsoString(
             : value,
         );
 
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toISOString();
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
 // ----------------------------------------------------
@@ -208,11 +195,7 @@ function parseJsonObject<T extends Record<string, unknown>>(
     try {
       const parsed: unknown = JSON.parse(value);
 
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        !Array.isArray(parsed)
-      ) {
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         return parsed as T;
       }
     } catch {
@@ -233,30 +216,22 @@ function mapHandoverCertificate(row: HandoverCertificateRow) {
     employeeId: String(row.employee_id),
     employeeName: String(row.employee_name),
 
-    customerId:
-      row.customer_id == null ? null : String(row.customer_id),
+    customerId: row.customer_id == null ? null : String(row.customer_id),
 
-    customerName:
-      row.customer_name == null ? null : String(row.customer_name),
+    customerName: row.customer_name == null ? null : String(row.customer_name),
 
     customerAddress:
-      row.customer_address == null
-        ? null
-        : String(row.customer_address),
+      row.customer_address == null ? null : String(row.customer_address),
 
     customerGstNo:
-      row.customer_gst_no == null
-        ? null
-        : String(row.customer_gst_no),
+      row.customer_gst_no == null ? null : String(row.customer_gst_no),
 
     customerContactNumber:
       row.customer_contact_number == null
         ? null
         : String(row.customer_contact_number),
 
-    templateId: String(
-      row.template_id || "handover-certificate",
-    ),
+    templateId: String(row.template_id || "handover-certificate"),
 
     templateSnapshot: parseJsonObject<Record<string, unknown>>(
       row.template_snapshot,
@@ -268,25 +243,14 @@ function mapHandoverCertificate(row: HandoverCertificateRow) {
       },
     ),
 
-    formData: parseJsonObject<Record<string, unknown>>(
-      row.form_data,
-      {},
-    ),
+    formData: parseJsonObject<Record<string, unknown>>(row.form_data, {}),
 
-    evidence: parseJsonObject<Record<string, unknown>>(
-      row.evidence,
-      {},
-    ),
+    evidence: parseJsonObject<Record<string, unknown>>(row.evidence, {}),
 
-    signatures: parseJsonObject<Record<string, unknown>>(
-      row.signatures,
-      {},
-    ),
+    signatures: parseJsonObject<Record<string, unknown>>(row.signatures, {}),
 
     status:
-      String(row.status).toUpperCase() === "COMPLETED"
-        ? "COMPLETED"
-        : "DRAFT",
+      String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : "DRAFT",
 
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
@@ -321,9 +285,7 @@ export async function GET(request: Request) {
       [dateStart, dateEnd] = getIndiaDateRange(requestedDate);
     }
 
-    function buildOptionalFilters(
-      includeEmployeeName: boolean,
-    ): {
+    function buildOptionalFilters(includeEmployeeName: boolean): {
       sql: string;
       params: string[];
     } {
@@ -342,10 +304,7 @@ export async function GET(request: Request) {
 
         conditions.push(
           `(${searchableColumns
-            .map(
-              (column) =>
-                `COALESCE(${column}, '') LIKE ?`,
-            )
+            .map((column) => `COALESCE(${column}, '') LIKE ?`)
             .join(" OR ")})`,
         );
 
@@ -355,17 +314,13 @@ export async function GET(request: Request) {
       }
 
       if (dateStart && dateEnd) {
-        conditions.push(
-          "created_at >= ? AND created_at < ?",
-        );
+        conditions.push("created_at >= ? AND created_at < ?");
 
         params.push(dateStart, dateEnd);
       }
 
       return {
-        sql: conditions.length
-          ? ` AND ${conditions.join(" AND ")}`
-          : "",
+        sql: conditions.length ? ` AND ${conditions.join(" AND ")}` : "",
         params,
       };
     }
@@ -374,26 +329,19 @@ export async function GET(request: Request) {
     // ADMIN: ONLY COMPLETED CERTIFICATES
     // ------------------------------------------------
 
-    const adminToken = getCookieToken(
-      request,
-      ADMIN_COOKIE,
-    );
+    const adminToken = getCookieToken(request, ADMIN_COOKIE);
 
     if (adminToken) {
       const adminSession = await getSession(adminToken);
 
-      if (
-        !adminSession ||
-        adminSession.role !== "admin"
-      ) {
+      if (!adminSession || adminSession.role !== "admin") {
         return unauthorized();
       }
 
       const filters = buildOptionalFilters(true);
 
-      const [rows] =
-        await db.execute<HandoverCertificateRow[]>(
-          `SELECT
+      const [rows] = await db.execute<HandoverCertificateRow[]>(
+        `SELECT
              id,
              employee_id,
              employee_name,
@@ -415,29 +363,21 @@ export async function GET(request: Request) {
            WHERE UPPER(status) = 'COMPLETED'
            ${filters.sql}
            ORDER BY created_at DESC`,
-          filters.params,
-        );
-
-      return NextResponse.json(
-        rows.map(mapHandoverCertificate),
+        filters.params,
       );
+
+      return NextResponse.json(rows.map(mapHandoverCertificate));
     }
 
     // ------------------------------------------------
     // EMPLOYEE: AUTHENTICATION AND PERMISSIONS
     // ------------------------------------------------
 
-    const employeeToken = getCookieToken(
-      request,
-      EMPLOYEE_COOKIE,
-    );
+    const employeeToken = getCookieToken(request, EMPLOYEE_COOKIE);
 
     const employeeSession = await getSession(employeeToken);
 
-    if (
-      !employeeSession ||
-      employeeSession.role !== "auditor"
-    ) {
+    if (!employeeSession || employeeSession.role !== "auditor") {
       return unauthorized();
     }
 
@@ -453,9 +393,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const employee = await getEmployee(
-      String(employeeId),
-    );
+    const employee = await getEmployee(String(employeeId));
 
     if (!employee) {
       return NextResponse.json(
@@ -464,18 +402,11 @@ export async function GET(request: Request) {
       );
     }
 
-    if (
-      employee.role !== "auditor" ||
-      !toBoolean(employee.is_active)
-    ) {
-      return forbidden(
-        "Your employee account is inactive or unauthorized.",
-      );
+    if (employee.role !== "auditor" || !toBoolean(employee.is_active)) {
+      return forbidden("Your employee account is inactive or unauthorized.");
     }
 
-    if (
-      !toBoolean(employee.can_access_handover_certificate)
-    ) {
+    if (!toBoolean(employee.can_access_handover_certificate)) {
       return forbidden(
         "You do not have permission to access handover certificates.",
       );
@@ -483,9 +414,8 @@ export async function GET(request: Request) {
 
     const filters = buildOptionalFilters(false);
 
-    const [rows] =
-      await db.execute<HandoverCertificateRow[]>(
-        `SELECT
+    const [rows] = await db.execute<HandoverCertificateRow[]>(
+      `SELECT
            id,
            employee_id,
            employee_name,
@@ -507,17 +437,12 @@ export async function GET(request: Request) {
          WHERE employee_id = ?
          ${filters.sql}
          ORDER BY created_at DESC`,
-        [String(employeeId), ...filters.params],
-      );
+      [String(employeeId), ...filters.params],
+    );
 
-    return NextResponse.json(
-      rows.map(mapHandoverCertificate),
-    );
+    return NextResponse.json(rows.map(mapHandoverCertificate));
   } catch (error) {
-    console.error(
-      "GET /api/handover-certificates error:",
-      error,
-    );
+    console.error("GET /api/handover-certificates error:", error);
 
     return NextResponse.json(
       { error: "Failed to fetch handover certificates" },
@@ -533,18 +458,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const employeeToken = getCookieToken(
-      request,
-      EMPLOYEE_COOKIE,
-    );
+    const employeeToken = getCookieToken(request, EMPLOYEE_COOKIE);
 
     const payload = await getSession(employeeToken);
 
-    if (
-      !payload ||
-      payload.role !== "auditor" ||
-      !payload.id
-    ) {
+    if (!payload || payload.role !== "auditor" || !payload.id) {
       return unauthorized();
     }
 
@@ -558,18 +476,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      employee.role !== "auditor" ||
-      !toBoolean(employee.is_active)
-    ) {
-      return forbidden(
-        "Your employee account is inactive or unauthorized.",
-      );
+    if (employee.role !== "auditor" || !toBoolean(employee.is_active)) {
+      return forbidden("Your employee account is inactive or unauthorized.");
     }
 
-    if (
-      !toBoolean(employee.can_access_handover_certificate)
-    ) {
+    if (!toBoolean(employee.can_access_handover_certificate)) {
       return forbidden(
         "You do not have permission to create handover certificates.",
       );
@@ -584,11 +495,7 @@ export async function POST(request: Request) {
     try {
       const parsed: unknown = await request.json();
 
-      if (
-        !parsed ||
-        typeof parsed !== "object" ||
-        Array.isArray(parsed)
-      ) {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         return NextResponse.json(
           { error: "Request body must be a JSON object." },
           { status: 400 },
@@ -604,26 +511,22 @@ export async function POST(request: Request) {
     }
 
     const customerId =
-      typeof body.customerId === "string" &&
-      body.customerId.trim()
+      typeof body.customerId === "string" && body.customerId.trim()
         ? body.customerId.trim()
         : null;
 
     const customerName =
-      typeof body.customerName === "string" &&
-      body.customerName.trim()
+      typeof body.customerName === "string" && body.customerName.trim()
         ? body.customerName.trim()
         : null;
 
     const customerAddress =
-      typeof body.customerAddress === "string" &&
-      body.customerAddress.trim()
+      typeof body.customerAddress === "string" && body.customerAddress.trim()
         ? body.customerAddress.trim()
         : null;
 
     const customerGstNo =
-      typeof body.customerGstNo === "string" &&
-      body.customerGstNo.trim()
+      typeof body.customerGstNo === "string" && body.customerGstNo.trim()
         ? body.customerGstNo.trim()
         : null;
 
@@ -634,8 +537,7 @@ export async function POST(request: Request) {
         : null;
 
     const templateId =
-      typeof body.templateId === "string" &&
-      body.templateId.trim()
+      typeof body.templateId === "string" && body.templateId.trim()
         ? body.templateId.trim()
         : "handover-certificate";
 
@@ -691,53 +593,38 @@ export async function POST(request: Request) {
       );
 
       // Lock counter to prevent duplicate IDs.
-      const [counterRows] =
-        await connection.execute<CounterRow[]>(
-          `SELECT next_number
+      const [counterRows] = await connection.execute<CounterRow[]>(
+        `SELECT next_number
            FROM report_id_counters
            WHERE report_type = 'HOC'
            FOR UPDATE`,
-        );
-
-      if (counterRows.length === 0) {
-        throw new Error(
-          "Failed to initialize HOC ID counter",
-        );
-      }
-
-      const counterValue = Number(
-        counterRows[0].next_number,
       );
 
+      if (counterRows.length === 0) {
+        throw new Error("Failed to initialize HOC ID counter");
+      }
+
+      const counterValue = Number(counterRows[0].next_number);
+
       // Check existing HOC IDs as an additional safeguard.
-      const [maxRows] =
-        await connection.execute<RowDataPacket[]>(
-          `SELECT COALESCE(
+      const [maxRows] = await connection.execute<RowDataPacket[]>(
+        `SELECT COALESCE(
              MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)),
              0
            ) AS max_number
            FROM handover_certificates
            WHERE id REGEXP '^HOC-[0-9]+$'`,
-        );
-
-      const maxExistingNumber = Number(
-        maxRows[0]?.max_number ?? 0,
       );
 
-      const nextNumber = Math.max(
-        counterValue,
-        maxExistingNumber + 1,
-      );
+      const maxExistingNumber = Number(maxRows[0]?.max_number ?? 0);
 
-      if (
-        !Number.isSafeInteger(nextNumber) ||
-        nextNumber < 1
-      ) {
+      const nextNumber = Math.max(counterValue, maxExistingNumber + 1);
+
+      if (!Number.isSafeInteger(nextNumber) || nextNumber < 1) {
         throw new Error("Invalid HOC ID counter value");
       }
 
-      const certificateId =
-        `HOC-${String(nextNumber).padStart(3, "0")}`;
+      const certificateId = `HOC-${String(nextNumber).padStart(3, "0")}`;
 
       await connection.execute(
         `UPDATE report_id_counters
@@ -798,9 +685,8 @@ export async function POST(request: Request) {
       // READ CREATED CERTIFICATE
       // ---------------------------------------------
 
-      const [rows] =
-        await connection.execute<HandoverCertificateRow[]>(
-          `SELECT
+      const [rows] = await connection.execute<HandoverCertificateRow[]>(
+        `SELECT
              id,
              employee_id,
              employee_name,
@@ -821,21 +707,26 @@ export async function POST(request: Request) {
            FROM handover_certificates
            WHERE id = ?
            LIMIT 1`,
-          [certificateId],
-        );
+        [certificateId],
+      );
 
       if (rows.length === 0) {
-        throw new Error(
-          "Created handover certificate could not be retrieved",
-        );
+        throw new Error("Created handover certificate could not be retrieved");
       }
+      await attachEvidenceFiles(connection, {
+        evidence,
+        reportType: "handover",
+        reportId: certificateId,
+        uploaderRole: "auditor",
+        uploaderId: employeeId,
+        allowNewFiles: true,
+      });
 
       await connection.commit();
 
-      return NextResponse.json(
-        mapHandoverCertificate(rows[0]),
-        { status: 201 },
-      );
+      return NextResponse.json(mapHandoverCertificate(rows[0]), {
+        status: 201,
+      });
     } catch (error) {
       await connection.rollback();
       throw error;
@@ -843,10 +734,7 @@ export async function POST(request: Request) {
       connection.release();
     }
   } catch (error) {
-    console.error(
-      "Create handover certificate error:",
-      error,
-    );
+    console.error("Create handover certificate error:", error);
 
     return NextResponse.json(
       { error: "Failed to save handover certificate draft." },

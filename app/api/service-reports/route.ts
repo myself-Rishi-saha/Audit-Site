@@ -1,8 +1,7 @@
-
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { RowDataPacket } from "mysql2/promise";
-
+import { attachEvidenceFiles } from "@/lib/report-files";
 import { getDatabase } from "@/lib/db";
 
 const ADMIN_COOKIE = "auditdesk_admin_session";
@@ -722,6 +721,18 @@ export async function POST(request: Request) {
       if (rows.length === 0) {
         throw new Error("Created service report could not be retrieved");
       }
+
+      // Attach temporary evidence files to this service report.
+      // This runs inside the same transaction as report creation.
+      await attachEvidenceFiles(connection, {
+        evidence,
+        reportType: "service",
+        reportId,
+        uploaderRole: "auditor",
+        uploaderId: employeeId,
+        allowNewFiles: true,
+      });
+
 
       await connection.commit();
 

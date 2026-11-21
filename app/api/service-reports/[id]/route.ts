@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getDatabase } from "@/lib/db";
-
+import { attachEvidenceFiles } from "@/lib/report-files";
 const EMPLOYEE_COOKIE = "auditdesk_session";
 const ADMIN_COOKIE = "auditdesk_admin_session";
 
@@ -337,36 +337,95 @@ export async function GET(
  *
  * Employee: may edit only their own DRAFT reports.
  */
+
+/**
+ * PUT /api/service-reports/[id]
+ *
+ * Admin:
+ * - May edit report data on DRAFT and COMPLETED reports.
+ * - Cannot attach new evidence to COMPLETED reports.
+ *
+ * Employee:
+ * - May edit only their own DRAFT reports.
+ * - May attach their own temporary evidence.
+ *
+ * Evidence attachment and report update happen in one transaction.
+ */
 export async function PUT(
   request: Request,
   { params }: RouteContext,
 ) {
+  let connection: Awaited<
+    ReturnType<ReturnType<typeof getDatabase>["getConnection"]>
+  > | null = null;
+
   try {
     const { id } = await params;
     const access = await getAccessContext();
 
     if (access.error) return access.error;
 
-    const db = getDatabase();
+    // Validate request JSON.
+    let body: Record<string, unknown>;
 
-    const [rows] = await db.execute<ReportRow[]>(
-      `${REPORT_SELECT} WHERE id = ? LIMIT 1`,
+    try {
+      const parsed: unknown = await request.json();
+
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        Array.isArray(parsed)
+      ) {
+        return NextResponse.json(
+          { error: "Request body must be a JSON object." },
+          { status: 400 },
+        );
+      }
+
+      body = parsed as Record<string, unknown>;
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON request body." },
+        { status: 400 },
+      );
+    }
+
+    const db = getDatabase();
+    connection = await db.getConnection();
+
+    await connection.beginTransaction();
+
+    // Lock the report so concurrent updates cannot bypass
+    // the DRAFT/COMPLETED evidence restrictions.
+    const [rows] = await connection.execute<ReportRow[]>(
+      `${REPORT_SELECT}
+       WHERE id = ?
+       LIMIT 1
+       FOR UPDATE`,
       [id],
     );
 
     const existing = rows[0];
 
     if (!existing) {
+      await connection.rollback();
+
       return NextResponse.json(
         { error: "Service report not found." },
         { status: 404 },
       );
     }
 
+    const existingStatus = String(existing.status).toUpperCase();
+    const isAdmin = access.role === "admin";
+
+    // Employees can only access their own reports.
     if (
       access.role === "auditor" &&
       existing.employee_id !== access.employeeId
     ) {
+      await connection.rollback();
+
       return NextResponse.json(
         {
           error:
@@ -376,10 +435,13 @@ export async function PUT(
       );
     }
 
+    // Employees can only edit DRAFT reports.
     if (
       access.role === "auditor" &&
-      String(existing.status).toUpperCase() !== "DRAFT"
+      existingStatus !== "DRAFT"
     ) {
+      await connection.rollback();
+
       return NextResponse.json(
         {
           error:
@@ -389,9 +451,7 @@ export async function PUT(
       );
     }
 
-    const body = await request.json();
-
-    // Preserve stored data if a property is omitted from the request.
+    // Preserve stored data when a property is omitted.
     const formData =
       body.formData === undefined
         ? parseObject(existing.form_data)
@@ -407,65 +467,211 @@ export async function PUT(
         ? parseObject(existing.signatures)
         : parseObject(body.signatures);
 
-    const isAdmin = access.role === "admin";
+    // Attach temporary local evidence files.
+    // For COMPLETED reports, only previously attached files
+    // belonging to this same report are accepted.
+    await attachEvidenceFiles(connection, {
+      evidence,
+      reportType: "service",
+      reportId: id,
+      uploaderRole: access.role,
+      uploaderId:
+        access.role === "admin"
+          ? "ADMIN"
+          : access.employeeId,
+      allowNewFiles: existingStatus === "DRAFT",
+    });
 
-    const [result] = await db.execute<ResultSetHeader>(
+    // Update the report within the same transaction.
+    const [result] = await connection.execute<ResultSetHeader>(
       `UPDATE service_reports
        SET
          form_data = ?,
          evidence = ?,
          signatures = ?,
          updated_at = UTC_TIMESTAMP(3)
-       WHERE id = ?
-         AND (
-           ? = 1
-           OR (
-             employee_id = ?
-             AND UPPER(status) = 'DRAFT'
-           )
-         )`,
+       WHERE id = ?`,
       [
         JSON.stringify(formData),
         JSON.stringify(evidence),
         JSON.stringify(signatures),
         id,
-        isAdmin ? 1 : 0,
-        access.role === "auditor" ? access.employeeId : "",
       ],
     );
 
-    if (result.affectedRows === 0) {
-      return NextResponse.json(
-        {
-          error:
-            "Service report could not be updated. It may have changed or is no longer editable.",
-        },
-        { status: 409 },
-      );
+    if (result.affectedRows !== 1) {
+      throw new Error("Service report update failed.");
     }
 
-    const [updatedRows] = await db.execute<ReportRow[]>(
-      `${REPORT_SELECT} WHERE id = ? LIMIT 1`,
+    // Retrieve the updated report before committing.
+    const [updatedRows] = await connection.execute<ReportRow[]>(
+      `${REPORT_SELECT}
+       WHERE id = ?
+       LIMIT 1`,
       [id],
     );
 
     if (!updatedRows[0]) {
-      return NextResponse.json(
-        { error: "Updated service report could not be retrieved." },
-        { status: 500 },
+      throw new Error(
+        "Updated service report could not be retrieved.",
       );
     }
 
+    await connection.commit();
+
     return NextResponse.json(mapServiceReport(updatedRows[0]));
   } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error(
+          "Service report rollback error:",
+          rollbackError,
+        );
+      }
+    }
+
     console.error("Update service report error:", error);
 
     return NextResponse.json(
       { error: "Failed to update service report." },
       { status: 500 },
     );
+  } finally {
+    connection?.release();
   }
 }
+
+// export async function PUT(
+//   request: Request,
+//   { params }: RouteContext,
+// ) {
+//   try {
+//     const { id } = await params;
+//     const access = await getAccessContext();
+
+//     if (access.error) return access.error;
+
+//     const db = getDatabase();
+
+//     const [rows] = await db.execute<ReportRow[]>(
+//       `${REPORT_SELECT} WHERE id = ? LIMIT 1`,
+//       [id],
+//     );
+
+//     const existing = rows[0];
+
+//     if (!existing) {
+//       return NextResponse.json(
+//         { error: "Service report not found." },
+//         { status: 404 },
+//       );
+//     }
+
+//     if (
+//       access.role === "auditor" &&
+//       existing.employee_id !== access.employeeId
+//     ) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "You cannot edit another employee's service report.",
+//         },
+//         { status: 403 },
+//       );
+//     }
+
+//     if (
+//       access.role === "auditor" &&
+//       String(existing.status).toUpperCase() !== "DRAFT"
+//     ) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "Only draft service reports can be edited by employees.",
+//         },
+//         { status: 403 },
+//       );
+//     }
+
+//     const body = await request.json();
+
+//     // Preserve stored data if a property is omitted from the request.
+//     const formData =
+//       body.formData === undefined
+//         ? parseObject(existing.form_data)
+//         : parseObject(body.formData);
+
+//     const evidence =
+//       body.evidence === undefined
+//         ? parseObject(existing.evidence)
+//         : parseObject(body.evidence);
+
+//     const signatures =
+//       body.signatures === undefined
+//         ? parseObject(existing.signatures)
+//         : parseObject(body.signatures);
+
+//     const isAdmin = access.role === "admin";
+
+//     const [result] = await db.execute<ResultSetHeader>(
+//       `UPDATE service_reports
+//        SET
+//          form_data = ?,
+//          evidence = ?,
+//          signatures = ?,
+//          updated_at = UTC_TIMESTAMP(3)
+//        WHERE id = ?
+//          AND (
+//            ? = 1
+//            OR (
+//              employee_id = ?
+//              AND UPPER(status) = 'DRAFT'
+//            )
+//          )`,
+//       [
+//         JSON.stringify(formData),
+//         JSON.stringify(evidence),
+//         JSON.stringify(signatures),
+//         id,
+//         isAdmin ? 1 : 0,
+//         access.role === "auditor" ? access.employeeId : "",
+//       ],
+//     );
+
+//     if (result.affectedRows === 0) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "Service report could not be updated. It may have changed or is no longer editable.",
+//         },
+//         { status: 409 },
+//       );
+//     }
+
+//     const [updatedRows] = await db.execute<ReportRow[]>(
+//       `${REPORT_SELECT} WHERE id = ? LIMIT 1`,
+//       [id],
+//     );
+
+//     if (!updatedRows[0]) {
+//       return NextResponse.json(
+//         { error: "Updated service report could not be retrieved." },
+//         { status: 500 },
+//       );
+//     }
+
+//     return NextResponse.json(mapServiceReport(updatedRows[0]));
+//   } catch (error) {
+//     console.error("Update service report error:", error);
+
+//     return NextResponse.json(
+//       { error: "Failed to update service report." },
+//       { status: 500 },
+//     );
+//   }
+// }
 
 /**
  * DELETE /api/service-reports/[id]
