@@ -635,15 +635,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       .setIssuedAt()
       .setExpirationTime(FILE_TOKEN_LIFETIME)
       .sign(getAuthSecret());
-    const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
+    const configuredFrontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL?.trim();
 
-    if (!frontendUrl) {
+    const requestUrl = new URL(request.url);
+
+    // Use the configured frontend URL in production.
+    // In local development, use the actual localhost origin.
+    const baseUrl =
+      process.env.NODE_ENV === "production"
+        ? configuredFrontendUrl
+        : requestUrl.origin;
+
+    if (!baseUrl) {
       throw new Error("NEXT_PUBLIC_FRONTEND_URL is not configured.");
     }
 
-    const baseUrl = frontendUrl.replace(/\/+$/, "");
-
-    const url = new URL(`${baseUrl}/api/files/${id}`);
+    const url = new URL(`/api/files/${id}`, baseUrl);
 
     url.searchParams.set("token", token);
 
@@ -651,6 +658,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       url: url.toString(),
       expiresIn: FILE_TOKEN_LIFETIME,
     });
+    // const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
+
+    // if (!frontendUrl) {
+    //   throw new Error("NEXT_PUBLIC_FRONTEND_URL is not configured.");
+    // }
+
+    // const baseUrl = frontendUrl.replace(/\/+$/, "");
+
+    // const url = new URL(`${baseUrl}/api/files/${id}`);
+
+    // url.searchParams.set("token", token);
+
+    // return NextResponse.json({
+    //   url: url.toString(),
+    //   expiresIn: FILE_TOKEN_LIFETIME,
+    // });
   } catch (error) {
     console.error("POST /api/files/[id] error:", error);
 
