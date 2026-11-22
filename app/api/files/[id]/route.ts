@@ -1,4 +1,3 @@
-
 // import { NextResponse } from "next/server";
 // import { cookies } from "next/headers";
 // import { jwtVerify } from "jose";
@@ -373,26 +372,15 @@ function getAuthSecret() {
 }
 
 function enabled(value: unknown) {
-  return (
-    value === true ||
-    value === 1 ||
-    value === "1" ||
-    value === "true"
-  );
+  return value === true || value === 1 || value === "1" || value === "true";
 }
 
 function unauthorized(message = "Authentication required.") {
-  return NextResponse.json(
-    { error: message },
-    { status: 401 },
-  );
+  return NextResponse.json({ error: message }, { status: 401 });
 }
 
 function forbidden(message = "You cannot access this file.") {
-  return NextResponse.json(
-    { error: message },
-    { status: 403 },
-  );
+  return NextResponse.json({ error: message }, { status: 403 });
 }
 
 function validFileId(id: string) {
@@ -405,9 +393,7 @@ function validFileId(id: string) {
 // AUTHENTICATE ADMIN / EMPLOYEE
 // ========================================
 
-async function getAuthenticatedUser(): Promise<
-  AuthContext | NextResponse
-> {
+async function getAuthenticatedUser(): Promise<AuthContext | NextResponse> {
   const cookieStore = await cookies();
 
   const adminToken = cookieStore.get(ADMIN_COOKIE)?.value;
@@ -415,10 +401,7 @@ async function getAuthenticatedUser(): Promise<
 
   if (adminToken) {
     try {
-      const { payload } = await jwtVerify(
-        adminToken,
-        getAuthSecret(),
-      );
+      const { payload } = await jwtVerify(adminToken, getAuthSecret());
 
       if (payload.role !== "admin" || !payload.id) {
         return unauthorized("Invalid admin session.");
@@ -436,10 +419,7 @@ async function getAuthenticatedUser(): Promise<
 
   if (employeeToken) {
     try {
-      const { payload } = await jwtVerify(
-        employeeToken,
-        getAuthSecret(),
-      );
+      const { payload } = await jwtVerify(employeeToken, getAuthSecret());
 
       if (payload.role !== "auditor" || !payload.id) {
         return unauthorized("Invalid employee session.");
@@ -470,9 +450,7 @@ async function getAuthenticatedUser(): Promise<
         !enabled(employee.is_active) ||
         employee.role !== "auditor"
       ) {
-        return forbidden(
-          "Your employee account is inactive or unauthorized.",
-        );
+        return forbidden("Your employee account is inactive or unauthorized.");
       }
 
       return {
@@ -481,9 +459,7 @@ async function getAuthenticatedUser(): Promise<
         employee,
       };
     } catch {
-      return unauthorized(
-        "Invalid or expired employee session.",
-      );
+      return unauthorized("Invalid or expired employee session.");
     }
   }
 
@@ -553,8 +529,7 @@ async function authorizeFile(
     );
   }
 
-  const reportConfig =
-    REPORTS[file.report_type as keyof typeof REPORTS];
+  const reportConfig = REPORTS[file.report_type as keyof typeof REPORTS];
 
   if (!reportConfig) {
     return NextResponse.json(
@@ -585,13 +560,8 @@ async function authorizeFile(
       return forbidden();
     }
 
-    if (
-      !auth.employee ||
-      !enabled(auth.employee[reportConfig.permission])
-    ) {
-      return forbidden(
-        "You do not have permission to access this report.",
-      );
+    if (!auth.employee || !enabled(auth.employee[reportConfig.permission])) {
+      return forbidden("You do not have permission to access this report.");
     }
   }
 
@@ -607,19 +577,12 @@ async function verifyFileToken(
   fileId: string,
 ): Promise<boolean> {
   try {
-    const { payload } = await jwtVerify(
-      token,
-      getAuthSecret(),
-      {
-        issuer: FILE_TOKEN_ISSUER,
-        audience: FILE_TOKEN_AUDIENCE,
-      },
-    );
+    const { payload } = await jwtVerify(token, getAuthSecret(), {
+      issuer: FILE_TOKEN_ISSUER,
+      audience: FILE_TOKEN_AUDIENCE,
+    });
 
-    return (
-      payload.purpose === "file-view" &&
-      payload.fileId === fileId
-    );
+    return payload.purpose === "file-view" && payload.fileId === fileId;
   } catch {
     return false;
   }
@@ -630,18 +593,12 @@ async function verifyFileToken(
 // POST /api/files/[id]
 // ========================================
 
-export async function POST(
-  request: Request,
-  { params }: RouteContext,
-) {
+export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { id } = await params;
 
     if (!validFileId(id)) {
-      return NextResponse.json(
-        { error: "Invalid file ID." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid file ID." }, { status: 400 });
     }
 
     // Only logged-in users can create viewing links.
@@ -654,17 +611,12 @@ export async function POST(
     const file = await getFile(id);
 
     if (!file) {
-      return NextResponse.json(
-        { error: "File not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "File not found." }, { status: 404 });
     }
 
     // Only attached evidence can receive a public viewing URL.
     if (file.status !== "ATTACHED") {
-      return forbidden(
-        "Only attached report files can receive viewing links.",
-      );
+      return forbidden("Only attached report files can receive viewing links.");
     }
 
     const accessError = await authorizeFile(file, auth);
@@ -683,11 +635,15 @@ export async function POST(
       .setIssuedAt()
       .setExpirationTime(FILE_TOKEN_LIFETIME)
       .sign(getAuthSecret());
+    const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
 
-    const url = new URL(
-      `/api/files/${id}`,
-      request.url,
-    );
+    if (!frontendUrl) {
+      throw new Error("NEXT_PUBLIC_FRONTEND_URL is not configured.");
+    }
+
+    const baseUrl = frontendUrl.replace(/\/+$/, "");
+
+    const url = new URL(`${baseUrl}/api/files/${id}`);
 
     url.searchParams.set("token", token);
 
@@ -696,10 +652,7 @@ export async function POST(
       expiresIn: FILE_TOKEN_LIFETIME,
     });
   } catch (error) {
-    console.error(
-      "POST /api/files/[id] error:",
-      error,
-    );
+    console.error("POST /api/files/[id] error:", error);
 
     return NextResponse.json(
       { error: "Could not create file viewing link." },
@@ -713,27 +666,18 @@ export async function POST(
 // GET /api/files/[id]
 // ========================================
 
-export async function GET(
-  request: Request,
-  { params }: RouteContext,
-) {
+export async function GET(request: Request, { params }: RouteContext) {
   try {
     const { id } = await params;
 
     if (!validFileId(id)) {
-      return NextResponse.json(
-        { error: "Invalid file ID." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid file ID." }, { status: 400 });
     }
 
     const file = await getFile(id);
 
     if (!file) {
-      return NextResponse.json(
-        { error: "File not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "File not found." }, { status: 404 });
     }
 
     const url = new URL(request.url);
@@ -741,15 +685,10 @@ export async function GET(
 
     if (signedToken) {
       // Signed links work without an application session.
-      const valid = await verifyFileToken(
-        signedToken,
-        id,
-      );
+      const valid = await verifyFileToken(signedToken, id);
 
       if (!valid) {
-        return unauthorized(
-          "File viewing link is invalid or expired.",
-        );
+        return unauthorized("File viewing link is invalid or expired.");
       }
 
       // Signed links are only for attached report evidence.
@@ -765,10 +704,7 @@ export async function GET(
         return auth;
       }
 
-      const accessError = await authorizeFile(
-        file,
-        auth,
-      );
+      const accessError = await authorizeFile(file, auth);
 
       if (accessError) {
         return accessError;
@@ -802,10 +738,9 @@ export async function GET(
     const fileInfo = await stat(filePath);
     const fileSize = fileInfo.size;
 
-    const safeMimeType =
-      /^[\w.+-]+\/[\w.+-]+$/.test(file.mime_type)
-        ? file.mime_type
-        : "application/octet-stream";
+    const safeMimeType = /^[\w.+-]+\/[\w.+-]+$/.test(file.mime_type)
+      ? file.mime_type
+      : "application/octet-stream";
 
     const range = request.headers.get("range");
 
@@ -846,9 +781,7 @@ export async function GET(
         end = fileSize - 1;
       } else {
         start = Number(match[1]);
-        end = match[2]
-          ? Number(match[2])
-          : fileSize - 1;
+        end = match[2] ? Number(match[2]) : fileSize - 1;
       }
 
       if (
@@ -896,10 +829,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(
-      "GET /api/files/[id] error:",
-      error,
-    );
+    console.error("GET /api/files/[id] error:", error);
 
     return NextResponse.json(
       { error: "Failed to retrieve file." },
