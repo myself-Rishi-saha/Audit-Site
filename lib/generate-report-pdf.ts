@@ -334,105 +334,78 @@ function collectEvidence(value: unknown): EvidenceLink[] {
   return found;
 }
 
-// function collectEvidence(value: unknown): EvidenceLink[] {
-//   const found: EvidenceLink[] = [];
-//   const seen = new Set<string>();
 
-//   function visit(item: unknown, key = ""): void {
-//     if (Array.isArray(item)) {
-//       item.forEach((child, index) =>
-//         visit(child, key || `Evidence ${index + 1}`),
-//       );
-//       return;
-//     }
+// ========================================
+// GENERATE PUBLIC EVIDENCE VIEWING URL
+// ========================================
 
-//     if (!item || typeof item !== "object") return;
+const evidenceUrlCache = new Map<string, Promise<string>>();
 
-//     const obj = item as Record<string, unknown>;
+async function getPublicEvidenceUrl(
+  originalUrl: string,
+): Promise<string> {
+  try {
+    const url = new URL(
+      originalUrl,
+      window.location.origin,
+    );
 
-//     const rawUrl = obj.url ?? obj.secure_url;
-//     const url = typeof rawUrl === "string" ? rawUrl.trim() : "";
+    const match = url.pathname.match(
+      /^\/api\/files\/([0-9a-f-]{36})$/i,
+    );
 
-//     if (/^https?:\/\//i.test(url)) {
-//       const fileName =
-//         typeof obj.fileName === "string"
-//           ? obj.fileName
-//           : typeof obj.filename === "string"
-//             ? obj.filename
-//             : typeof obj.original_filename === "string"
-//               ? obj.original_filename
-//               : undefined;
+    // External URLs, including Cloudinary, remain unchanged.
+    if (!match) {
+      return originalUrl;
+    }
 
-//       const explicitType = String(
-//         obj.type ??
-//           obj.resource_type ??
-//           obj.mimeType ??
-//           obj.mime_type ??
-//           "",
-//       ).toLowerCase();
+    const existing = evidenceUrlCache.get(originalUrl);
 
-//       const extension = `${fileName ?? ""} ${url.split("?")[0]}`;
+    if (existing) {
+      return existing;
+    }
 
-//       const kind: EvidenceLink["kind"] =
-//         explicitType.includes("video") ||
-//         /\.(mp4|mov|webm|m4v|avi)$/i.test(extension)
-//           ? "video"
-//           : explicitType.includes("image") ||
-//               /\.(jpg|jpeg|png|gif|webp|heic|avif)$/i.test(extension)
-//             ? "image"
-//             : "file";
+    const request = (async () => {
+      const response = await fetch(originalUrl, {
+        method: "POST",
+        credentials: "include",
+      });
 
-//       if (!seen.has(url)) {
-//         seen.add(url);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to generate viewing link: ${response.status}`,
+        );
+      }
 
-//         found.push({
-//           label:
-//             typeof obj.label === "string"
-//               ? obj.label
-//               : typeof obj.fieldLabel === "string"
-//                 ? obj.fieldLabel
-//                 : key || "Evidence",
-//           url,
-//           fileName,
-//           capturedAt:
-//             typeof obj.capturedAt === "string"
-//               ? obj.capturedAt
-//               : typeof obj.captured_at === "string"
-//                 ? obj.captured_at
-//                 : undefined,
-//           kind,
-//         });
-//       }
-//     }
+      const result = await response.json();
 
-//     for (const [childKey, childValue] of Object.entries(obj)) {
-//       if (
-//         [
-//           "url",
-//           "secure_url",
-//           "fileName",
-//           "filename",
-//           "original_filename",
-//           "type",
-//           "resource_type",
-//           "mimeType",
-//           "mime_type",
-//           "label",
-//           "fieldLabel",
-//           "capturedAt",
-//           "captured_at",
-//         ].includes(childKey)
-//       ) {
-//         continue;
-//       }
+      if (typeof result.url !== "string" || !result.url) {
+        throw new Error("Invalid viewing URL response.");
+      }
 
-//       visit(childValue, childKey);
-//     }
-//   }
+      return result.url;
+    })();
 
-//   visit(value);
-//   return found;
-// }
+    evidenceUrlCache.set(originalUrl, request);
+
+    try {
+      return await request;
+    } catch (error) {
+      evidenceUrlCache.delete(originalUrl);
+      throw error;
+    }
+  } catch (error) {
+    console.error(
+      "Could not generate public evidence URL:",
+      originalUrl,
+      error,
+    );
+
+    // Do not silently produce a broken protected link.
+    throw error;
+  }
+}
+
 
 function getFieldEvidence(
   field: ReportField,
@@ -876,6 +849,7 @@ export async function generateReportPdf(
   // ========================================
   // REPORT INFORMATION
   // ========================================
+  
 
   autoTable(pdf, {
     startY: y,
@@ -1031,6 +1005,16 @@ export async function generateReportPdf(
         mediaRows.push({ rowIndex, links });
       }
     }
+
+// Generate signed viewing links for local evidence files.
+await Promise.all(
+  mediaRows.flatMap(({ links }) =>
+    links.map(async (item) => {
+      item.url = await getPublicEvidenceUrl(item.url);
+    }),
+  ),
+);
+
 
     autoTable(pdf, {
       startY: y,
