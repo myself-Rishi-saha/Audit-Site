@@ -128,11 +128,11 @@ const REPORT_TYPES = {
     type: "service",
     permission: "can_access_service_report",
   },
-  DAC: {
-    table: "daily_accent_reports",
-    type: "daily_accent",
-    permission: "can_access_daily_accent_report",
-  },
+DAR: {
+  table: "daily_accent_reports",
+  type: "daily_accent",
+  permission: "can_access_daily_accent_report",
+},
   HOC: {
     table: "handover_certificates",
     type: "handover",
